@@ -74,7 +74,7 @@ export async function registerUser(
   const hashedPassword = await bcrypt.hash(password, 10)
   const isAdmin = email.includes("admin") || email.includes("captain")
 
-  await prisma.user.create({
+  const newUser = await prisma.user.create({
     data: {
       email,
       password: hashedPassword,
@@ -83,6 +83,27 @@ export async function registerUser(
       role: isAdmin ? "ADMIN" : "USER",
     },
   })
+
+  // Automatically enroll new users into all existing competitions
+  if (!isAdmin) {
+    const competitions = await prisma.competition.findMany({ select: { id: true } })
+    for (const comp of competitions) {
+      await prisma.competitionParticipant.upsert({
+        where: {
+          competitionId_userId: {
+            competitionId: comp.id,
+            userId: newUser.id,
+          }
+        },
+        update: {},
+        create: {
+          competitionId: comp.id,
+          userId: newUser.id,
+          score: 0
+        }
+      })
+    }
+  }
 
   return "SUCCESS"
 }

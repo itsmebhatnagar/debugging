@@ -6,43 +6,7 @@ const prisma = new PrismaClient()
 export async function seedPirateChampionship() {
   console.log("⚓ Seeding Pirate Code Championship...")
 
-  // 1. Create or ensure Admin & User accounts exist
-  const hashedAdminPassword = await bcrypt.hash("admin123", 10)
-  const hashedUserPassword = await bcrypt.hash("user123", 10)
-
-  const admin = await prisma.user.upsert({
-    where: { email: "captain@echona.com" },
-    update: {
-      name: "Captain Jack Sparrow",
-      mobile: "+91 98765 43210",
-      role: "ADMIN"
-    },
-    create: {
-      email: "captain@echona.com",
-      password: hashedAdminPassword,
-      name: "Captain Jack Sparrow",
-      mobile: "+91 98765 43210",
-      role: "ADMIN"
-    }
-  })
-
-  const user = await prisma.user.upsert({
-    where: { email: "crew@echona.com" },
-    update: {
-      name: "Will Turner",
-      mobile: "+91 87654 32109",
-      role: "USER"
-    },
-    create: {
-      email: "crew@echona.com",
-      password: hashedUserPassword,
-      name: "Will Turner",
-      mobile: "+91 87654 32109",
-      role: "USER"
-    }
-  })
-
-  // 2. Find or create the flagship Championship
+  // 1. Find or create the flagship Championship
   let competition = await prisma.competition.findFirst({
     where: { name: "Echona 2K26 - Pirate Code Championship" },
     include: { rounds: true }
@@ -61,7 +25,7 @@ export async function seedPirateChampionship() {
     // Reset status to WAITING if seeding
     await prisma.competition.update({
       where: { id: competition.id },
-      data: { status: "WAITING" }
+      data: { status: "WAITING", startedAt: null }
     })
 
     // Wipe all previous participant attempts so they get a fresh start
@@ -77,24 +41,28 @@ export async function seedPirateChampionship() {
       await prisma.submission.deleteMany({ where: { questionId: { in: questionIds } } })
       await prisma.draftCode.deleteMany({ where: { questionId: { in: questionIds } } })
     }
-    await prisma.competitionParticipant.deleteMany({ where: { competitionId: competition.id } })
   }
 
-  // Ensure user is participant
-  await prisma.competitionParticipant.upsert({
-    where: {
-      competitionId_userId: {
-        competitionId: competition.id,
-        userId: user.id
-      }
-    },
-    update: {},
-    create: {
-      competitionId: competition.id,
-      userId: user.id,
-      score: 0
-    }
+  // Ensure all registered real users are enrolled as participants
+  const realUsers = await prisma.user.findMany({
+    where: { role: "USER" }
   })
+  for (const u of realUsers) {
+    await prisma.competitionParticipant.upsert({
+      where: {
+        competitionId_userId: {
+          competitionId: competition.id,
+          userId: u.id
+        }
+      },
+      update: { score: 0 },
+      create: {
+        competitionId: competition.id,
+        userId: u.id,
+        score: 0
+      }
+    })
+  }
 
   // 3. Configure Round 1: Quest for the Lost Treasure
   // 3 questions, 25 minutes (1500s), 5 compile attempts

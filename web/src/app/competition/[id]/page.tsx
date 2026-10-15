@@ -4,7 +4,7 @@ import { use, useEffect, useState } from "react"
 import { useRealtime } from "@/hooks/useRealtime"
 import Editor from "@monaco-editor/react"
 import ReactMarkdown from "react-markdown"
-import { compileCode, submitFinalCode, saveDraft } from "@/app/actions/participant"
+import { compileCode, submitFinalCode, saveDraft, startRoundNow } from "@/app/actions/participant"
 import Link from "next/link"
 import { Spotlight } from "@/components/ui/spotlight"
 
@@ -162,11 +162,11 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
     })
     socket.on("round_started", (data: any) => {
       setSplashRoundName(data.roundName)
-      setArenaState("SPLASH")
       setNeedsFullscreen(true)   // ← trigger fullscreen requirement
       setIsFullscreen(false)     // reset so overlay shows
       setFullscreenExitWarning(false)
       setAutoSubmitDone(false)
+      setArenaState("SPLASH")    // show splash (ok even if already SPLASH)
       setTimeout(() => {
         setRound({ id: data.roundId, name: data.roundName, order: data.roundOrder, maxCompileAttempts: data.maxCompileAttempts, questions: data.questions })
         const initialCodes: Record<string, string> = {}
@@ -197,14 +197,27 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
 
   useEffect(() => {
     if (arenaState !== "COUNTDOWN") return
-    if (countdownSeconds <= 0) { handleStartTestNow(); return }
+    if (countdownSeconds <= 0) {
+      // Wrap async call to avoid unhandled promise in useEffect
+      void handleStartTestNow()
+      return
+    }
     const interval = setInterval(() => setCountdownSeconds((prev) => prev - 1), 1000)
     return () => clearInterval(interval)
   }, [arenaState, countdownSeconds])
 
-  const handleStartTestNow = () => {
+  const handleStartTestNow = async () => {
+    // Prevent double-trigger
+    if (arenaState !== "COUNTDOWN") return
     setArenaState("SPLASH")
-    setTimeout(() => fetchStatus(), 2500)
+    try {
+      // Activate the round in the database — this triggers the socket 'round_started' event
+      // which will transition us from SPLASH → ACTIVE with full round data
+      await startRoundNow(competitionId)
+    } catch {
+      // If socket fires first that's fine; if activation fails, fall back to polling
+      setTimeout(() => fetchStatus(), 2000)
+    }
   }
 
   const currentQuestion = round?.questions[selectedQuestionIndex]

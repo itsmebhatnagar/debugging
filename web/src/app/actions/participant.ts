@@ -84,3 +84,32 @@ export async function getUserQuestionStatus(questionId: string) {
     draft
   }
 }
+
+export async function startRoundNow(competitionId: string) {
+  const session = await auth()
+  if (!session?.user?.id) {
+    return { success: false, error: "Unauthorized" }
+  }
+
+  // Check if competition is in COUNTDOWN state
+  const comp = await prisma.competition.findUnique({
+    where: { id: competitionId },
+    include: { rounds: { orderBy: { order: "asc" } } }
+  })
+
+  if (!comp) return { success: false, error: "Competition not found" }
+
+  // If already ACTIVE, return success
+  if (comp.status === "ACTIVE") {
+    return { success: true }
+  }
+
+  // Activate Round 1
+  const firstRound = comp.rounds[0]
+  if (!firstRound) return { success: false, error: "No rounds configured" }
+
+  const { activateRound } = await import("@/lib/competition-engine")
+  await activateRound(competitionId, firstRound.order)
+
+  return { success: true }
+}

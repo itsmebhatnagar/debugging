@@ -50,10 +50,23 @@ export async function GET(
 
     if (comp.status === "COUNTDOWN") {
       const firstRound = comp.rounds[0]
+      const startedAt = comp.startedAt ? new Date(comp.startedAt).getTime() : Date.now()
+      const elapsedSeconds = Math.floor((Date.now() - startedAt) / 1000)
+      const remainingSeconds = Math.max(0, 60 - elapsedSeconds)
+
+      if (remainingSeconds <= 0 && firstRound) {
+        // 60s countdown finished! Automatically transition to Round 1 ACTIVE
+        const { activateRound } = await import("@/lib/competition-engine")
+        await activateRound(competitionId, firstRound.order)
+
+        // Reload updated competition
+        return GET(req, { params })
+      }
+
       return NextResponse.json({
         status: "COUNTDOWN",
         competitionName: comp.name,
-        countdownSeconds: 60,
+        countdownSeconds: remainingSeconds,
         roundName: firstRound?.name || "Quest for the Lost Treasure"
       })
     }
