@@ -67,6 +67,16 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
         setRound(data.round)
         setArenaState("ACTIVE")
         setNeedsFullscreen(true)
+        const currentlyFs = !!(
+          document.fullscreenElement ||
+          (document as any).webkitFullscreenElement ||
+          (document as any).mozFullScreenElement ||
+          (document as any).msFullscreenElement
+        )
+        setIsFullscreen(currentlyFs)
+        if (currentlyFs) {
+          setHasEnteredFullscreenOnce(true)
+        }
         if (data.userState) {
           setAttempts(data.userState.attempts || {})
           setSubmissions(data.userState.submissions || {})
@@ -166,11 +176,28 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
       setArenaState("COUNTDOWN")
       setCountdownSeconds(data.countdownSeconds || 60)
       setSplashRoundName(data.roundName || "Quest for the Lost Treasure")
+      // Reset fullscreen states on test restart so participant is prompted freshly
+      setFullscreenExited(false)
+      setHasEnteredFullscreenOnce(false)
+      setFullscreenExitWarning(false)
+      setAutoSubmitDone(false)
     })
     socket.on("round_started", (data: any) => {
       setSplashRoundName(data.roundName)
+      // Reset lockout states on round transition
+      setFullscreenExited(false)
+      setHasEnteredFullscreenOnce(false)
       setNeedsFullscreen(true)   // ← trigger fullscreen requirement
-      setIsFullscreen(false)     // reset so overlay shows
+      const currentlyFs = !!(
+        document.fullscreenElement ||
+        (document as any).webkitFullscreenElement ||
+        (document as any).mozFullScreenElement ||
+        (document as any).msFullscreenElement
+      )
+      setIsFullscreen(currentlyFs)
+      if (currentlyFs) {
+        setHasEnteredFullscreenOnce(true)
+      }
       setFullscreenExitWarning(false)
       setAutoSubmitDone(false)
       setArenaState("SPLASH")    // show splash (ok even if already SPLASH)
