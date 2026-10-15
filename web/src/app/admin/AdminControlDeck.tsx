@@ -22,6 +22,7 @@ export function AdminControlDeck({ initialData }: AdminDeckProps) {
 
   const [loadingAction, setLoadingAction] = useState<string | null>(null)
   const [inspectedParticipant, setInspectedParticipant] = useState<any | null>(null)
+  const [disqualifiedSailors, setDisqualifiedSailors] = useState<Record<string, string>>({})
   
   // Backend Timer display for Admin
   const [adminTimer, setAdminTimer] = useState<number>(data?.secondsRemaining || 0)
@@ -63,6 +64,41 @@ export function AdminControlDeck({ initialData }: AdminDeckProps) {
       } : prev)
     })
 
+    socket.on("participant_disqualified", (payload: any) => {
+      setDisqualifiedSailors(prev => ({
+        ...prev,
+        [payload.userId]: payload.reason || "FULLSCREEN_EXIT"
+      }))
+    })
+
+    socket.on("attempt_exceeded", (payload: any) => {
+      setDisqualifiedSailors(prev => ({
+        ...prev,
+        [payload.userId]: "ATTEMPTS_EXCEEDED"
+      }))
+    })
+
+    socket.on("submission_created", (payload: any) => {
+      // Instantly update participant score in state if available
+      if (payload.userId && payload.pointsEarned !== undefined) {
+        setData((prev: any) => {
+          if (!prev?.competition?.participants) return prev
+          return {
+            ...prev,
+            competition: {
+              ...prev.competition,
+              participants: prev.competition.participants.map((p: any) => {
+                if (p.userId === payload.userId) {
+                  return { ...p, score: (p.score || 0) + payload.pointsEarned }
+                }
+                return p
+              })
+            }
+          }
+        })
+      }
+    })
+
     socket.on("leaderboard_updated", async () => {
       // Refresh admin data
       try {
@@ -79,6 +115,9 @@ export function AdminControlDeck({ initialData }: AdminDeckProps) {
       socket.off("round_started")
       socket.off("test_ended")
       socket.off("leaderboard_updated")
+      socket.off("participant_disqualified")
+      socket.off("attempt_exceeded")
+      socket.off("submission_created")
     }
   }, [socket, competitionId])
 
@@ -465,6 +504,7 @@ export function AdminControlDeck({ initialData }: AdminDeckProps) {
               <tr>
                 <th className="px-4 py-3">Pirate Sailor</th>
                 <th className="px-4 py-3">Contact Details</th>
+                <th className="px-4 py-3">Live Status</th>
                 <th className="px-4 py-3">Bounty Score</th>
                 <th className="px-4 py-3 text-right">Actions</th>
               </tr>
@@ -472,6 +512,9 @@ export function AdminControlDeck({ initialData }: AdminDeckProps) {
             <tbody className="divide-y divide-[#8b7355]/20">
               {participants.map((p: any) => {
                 const evaluated = allEvaluated.find((e: any) => e.userId === p.userId)
+                const isDisqualified = Boolean(disqualifiedSailors[p.userId])
+                const dqReason = disqualifiedSailors[p.userId]
+
                 return (
                   <tr key={p.id} className="hover:bg-[#d4af37]/10/40 transition-colors">
                     <td className="px-4 py-3 font-bold text-[#f4ede0] font-cinzel tracking-wider">
@@ -482,8 +525,29 @@ export function AdminControlDeck({ initialData }: AdminDeckProps) {
                       <div>{p.user?.email}</div>
                       <div className="text-[#d4af37]">📞 {p.user?.mobile || "No Mobile"}</div>
                     </td>
+                    <td className="px-4 py-3 font-garamond">
+                      {isDisqualified ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-red-950/60 border border-red-500/60 text-red-400">
+                          <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
+                          {dqReason === "FULLSCREEN_EXIT" ? "DISQUALIFIED (EXIT FS)" : "DISQUALIFIED (LIMIT)"}
+                        </span>
+                      ) : comp?.status === "ACTIVE" ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-950/60 border border-emerald-500/60 text-emerald-400">
+                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                          QUALIFIED (IN BATTLE)
+                        </span>
+                      ) : comp?.status === "ENDED" ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-blue-950/60 border border-blue-500/60 text-blue-400">
+                          COMPLETED
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-amber-950/60 border border-amber-500/60 text-amber-400">
+                          WAITING
+                        </span>
+                      )}
+                    </td>
                     <td className="px-4 py-3 font-garamond font-bold text-[#d4af37]">
-                      {evaluated ? `${evaluated.compositeScore} pts (AI: ${evaluated.avgQuality}%)` : `${p.score} pts`}
+                      {evaluated ? `${evaluated.compositeScore} pts (AI: ${evaluated.avgQuality}%)` : `${p.score || 0} pts`}
                     </td>
                     <td className="px-4 py-3 text-right">
                       {evaluated ? (
@@ -494,7 +558,9 @@ export function AdminControlDeck({ initialData }: AdminDeckProps) {
                           View AI Debug Analysis
                         </button>
                       ) : (
-                        <span className="text-[#64748b] text-sm">Pending AI Evaluation</span>
+                        <span className="text-[#64748b] text-sm">
+                          {isDisqualified ? "Auto-Submitted" : "Score Active"}
+                        </span>
                       )}
                     </td>
                   </tr>
@@ -503,7 +569,7 @@ export function AdminControlDeck({ initialData }: AdminDeckProps) {
 
               {participants.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-[#64748b]">
+                  <td colSpan={5} className="px-4 py-8 text-center text-[#64748b]">
                     No participants enrolled yet. Ask participants to sign up at /register!
                   </td>
                 </tr>

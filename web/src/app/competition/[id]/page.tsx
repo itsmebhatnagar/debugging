@@ -4,7 +4,7 @@ import { use, useEffect, useState } from "react"
 import { useRealtime } from "@/hooks/useRealtime"
 import Editor from "@monaco-editor/react"
 import ReactMarkdown from "react-markdown"
-import { compileCode, submitFinalCode, saveDraft, startRoundNow } from "@/app/actions/participant"
+import { compileCode, submitFinalCode, saveDraft, startRoundNow, recordDisqualification } from "@/app/actions/participant"
 import Link from "next/link"
 import { Spotlight } from "@/components/ui/spotlight"
 
@@ -166,6 +166,8 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
       const currentQ = round?.questions[selectedQuestionIndex]
       const currentCodeVal = currentQ ? (codes[currentQ.id] || "") : ""
       handleFullscreenAutoSubmit(currentQ, currentCodeVal, language)
+      // Notify Admin Panel immediately
+      recordDisqualification(competitionId, "FULLSCREEN_EXIT").catch(() => {})
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isFullscreen, hasEnteredFullscreenOnce, arenaState, needsFullscreen])

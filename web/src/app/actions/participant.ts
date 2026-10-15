@@ -113,3 +113,23 @@ export async function startRoundNow(competitionId: string) {
 
   return { success: true }
 }
+
+export async function recordDisqualification(competitionId: string, reason: string = "FULLSCREEN_EXIT") {
+  const session = await auth()
+  if (!session?.user?.id) return { success: false }
+
+  const userId = session.user.id
+  try {
+    const { broadcastEvent } = await import("@/lib/realtime")
+    await broadcastEvent(competitionId, "participant_disqualified", {
+      competitionId,
+      userId,
+      reason,
+      userName: session.user.name,
+      userEmail: session.user.email
+    })
+    return { success: true }
+  } catch (err: any) {
+    return { success: false, error: err.message }
+  }
+}
