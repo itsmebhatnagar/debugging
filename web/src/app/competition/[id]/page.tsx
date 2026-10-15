@@ -66,6 +66,7 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
       } else if (data.status === "ACTIVE_ROUND") {
         setRound(data.round)
         setArenaState("ACTIVE")
+        setNeedsFullscreen(true)
         if (data.userState) {
           setAttempts(data.userState.attempts || {})
           setSubmissions(data.userState.submissions || {})
@@ -117,6 +118,9 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
   }
 
   // Track fullscreen state changes
+  const [hasEnteredFullscreenOnce, setHasEnteredFullscreenOnce] = useState(false)
+
+  // Track fullscreen state changes
   useEffect(() => {
     const onFsChange = () => {
       const inFs = !!(
@@ -126,6 +130,9 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
         (document as any).msFullscreenElement
       )
       setIsFullscreen(inFs)
+      if (inFs) {
+        setHasEnteredFullscreenOnce(true)
+      }
     }
     document.addEventListener("fullscreenchange", onFsChange)
     document.addEventListener("webkitfullscreenchange", onFsChange)
@@ -139,19 +146,19 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
     }
   }, [])
 
-  // When ACTIVE + fullscreen exits → auto-submit + PERMANENT LOCK
+  // When ACTIVE + user previously entered fullscreen + now exits → auto-submit + PERMANENT LOCK
   useEffect(() => {
     if (arenaState !== "ACTIVE") return
     if (!needsFullscreen) return
-    if (!isFullscreen) {
-      // Fullscreen was exited — auto-submit and permanently lock the participant
+    if (hasEnteredFullscreenOnce && !isFullscreen && !fullscreenExited) {
+      // Fullscreen was exited after having entered — auto-submit and permanently lock the participant
       setFullscreenExited(true)
       const currentQ = round?.questions[selectedQuestionIndex]
       const currentCodeVal = currentQ ? (codes[currentQ.id] || "") : ""
       handleFullscreenAutoSubmit(currentQ, currentCodeVal, language)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isFullscreen])
+  }, [isFullscreen, hasEnteredFullscreenOnce, arenaState, needsFullscreen])
 
   useEffect(() => {
     if (!socket) return
