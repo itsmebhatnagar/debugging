@@ -1,10 +1,10 @@
 "use client"
 
-import { use, useEffect, useState } from "react"
+import { use, useEffect, useState, useRef } from "react"
 import { useRealtime } from "@/hooks/useRealtime"
 import Editor from "@monaco-editor/react"
 import ReactMarkdown from "react-markdown"
-import { compileCode, submitFinalCode, saveDraft, startRoundNow, recordDisqualification } from "@/app/actions/participant"
+import { compileCode, submitFinalCode, saveDraft, startRoundNow, recordDisqualification, autoSubmitRound } from "@/app/actions/participant"
 import Link from "next/link"
 import { Spotlight } from "@/components/ui/spotlight"
 
@@ -45,18 +45,41 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
   const [attemptErrorModal, setAttemptErrorModal] = useState<string | null>(null)
   const [top3Winners, setTop3Winners] = useState<any[]>([])
 
-  // ── FULLSCREEN ENFORCEMENT ─────────────────────────────────────
+  // ── FULLSCREEN & ANTI-CHEAT ENFORCEMENT ─────────────────────────
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [needsFullscreen, setNeedsFullscreen] = useState(false)
   const [fullscreenExitWarning, setFullscreenExitWarning] = useState(false)
   const [autoSubmitDone, setAutoSubmitDone] = useState(false)
   const [fullscreenExited, setFullscreenExited] = useState(false) // permanent lock once exited
+  const [dqReason, setDqReason] = useState<string>("FULLSCREEN_EXIT")
+  const [securityToast, setSecurityToast] = useState<string | null>(null)
+  const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const isAutoSubmittingRound = useRef(false)
+  const editorRef = useRef<any>(null)
+  const [hasEnteredFullscreenOnce, setHasEnteredFullscreenOnce] = useState(false)
+
+  const showSecurityToast = (msg: string) => {
+    setSecurityToast(msg)
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current)
+    toastTimeoutRef.current = setTimeout(() => {
+      setSecurityToast(null)
+    }, 2800)
+  }
 
   const fetchStatus = async () => {
     try {
       const res = await fetch(`/api/competition/${competitionId}/status`)
       const data = await res.json()
       if (data.competitionName) setCompetitionName(data.competitionName)
+
+      // If user was previously disqualified, persist lockout
+      if (data.isDisqualified) {
+        setFullscreenExited(true)
+        setDqReason(data.dqReason || "FULLSCREEN_EXIT")
+        setNeedsFullscreen(true)
+        setAutoSubmitDone(true)
+      }
+
       if (data.status === "WAITING" || data.status === "WAITING_ROUND") {
         setArenaState("WAITING")
       } else if (data.status === "COUNTDOWN") {
@@ -102,33 +125,59 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
 
   useEffect(() => { fetchStatus() }, [competitionId])
 
-  // ── FULLSCREEN HELPERS ─────────────────────────────────────────
-  const enterFullscreen = () => {
-    const el = document.documentElement
-    if (el.requestFullscreen) el.requestFullscreen()
-    else if ((el as any).webkitRequestFullscreen) (el as any).webkitRequestFullscreen()
-    else if ((el as any).mozRequestFullScreen) (el as any).mozRequestFullScreen()
-    else if ((el as any).msRequestFullscreen) (el as any).msRequestFullscreen()
+  // ── FULLSCREEN REQUEST & KEYBOARD LOCK ──────────────────────────
+  const enterFullscreen = async () => {
+    try {
+      const el = document.documentElement
+      if (el.requestFullscreen) await el.requestFullscreen()
+      else if ((el as any).webkitRequestFullscreen) await (el as any).webkitRequestFullscreen()
+      else if ((el as any).mozRequestFullScreen) await (el as any).mozRequestFullScreen()
+      else if ((el as any).msRequestFullscreen) await (el as any).msRequestFullscreen()
+
+      // Request Chromium Keyboard Lock API to lock Escape, Tab, Alt, Meta keys while in fullscreen
+      if (typeof window !== "undefined" && "keyboard" in navigator && (navigator as any).keyboard?.lock) {
+        try {
+          await (navigator as any).keyboard.lock(["Escape", "Tab", "AltLeft", "AltRight", "MetaLeft", "MetaRight"])
+        } catch {
+          // Handled gracefully if browser restricts keyboard lock
+        }
+      }
+    } catch (err) {
+      console.error("Fullscreen request failed:", err)
+    }
   }
 
-  const handleFullscreenAutoSubmit = async (currentQ: QuestionData | undefined, currentCodeVal: string, lang: string) => {
-    if (!currentQ) return
+  // ── AUTO-SUBMIT ENTIRE ROUND & LOCKOUT ─────────────────────────
+  const handleRoundAutoSubmit = async (reason: "FULLSCREEN_EXIT" | "TAB_SWITCH" | "WINDOW_BLUR") => {
+    if (isAutoSubmittingRound.current || fullscreenExited) return
+    isAutoSubmittingRound.current = true
+
+    setFullscreenExited(true)
+    setDqReason(reason)
     setFullscreenExitWarning(true)
     setAutoSubmitDone(false)
     setIsSubmitting(true)
+
     try {
-      await submitFinalCode(currentQ.id, lang, currentCodeVal)
-      setSubmissions((prev) => ({ ...prev, [currentQ.id]: "AUTO_SUBMITTED" }))
+      if (round?.id) {
+        // Auto-submit all questions in the round with current codes/drafts
+        await autoSubmitRound(competitionId, round.id, codes, language, reason)
+      }
+      if (round?.questions) {
+        const autoSubMap: Record<string, string> = {}
+        round.questions.forEach((q) => {
+          autoSubMap[q.id] = "AUTO_SUBMITTED"
+        })
+        setSubmissions((prev) => ({ ...prev, ...autoSubMap }))
+      }
       setAutoSubmitDone(true)
-    } catch {
-      // silently fail — code still saved as draft
+    } catch (err) {
+      console.error("Auto submit round error:", err)
+      setAutoSubmitDone(true)
     } finally {
       setIsSubmitting(false)
     }
   }
-
-  // Track fullscreen state changes
-  const [hasEnteredFullscreenOnce, setHasEnteredFullscreenOnce] = useState(false)
 
   // Track fullscreen state changes
   useEffect(() => {
@@ -156,21 +205,273 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
     }
   }, [])
 
-  // When ACTIVE + user previously entered fullscreen + now exits → auto-submit + PERMANENT LOCK
+  // When ACTIVE + user previously entered fullscreen + now exits → auto-submit ENTIRE round + PERMANENT LOCK
   useEffect(() => {
     if (arenaState !== "ACTIVE") return
     if (!needsFullscreen) return
     if (hasEnteredFullscreenOnce && !isFullscreen && !fullscreenExited) {
-      // Fullscreen was exited after having entered — auto-submit and permanently lock the participant
-      setFullscreenExited(true)
-      const currentQ = round?.questions[selectedQuestionIndex]
-      const currentCodeVal = currentQ ? (codes[currentQ.id] || "") : ""
-      handleFullscreenAutoSubmit(currentQ, currentCodeVal, language)
-      // Notify Admin Panel immediately
-      recordDisqualification(competitionId, "FULLSCREEN_EXIT").catch(() => {})
+      // Fullscreen was exited after having entered — auto-submit round and permanently lock participant
+      handleRoundAutoSubmit("FULLSCREEN_EXIT")
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isFullscreen, hasEnteredFullscreenOnce, arenaState, needsFullscreen])
+  }, [isFullscreen, hasEnteredFullscreenOnce, arenaState, needsFullscreen, fullscreenExited])
+
+  // ── ANTI-CHEAT: PREVENT CUT, COPY, PASTE, DRAG & DROP, CONTEXT MENU ──
+  useEffect(() => {
+    if (arenaState !== "ACTIVE" || !hasEnteredFullscreenOnce || fullscreenExited) return
+
+    const blockClipboard = (e: ClipboardEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
+      showSecurityToast("⚔️ Action Blocked: Cut, copy, and paste are strictly prohibited!")
+    }
+
+    const blockContextMenu = (e: MouseEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
+      showSecurityToast("⚔️ Action Blocked: Right-click context menu is disabled!")
+    }
+
+    const blockDrag = (e: DragEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
+    }
+
+    const blockSelect = (e: Event) => {
+      const target = e.target as HTMLElement
+      // Prevent selecting problem statement or mission briefing text to copy
+      if (!target?.closest?.(".monaco-editor")) {
+        e.preventDefault()
+      }
+    }
+
+    document.addEventListener("copy", blockClipboard, true)
+    document.addEventListener("cut", blockClipboard, true)
+    document.addEventListener("paste", blockClipboard, true)
+    document.addEventListener("contextmenu", blockContextMenu, true)
+    document.addEventListener("dragstart", blockDrag, true)
+    document.addEventListener("dragover", blockDrag, true)
+    document.addEventListener("drop", blockDrag, true)
+    document.addEventListener("selectstart", blockSelect, true)
+
+    return () => {
+      document.removeEventListener("copy", blockClipboard, true)
+      document.removeEventListener("cut", blockClipboard, true)
+      document.removeEventListener("paste", blockClipboard, true)
+      document.removeEventListener("contextmenu", blockContextMenu, true)
+      document.removeEventListener("dragstart", blockDrag, true)
+      document.removeEventListener("dragover", blockDrag, true)
+      document.removeEventListener("drop", blockDrag, true)
+      document.removeEventListener("selectstart", blockSelect, true)
+    }
+  }, [arenaState, hasEnteredFullscreenOnce, fullscreenExited])
+
+  // ── ANTI-CHEAT: PREVENT TAB SWITCHING, WINDOWS+TAB, CTRL+TAB, BLUR ──
+  useEffect(() => {
+    if (arenaState !== "ACTIVE" || !hasEnteredFullscreenOnce || fullscreenExited) return
+
+    // 1. Capturing KeyDown listener to block Windows key, Ctrl+Tab, Alt+Tab, etc.
+    const onKeyDown = (e: KeyboardEvent) => {
+      // A. Windows Key (Meta)
+      if (
+        e.key === "Meta" ||
+        e.code === "MetaLeft" ||
+        e.code === "MetaRight" ||
+        e.keyCode === 91 ||
+        e.keyCode === 92
+      ) {
+        e.preventDefault()
+        e.stopPropagation()
+        showSecurityToast("⚠️ Windows key is disabled during the tournament!")
+        return false
+      }
+
+      // B. Tab combinations: Ctrl + Tab, Ctrl + Shift + Tab, Alt + Tab, Meta + Tab
+      if (e.key === "Tab" || e.code === "Tab" || e.keyCode === 9) {
+        if (e.ctrlKey || e.altKey || e.metaKey) {
+          e.preventDefault()
+          e.stopPropagation()
+          showSecurityToast("🚨 Tab switching shortcuts are strictly forbidden!")
+          return false
+        }
+      }
+
+      // C. Browser tab paging: Ctrl + PageUp / PageDown
+      if ((e.ctrlKey || e.metaKey) && (e.key === "PageUp" || e.key === "PageDown")) {
+        e.preventDefault()
+        e.stopPropagation()
+        showSecurityToast("🚨 Tab navigation is strictly forbidden!")
+        return false
+      }
+
+      // D. Window / Tab creation & closure: Ctrl + T, Ctrl + N, Ctrl + W, Ctrl + Shift + T/N/W
+      if (e.ctrlKey || e.metaKey) {
+        const k = e.key.toLowerCase()
+        if (k === "t" || k === "n" || k === "w") {
+          e.preventDefault()
+          e.stopPropagation()
+          showSecurityToast("🚨 Opening or closing tabs is prohibited!")
+          return false
+        }
+      }
+
+      // E. Window management: Alt + F4, Alt + ArrowLeft/Right
+      if (e.altKey && (e.key === "F4" || e.key === "ArrowLeft" || e.key === "ArrowRight")) {
+        e.preventDefault()
+        e.stopPropagation()
+        return false
+      }
+
+      // F. Fullscreen exit attempt via Escape or F11
+      if (e.key === "Escape" || e.key === "F11") {
+        e.preventDefault()
+        e.stopPropagation()
+        showSecurityToast("⚠️ Exiting fullscreen will auto-submit your round and disqualify you!")
+        return false
+      }
+
+      // G. Developer tools & page reload
+      if (
+        e.key === "F12" ||
+        ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key.toLowerCase() === "i" || e.key.toLowerCase() === "j" || e.key.toLowerCase() === "c")) ||
+        ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "u") ||
+        e.key === "F5" ||
+        ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "r")
+      ) {
+        e.preventDefault()
+        e.stopPropagation()
+        showSecurityToast("⚠️ Developer tools and reloading are strictly prohibited!")
+        return false
+      }
+
+      // H. Cut, Copy, Paste shortcuts (Ctrl+C, Ctrl+V, Ctrl+X, Insert/Delete)
+      if (
+        (e.ctrlKey || e.metaKey) &&
+        (e.key.toLowerCase() === "c" || e.key.toLowerCase() === "v" || e.key.toLowerCase() === "x" || e.key === "Insert")
+      ) {
+        e.preventDefault()
+        e.stopPropagation()
+        showSecurityToast("⚔️ Action Blocked: Cut, copy, and paste are strictly prohibited!")
+        return false
+      }
+      if (e.shiftKey && (e.key === "Insert" || e.key === "Delete")) {
+        e.preventDefault()
+        e.stopPropagation()
+        showSecurityToast("⚔️ Action Blocked: Cut, copy, and paste are strictly prohibited!")
+        return false
+      }
+    }
+
+    // 2. Visibility Change: triggers when tab switches or browser minimizes
+    const onVisibilityChange = () => {
+      if (document.hidden || document.visibilityState === "hidden") {
+        handleRoundAutoSubmit("TAB_SWITCH")
+      }
+    }
+
+    window.addEventListener("keydown", onKeyDown, true)
+    document.addEventListener("visibilitychange", onVisibilityChange)
+
+    return () => {
+      window.removeEventListener("keydown", onKeyDown, true)
+      document.removeEventListener("visibilitychange", onVisibilityChange)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [arenaState, hasEnteredFullscreenOnce, fullscreenExited, round, codes, language])
+
+  // Monaco Editor mount hook to disable contextmenu and internal clipboard
+  const handleEditorMount = (editor: any) => {
+    editorRef.current = editor
+
+    editor.onKeyDown((e: any) => {
+      const isCtrlOrCmd = e.ctrlKey || e.metaKey
+      if (
+        isCtrlOrCmd &&
+        (e.code === "KeyC" || e.code === "KeyV" || e.code === "KeyX" || e.code === "Insert")
+      ) {
+        e.preventDefault()
+        e.stopPropagation()
+        showSecurityToast("⚔️ Clipboard shortcuts are disabled in the editor!")
+        return
+      }
+      if (e.shiftKey && (e.code === "Insert" || e.code === "Delete")) {
+        e.preventDefault()
+        e.stopPropagation()
+        showSecurityToast("⚔️ Clipboard shortcuts are disabled in the editor!")
+        return
+      }
+      if (e.code === "Tab" && (e.ctrlKey || e.metaKey || e.altKey)) {
+        e.preventDefault()
+        e.stopPropagation()
+        showSecurityToast("🚨 Tab switching is strictly forbidden!")
+        return
+      }
+      if (e.code === "MetaLeft" || e.code === "MetaRight") {
+        e.preventDefault()
+        e.stopPropagation()
+        showSecurityToast("⚠️ Windows key is disabled!")
+        return
+      }
+    })
+
+    const dom = editor.getDomNode()
+    if (dom) {
+      dom.addEventListener(
+        "paste",
+        (e: any) => {
+          e.preventDefault()
+          e.stopPropagation()
+          showSecurityToast("⚔️ Pasting code is strictly prohibited!")
+        },
+        true
+      )
+      dom.addEventListener(
+        "copy",
+        (e: any) => {
+          e.preventDefault()
+          e.stopPropagation()
+          showSecurityToast("⚔️ Copying code is strictly prohibited!")
+        },
+        true
+      )
+      dom.addEventListener(
+        "cut",
+        (e: any) => {
+          e.preventDefault()
+          e.stopPropagation()
+          showSecurityToast("⚔️ Cutting code is strictly prohibited!")
+        },
+        true
+      )
+      dom.addEventListener(
+        "beforeinput",
+        (e: any) => {
+          if (e.inputType === "insertFromPaste" || e.inputType === "insertFromDrop") {
+            e.preventDefault()
+            e.stopPropagation()
+            showSecurityToast("⚔️ Pasting is strictly prohibited!")
+          }
+        },
+        true
+      )
+      dom.addEventListener(
+        "contextmenu",
+        (e: any) => {
+          e.preventDefault()
+          e.stopPropagation()
+        },
+        true
+      )
+      dom.addEventListener(
+        "drop",
+        (e: any) => {
+          e.preventDefault()
+          e.stopPropagation()
+        },
+        true
+      )
+    }
+  }
 
   useEffect(() => {
     if (!socket) return
@@ -183,6 +484,7 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
       setHasEnteredFullscreenOnce(false)
       setFullscreenExitWarning(false)
       setAutoSubmitDone(false)
+      isAutoSubmittingRound.current = false
     })
     socket.on("round_started", (data: any) => {
       setSplashRoundName(data.roundName)
@@ -190,6 +492,7 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
       setFullscreenExited(false)
       setHasEnteredFullscreenOnce(false)
       setNeedsFullscreen(true)   // ← trigger fullscreen requirement
+      isAutoSubmittingRound.current = false
       const currentlyFs = !!(
         document.fullscreenElement ||
         (document as any).webkitFullscreenElement ||
@@ -602,6 +905,21 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
   return (
     <div className="flex h-screen w-full flex-col font-sans relative z-10 pt-[120px] pb-4 px-4 gap-4 text-[#f4ede0]">
 
+      {/* ── SECURITY HUD WARNING TOAST ─────────────────────────── */}
+      {securityToast && (
+        <div className="fixed top-8 left-1/2 -translate-x-1/2 z-[10000] flex items-center gap-3 px-6 py-3.5 rounded-2xl bg-[#140808]/95 border-2 border-red-500/80 shadow-[0_0_40px_rgba(239,68,68,0.6)] backdrop-blur-xl animate-bounce">
+          <span className="text-2xl animate-pulse">⚔️</span>
+          <div>
+            <div className="text-[10px] font-cinzel font-black tracking-[0.25em] text-red-400 uppercase">
+              SECURITY PROTOCOL ENFORCEMENT
+            </div>
+            <div className="text-xs font-garamond text-[#f4ede0] font-bold">
+              {securityToast}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── FULLSCREEN OVERLAY ───────────────────────────────────── */}
       {needsFullscreen && (!isFullscreen || fullscreenExited) && (
         <div
@@ -660,12 +978,17 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
                     textShadow: "0 4px 30px rgba(0,0,0,0.9), 0 0 60px rgba(239,68,68,0.2)",
                   }}
                 >
-                  MAROONED!
+                  {dqReason === "TAB_SWITCH"
+                    ? "MUTINY DETECTED!"
+                    : "MAROONED!"}
                 </h1>
 
                 <p className="text-sm font-garamond leading-relaxed" style={{ color: "#64748b" }}>
-                  You exited fullscreen during an active battle. Your current answer has been{" "}
-                  <strong style={{ color: "#ef4444" }}>automatically submitted</strong>. You cannot
+                  {dqReason === "TAB_SWITCH"
+                    ? "You switched tabs or minimized the arena window during an active battle."
+                    : "You exited fullscreen during an active battle."}{" "}
+                  All questions in this round have been{" "}
+                  <strong style={{ color: "#ef4444" }}>automatically submitted</strong> to the Captain. You cannot
                   attempt any more questions in this round.
                 </p>
 
@@ -676,12 +999,12 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
                 >
                   <div className="text-2xl mb-2">⚓</div>
                   <p className="text-sm font-cinzel font-bold text-red-400 tracking-wider">
-                    {autoSubmitDone ? "SUBMISSION RECORDED" : "SUBMITTING YOUR CODE..."}
+                    {autoSubmitDone ? "ALL QUESTIONS AUTO-SUBMITTED" : "SUBMITTING ALL QUESTIONS..."}
                   </p>
                   <p className="text-xs font-garamond mt-2 leading-relaxed" style={{ color: "#94a3b8" }}>
                     {autoSubmitDone
-                      ? "Your code has been sealed and sent to the Admiral. Wait for the round to end."
-                      : "Dispatching your scroll to the Admiral's ship..."}
+                      ? "All your answer scrolls have been sealed and dispatched to the Admiral. Wait for the round to end."
+                      : "Dispatching your answer scrolls to the Admiral's ship..."}
                   </p>
                 </div>
 
@@ -729,9 +1052,9 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
                 <p className="text-sm font-garamond leading-relaxed" style={{ color: "#64748b" }}>
                   The Captain has started the round! You must enter{" "}
                   <strong style={{ color: "#d4af37" }}>fullscreen mode</strong> to access the coding
-                  arena. Exiting fullscreen at any point will{" "}
+                  arena. Exiting fullscreen, switching tabs (Windows+Tab, Ctrl+Tab), or cutting/copying/pasting will{" "}
                   <strong style={{ color: "#ef4444" }}>permanently lock you out</strong> and
-                  auto-submit your current answer.
+                  auto-submit all questions in this round.
                 </p>
 
                 <button
@@ -749,7 +1072,7 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
                 </button>
 
                 <p className="text-[10px] font-garamond" style={{ color: "#334155" }}>
-                  Press F11 or click the button above · Exiting fullscreen = permanent lockout
+                  Press F11 or click the button above · Exiting fullscreen or switching tabs = permanent lockout
                 </p>
               </>
             )}
@@ -762,15 +1085,15 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
       <div className="flex flex-1 overflow-hidden w-full max-w-[1800px] mx-auto gap-4">
         
         {/* ── LEFT: Problem Panel (Exercise) ──────────────────────── */}
-        <div className="relative w-[35%] xl:w-[30%] overflow-hidden rounded-2xl bg-[#d4af37]/10 p-[1px] shadow-2xl flex flex-col">
-          <div className="relative flex-1 flex flex-col bg-[#1a1714]/70 backdrop-blur-lg rounded-2xl border border-[#d4af37]/20 overflow-hidden">
+        <div className="relative w-[35%] xl:w-[30%] overflow-hidden rounded-2xl bg-[#d4af37]/10 p-[1px] shadow-2xl flex flex-col select-none">
+          <div className="relative flex-1 flex flex-col bg-[#1a1714]/70 backdrop-blur-lg rounded-2xl border border-[#d4af37]/20 overflow-hidden select-none">
             {/* Header */}
-            <div className="flex items-center px-5 py-4 border-b border-[#d4af37]/20 bg-[#d4af37]/5">
+            <div className="flex items-center px-5 py-4 border-b border-[#d4af37]/20 bg-[#d4af37]/5 select-none">
               <span className="text-[10px] font-cinzel font-bold uppercase tracking-[0.2em] text-[#d4af37]">Mission Briefing</span>
             </div>
             
             {currentQuestion ? (
-              <div className="flex-1 overflow-y-auto p-5 scrollbar-thin scrollbar-thumb-[#d4af37]/30">
+              <div className="flex-1 overflow-y-auto p-5 scrollbar-thin scrollbar-thumb-[#d4af37]/30 select-none">
                 <div className="mb-6">
                   <h2 className="text-3xl font-cinzel font-bold text-[#f4ede0] mb-2 leading-tight drop-shadow-md">
                     {String(selectedQuestionIndex + 1).padStart(2, '0')}. {currentQuestion.title}
@@ -787,18 +1110,18 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
                   </div>
                 </div>
 
-                <div className="prose prose-lg font-garamond max-w-none prose-p:text-[#f4ede0]/80 prose-headings:text-[#d4af37] prose-headings:font-cinzel prose-pre:bg-[#1a1714]/50 prose-pre:border prose-pre:border-[#d4af37]/20 prose-code:text-[#d4af37] leading-relaxed">
+                <div className="prose prose-lg font-garamond max-w-none prose-p:text-[#f4ede0]/80 prose-headings:text-[#d4af37] prose-headings:font-cinzel prose-pre:bg-[#1a1714]/50 prose-pre:border prose-pre:border-[#d4af37]/20 prose-code:text-[#d4af37] leading-relaxed select-none">
                   <ReactMarkdown>{currentQuestion.description}</ReactMarkdown>
                 </div>
 
                 {currentQuestion.testCases?.length > 0 && (
-                  <div className="mt-8 pt-6 border-t border-[#d4af37]/20">
+                  <div className="mt-8 pt-6 border-t border-[#d4af37]/20 select-none">
                     <h4 className="text-[10px] font-cinzel font-bold uppercase tracking-[0.2em] text-[#d4af37] mb-4">
                       Test Vectors
                     </h4>
                     <div className="space-y-3">
                       {currentQuestion.testCases.map((tc, i) => (
-                        <div key={i} className="rounded-xl p-4 text-sm font-mono bg-[#1a1714]/60 border border-[#d4af37]/10">
+                        <div key={i} className="rounded-xl p-4 text-sm font-mono bg-[#1a1714]/60 border border-[#d4af37]/10 select-none">
                           <div className="text-[#f4ede0]/60 mb-1">
                             Input: <span className="text-[#f4ede0]">{tc.input}</span>
                           </div>
@@ -812,7 +1135,7 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
                 )}
               </div>
             ) : (
-              <div className="flex-1 flex items-center justify-center text-[#f4ede0]/60 font-garamond text-lg">
+              <div className="flex-1 flex items-center justify-center text-[#f4ede0]/60 font-garamond text-lg select-none">
                 No question selected.
               </div>
             )}
@@ -827,7 +1150,7 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
             <div className="relative flex-1 flex flex-col bg-[#1a1714]/70 backdrop-blur-lg rounded-2xl border border-[#d4af37]/20">
               
               {/* Editor Header */}
-              <div className="flex items-center justify-between px-4 py-2 border-b border-[#d4af37]/20 bg-[#d4af37]/5">
+              <div className="flex items-center justify-between px-4 py-2 border-b border-[#d4af37]/20 bg-[#d4af37]/5 select-none">
                 <div className="flex items-center gap-2">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d4af37" strokeWidth="2">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
@@ -859,6 +1182,7 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
                   language={language === "cpp" ? "cpp" : language}
                   value={currentCode}
                   onChange={handleCodeChange}
+                  onMount={handleEditorMount}
                   options={{
                     minimap: { enabled: false },
                     fontSize: 15,
@@ -870,6 +1194,9 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
                     overviewRulerBorder: false,
                     hideCursorInOverviewRuler: true,
                     renderLineHighlight: "none",
+                    contextmenu: false,
+                    copyWithSyntaxHighlighting: false,
+                    selectionClipboard: false,
                   }}
                   className="bg-transparent"
                 />
@@ -879,9 +1206,9 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
           </div>
 
           {/* TERMINAL PANEL */}
-          <div className="relative flex-[1] min-h-[200px] overflow-hidden rounded-2xl bg-[#d4af37]/10 p-[1px] shadow-2xl flex flex-col">
-            <div className="relative flex-1 flex flex-col bg-[#1a1714]/70 backdrop-blur-lg rounded-2xl border border-[#d4af37]/20">
-              <div className="flex items-center justify-between px-5 py-2 border-b border-[#d4af37]/20 bg-[#d4af37]/5">
+          <div className="relative flex-[1] min-h-[200px] overflow-hidden rounded-2xl bg-[#d4af37]/10 p-[1px] shadow-2xl flex flex-col select-none">
+            <div className="relative flex-1 flex flex-col bg-[#1a1714]/70 backdrop-blur-lg rounded-2xl border border-[#d4af37]/20 select-none">
+              <div className="flex items-center justify-between px-5 py-2 border-b border-[#d4af37]/20 bg-[#d4af37]/5 select-none">
                 <span className="text-[10px] font-cinzel font-bold uppercase tracking-[0.2em] text-[#f4ede0]/60">
                   Terminal
                 </span>

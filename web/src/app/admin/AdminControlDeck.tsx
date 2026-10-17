@@ -22,7 +22,7 @@ export function AdminControlDeck({ initialData }: AdminDeckProps) {
 
   const [loadingAction, setLoadingAction] = useState<string | null>(null)
   const [inspectedParticipant, setInspectedParticipant] = useState<any | null>(null)
-  const [disqualifiedSailors, setDisqualifiedSailors] = useState<Record<string, string>>({})
+  const [disqualifiedSailors, setDisqualifiedSailors] = useState<Record<string, string>>(data?.disqualifiedSailors || {})
   
   // Backend Timer display for Admin
   const [adminTimer, setAdminTimer] = useState<number>(data?.secondsRemaining || 0)
@@ -529,7 +529,15 @@ export function AdminControlDeck({ initialData }: AdminDeckProps) {
                       {isDisqualified ? (
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-red-950/60 border border-red-500/60 text-red-400">
                           <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
-                          {dqReason === "FULLSCREEN_EXIT" ? "DISQUALIFIED (EXIT FS)" : "DISQUALIFIED (LIMIT)"}
+                          {dqReason === "FULLSCREEN_EXIT"
+                            ? "DISQUALIFIED (EXIT FS)"
+                            : dqReason === "TAB_SWITCH"
+                            ? "DISQUALIFIED (TAB SWITCH)"
+                            : dqReason === "WINDOW_BLUR"
+                            ? "DISQUALIFIED (FOCUS LOST)"
+                            : dqReason === "ATTEMPTS_EXCEEDED"
+                            ? "DISQUALIFIED (LIMIT)"
+                            : `DISQUALIFIED (${dqReason})`}
                         </span>
                       ) : comp?.status === "ACTIVE" ? (
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-950/60 border border-emerald-500/60 text-emerald-400">

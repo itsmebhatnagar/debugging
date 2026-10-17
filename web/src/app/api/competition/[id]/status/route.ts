@@ -133,10 +133,31 @@ export async function GET(
       return acc
     }, {} as Record<string, { code: string; language: string }>)
 
+    // Check if participant has been disqualified for fullscreen exit or tab switching
+    const dqEvent = await prisma.competitionEvent.findFirst({
+      where: {
+        competitionId,
+        userId: session.user.id,
+        eventType: "PARTICIPANT_DISQUALIFIED"
+      },
+      orderBy: { createdAt: "desc" }
+    })
+
+    let dqReason: string | null = null
+    if (dqEvent?.payload) {
+      try {
+        dqReason = JSON.parse(dqEvent.payload).reason || "FULLSCREEN_EXIT"
+      } catch {
+        dqReason = "FULLSCREEN_EXIT"
+      }
+    }
+
     // NOTICE: PER SPECIFICATION, THE TIMER RUNS IN BACKEND AND IS NOT SENT TO THE USER SCREEN!
     return NextResponse.json({
       status: "ACTIVE_ROUND",
       competitionName: comp.name,
+      isDisqualified: !!dqEvent,
+      dqReason,
       round: {
         id: activeRound.id,
         name: activeRound.name,
@@ -215,6 +236,14 @@ export async function POST(
        // Wipe overall competition participant scores
        await prisma.competitionParticipant.deleteMany({
          where: { competitionId }
+       })
+
+       // Wipe disqualification records on competition restart
+       await prisma.competitionEvent.deleteMany({
+         where: {
+           competitionId,
+           eventType: "PARTICIPANT_DISQUALIFIED"
+         }
        })
     }
     

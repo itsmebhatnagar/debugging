@@ -1,0 +1,10 @@
+{
+  "name": "debugging-root",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "npm --prefix web run build",
+    "dev": "npm --prefix web run dev",
+    "start": "npm --prefix web run start"
+  }
+}

@@ -344,10 +344,32 @@ export async function getLiveAdminData(competitionId: string) {
     }
   }
 
+  // Fetch all disqualified participants for this competition
+  const dqEvents = await prisma.competitionEvent.findMany({
+    where: {
+      competitionId,
+      eventType: "PARTICIPANT_DISQUALIFIED"
+    },
+    orderBy: { createdAt: "desc" }
+  })
+
+  const disqualifiedSailors: Record<string, string> = {}
+  dqEvents.forEach((ev) => {
+    if (ev.userId && !disqualifiedSailors[ev.userId]) {
+      try {
+        const payload = JSON.parse(ev.payload || "{}")
+        disqualifiedSailors[ev.userId] = payload.reason || "FULLSCREEN_EXIT"
+      } catch {
+        disqualifiedSailors[ev.userId] = "FULLSCREEN_EXIT"
+      }
+    }
+  })
+
   return {
     competition: comp,
     activeRound,
     secondsRemaining,
-    evaluation
+    evaluation,
+    disqualifiedSailors
   }
 }

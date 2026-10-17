@@ -120,6 +120,21 @@ export async function recordDisqualification(competitionId: string, reason: stri
 
   const userId = session.user.id
   try {
+    // Persist disqualification in database so it remains locked even across page refresh
+    await prisma.competitionEvent.create({
+      data: {
+        competitionId,
+        userId,
+        eventType: "PARTICIPANT_DISQUALIFIED",
+        payload: JSON.stringify({
+          reason,
+          userName: session.user.name,
+          userEmail: session.user.email,
+          at: new Date().toISOString()
+        })
+      }
+    })
+
     const { broadcastEvent } = await import("@/lib/realtime")
     await broadcastEvent(competitionId, "participant_disqualified", {
       competitionId,
@@ -133,3 +148,88 @@ export async function recordDisqualification(competitionId: string, reason: stri
     return { success: false, error: err.message }
   }
 }
+
+/**
+ * Automatically submits all questions in the round when a participant violates fullscreen or tab switching rules.
+ */
+export async function autoSubmitRound(
+  competitionId: string,
+  roundId: string,
+  codes: Record<string, string>,
+  language: string,
+  reason: string = "FULLSCREEN_EXIT"
+) {
+  const session = await auth()
+  if (!session?.user?.id) return { success: false, error: "Unauthorized" }
+
+  const userId = session.user.id
+
+  try {
+    const round = await prisma.round.findUnique({
+      where: { id: roundId },
+      include: {
+        questions: {
+          include: { starterCodes: true }
+        }
+      }
+    })
+
+    if (!round) return { success: false, error: "Round not found" }
+
+    // Fetch existing submissions for this user in this round
+    const existingSubmissions = await prisma.submission.findMany({
+      where: {
+        userId,
+        questionId: { in: round.questions.map((q) => q.id) }
+      }
+    })
+    const submittedQIds = new Set(existingSubmissions.map((s) => s.questionId))
+
+    // Submit every question that hasn't been submitted yet
+    for (const q of round.questions) {
+      if (!submittedQIds.has(q.id)) {
+        let codeToSubmit = codes[q.id]
+        if (!codeToSubmit || !codeToSubmit.trim()) {
+          const draft = await prisma.draftCode.findUnique({
+            where: {
+              userId_questionId: {
+                userId,
+                questionId: q.id
+              }
+            }
+          })
+          if (draft?.code) {
+            codeToSubmit = draft.code
+          } else {
+            const starter = q.starterCodes.find((s) => s.language === language) || q.starterCodes[0]
+            codeToSubmit = starter?.code || `// Autosubmitted solution\nfunction solve() {}\n`
+          }
+        }
+
+        try {
+          const sub = await submitSolution(userId, q.id, language, codeToSubmit, true)
+          // Fire background AI analysis asynchronously
+          if (sub?.id) {
+            const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000"
+            fetch(`${baseUrl}/api/submissions/evaluate`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ submissionId: sub.id })
+            }).catch(() => {})
+          }
+        } catch (subErr) {
+          console.error(`Failed to auto-submit solution for question ${q.id}:`, subErr)
+        }
+      }
+    }
+
+    // Record disqualification and broadcast to admin
+    await recordDisqualification(competitionId, reason)
+
+    return { success: true }
+  } catch (err: any) {
+    console.error("autoSubmitRound error:", err)
+    return { success: false, error: err.message }
+  }
+}
+
