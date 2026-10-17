@@ -1,14 +1,3 @@
-# 🐛 Debugging
-
-[![GitHub issues](https://img.shields.io/github/issues/itsmebhatnagar/debugging)](https://github.com/itsmebhatnagar/debugging/issues)
-[![GitHub forks](https://img.shields.io/github/forks/itsmebhatnagar/debugging)](https://github.com/itsmebhatnagar/debugging/network)
-[![GitHub stars](https://img.shields.io/github/stars/itsmebhatnagar/debugging)](https://github.com/itsmebhatnagar/debugging/stargazers)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-
-> A centralized repository for debugging practices, bug-tracking exercises, and troubleshooting code snippets.
-
----
-
 ## 📖 About The Project
 
 This repository serves as a collection of debugging exercises, bug fixes, and troubleshooting scripts. Whether it's resolving frontend UI glitches, fixing logic errors in scripts, or tracking down backend performance issues, this space documents the problem-solving process.
