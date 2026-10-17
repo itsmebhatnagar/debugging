@@ -59,13 +59,13 @@ export default async function DashboardPage() {
   }
 
   return (
-    <div className="relative min-h-screen pt-32 pb-24 px-6 z-10">
-      <div className="mx-auto max-w-6xl space-y-12">
+    <div className="relative min-h-screen pt-24 lg:pt-16 pb-16 lg:pb-8 px-4 lg:px-6 z-10 overflow-x-hidden">
+      <div className="mx-auto max-w-6xl space-y-8 lg:space-y-6">
         
         {/* ── WELCOME BANNER ─────────────────────────────── */}
         <div className="relative w-full overflow-hidden rounded-[2rem] bg-[#d4af37]/20 p-[2px] shadow-2xl">
           <Spotlight className="from-[#f4ede0] via-[#d4af37] to-transparent blur-3xl" size={600} />
-          <div className="relative w-full h-full rounded-[2rem] bg-[#1a1714]/60 backdrop-blur-md p-10 flex flex-col md:flex-row items-center justify-between border border-[#d4af37]/10">
+          <div className="relative w-full h-full rounded-[2rem] bg-[#1a1714]/60 backdrop-blur-md p-8 md:p-10 lg:p-8 flex flex-col md:flex-row items-center justify-between border border-[#d4af37]/10">
             
             <div className="flex flex-col items-center md:items-start text-center md:text-left space-y-4">
               <div className="inline-block px-4 py-1.5 border border-[#d4af37]/30 bg-[#d4af37]/10 rounded-full text-[10px] font-cinzel font-bold tracking-[0.2em] text-[#d4af37] uppercase">

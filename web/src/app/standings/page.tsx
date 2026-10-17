@@ -13,33 +13,33 @@ export default async function StandingsPage() {
   // If no competition or not ended yet
   if (!competition || competition.status !== "ENDED") {
     return (
-      <div className="relative min-h-screen flex flex-col items-center pt-40 px-6 z-10">
+      <div className="relative min-h-screen lg:h-screen lg:max-h-screen lg:overflow-hidden flex flex-col items-center justify-center pt-20 lg:pt-14 pb-12 lg:pb-4 px-4 sm:px-6 z-10">
         {competition && <LeaderboardRefresher competitionId={competition.id} />}
-        <div className="max-w-4xl w-full flex flex-col items-center text-center space-y-12">
+        <div className="max-w-4xl w-full flex flex-col items-center text-center space-y-6 lg:space-y-4">
           
-          <div className="space-y-4">
-            <h1 className="font-cinzel text-5xl md:text-6xl text-[#f4ede0] font-bold tracking-wide drop-shadow-lg">
+          <div className="space-y-2">
+            <h1 className="font-cinzel text-4xl md:text-5xl lg:text-4xl text-[#f4ede0] font-bold tracking-wide drop-shadow-lg">
               The Brethren Court
             </h1>
-            <p className="font-garamond text-2xl text-[#f4ede0]/80 font-semibold italic">
+            <p className="font-garamond text-xl lg:text-lg text-[#f4ede0]/80 font-semibold italic">
               Current Standings & Bounties
             </p>
-            <div className="w-[1px] h-12 bg-gradient-to-b from-[#d4af37]/60 to-transparent mx-auto mt-6" />
+            <div className="w-[1px] h-6 bg-gradient-to-b from-[#d4af37]/60 to-transparent mx-auto mt-3" />
           </div>
 
-          <div className="w-full bg-[#1a1714]/80 backdrop-blur-md border border-[#d4af37]/40 p-12 shadow-2xl relative rounded-[2rem] overflow-hidden">
+          <div className="w-full bg-[#1a1714]/80 backdrop-blur-md border border-[#d4af37]/40 p-6 sm:p-8 lg:p-6 shadow-2xl relative rounded-[2rem] overflow-hidden">
             <Spotlight className="from-[#f4ede0] via-[#d4af37] to-transparent blur-3xl" size={400} />
             
-            <div className="flex flex-col items-center justify-center py-12 space-y-6 relative z-10">
-              <div className="mb-4 opacity-80 flex items-center justify-center">
-                <Ship className="w-16 h-16 text-[#d4af37]" />
+            <div className="flex flex-col items-center justify-center py-6 lg:py-4 space-y-4 relative z-10">
+              <div className="mb-2 opacity-80 flex items-center justify-center">
+                <Ship className="w-12 h-12 lg:w-14 lg:h-14 text-[#d4af37]" />
               </div>
-              <p className="font-garamond text-xl text-[#f4ede0]/70 max-w-lg text-center leading-relaxed">
+              <p className="font-garamond text-base lg:text-sm text-[#f4ede0]/70 max-w-lg text-center leading-relaxed">
                 {competition 
                   ? "The tournament is currently underway! The final ledgers will remain strictly hidden until the High Admiral officially ends the test."
                   : "The tournament has not yet commenced. The ledgers are being prepared and the bounties await the bold."}
               </p>
-              <p className="font-cinzel font-bold text-[#d4af37] text-sm tracking-[0.2em] uppercase mt-4">
+              <p className="font-cinzel font-bold text-[#d4af37] text-xs lg:text-sm tracking-[0.2em] uppercase mt-2">
                 Check back at dawn
               </p>
             </div>
@@ -54,8 +54,8 @@ export default async function StandingsPage() {
   const top3 = leaderboard.slice(0, 3)
 
   return (
-    <div className="relative min-h-screen flex flex-col items-center pt-40 px-6 z-10 pb-20">
-      <div className="max-w-5xl w-full flex flex-col items-center text-center space-y-12">
+    <div className="relative min-h-screen flex flex-col items-center pt-24 lg:pt-16 px-4 lg:px-6 z-10 pb-16 lg:pb-10 overflow-x-hidden">
+      <div className="max-w-5xl w-full flex flex-col items-center text-center space-y-8 lg:space-y-6">
         
         <div className="space-y-4">
           <div className="inline-flex items-center space-x-2 rounded-full border border-[#d4af37]/40 bg-[#d4af37]/10 px-3 py-1 text-xs font-bold text-[#ffd700] mb-2 shadow-[0_0_15px_rgba(212,175,55,0.2)]">

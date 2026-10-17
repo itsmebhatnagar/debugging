@@ -35,7 +35,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="relative min-h-[calc(100vh-65px)] flex flex-col items-center justify-center p-6 z-10 pt-32">
+    <div className="relative min-h-screen lg:h-screen lg:max-h-screen lg:overflow-hidden flex flex-col items-center justify-center p-6 lg:p-4 z-10 pt-24 lg:pt-14">
       
       <div className="relative w-full max-w-md overflow-hidden rounded-[2rem] bg-[#d4af37]/20 p-[2px] shadow-2xl">
         <Spotlight 
@@ -43,11 +43,11 @@ export default function LoginPage() {
           size={400} 
         />
         
-        <div className="relative w-full h-full rounded-[2rem] bg-[#1a1714]/60 backdrop-blur-md p-10 flex flex-col items-center border border-[#d4af37]/10">
+        <div className="relative w-full h-full rounded-[2rem] bg-[#1a1714]/60 backdrop-blur-md p-8 lg:p-7 flex flex-col items-center border border-[#d4af37]/10">
           
           {/* Header */}
-          <div className="mb-8 text-center space-y-4">
-            <div className="mx-auto w-16 h-16 rounded-full border border-[#d4af37]/50 flex items-center justify-center bg-[#1a1714]/80 shadow-[0_0_15px_rgba(212,175,55,0.2)]">
+          <div className="mb-6 lg:mb-5 text-center space-y-3 lg:space-y-2">
+            <div className="mx-auto w-14 h-14 lg:w-16 lg:h-16 rounded-full border border-[#d4af37]/50 flex items-center justify-center bg-[#1a1714]/80 shadow-[0_0_15px_rgba(212,175,55,0.2)]">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#d4af37" strokeWidth="1.5">
                 <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
                 <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>

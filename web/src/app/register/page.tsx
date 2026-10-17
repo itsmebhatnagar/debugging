@@ -14,7 +14,7 @@ export default function RegisterPage() {
   const [inviteCode, setInviteCode] = useState("")
 
   return (
-    <div className="relative min-h-[calc(100vh-65px)] flex flex-col items-center justify-center p-6 z-10 pt-32 pb-24">
+    <div className="relative min-h-screen lg:h-screen lg:max-h-screen lg:overflow-hidden flex flex-col items-center justify-center p-6 lg:p-4 z-10 pt-24 lg:pt-14">
       
       <div className="relative w-full max-w-xl overflow-hidden rounded-[2rem] bg-[#d4af37]/20 p-[2px] shadow-2xl">
         <Spotlight 
@@ -22,11 +22,11 @@ export default function RegisterPage() {
           size={500} 
         />
         
-        <div className="relative w-full h-full rounded-[2rem] bg-[#1a1714]/70 backdrop-blur-md p-10 flex flex-col items-center border border-[#d4af37]/10">
+        <div className="relative w-full h-full rounded-[2rem] bg-[#1a1714]/70 backdrop-blur-md p-8 lg:p-7 flex flex-col items-center border border-[#d4af37]/10 max-h-[92vh] overflow-y-auto scrollbar-none">
           
           {/* Header */}
-          <div className="mb-8 text-center space-y-4">
-            <div className="mx-auto w-16 h-16 rounded-full border border-[#d4af37]/50 flex items-center justify-center bg-[#1a1714]/80 shadow-[0_0_15px_rgba(212,175,55,0.2)]">
+          <div className="mb-6 lg:mb-4 text-center space-y-3 lg:space-y-1.5">
+            <div className="mx-auto w-14 h-14 lg:w-16 lg:h-16 rounded-full border border-[#d4af37]/50 flex items-center justify-center bg-[#1a1714]/80 shadow-[0_0_15px_rgba(212,175,55,0.2)]">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#d4af37" strokeWidth="1.5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4"></path>
               </svg>

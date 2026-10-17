@@ -7,17 +7,17 @@ export default async function ProfilePage() {
   if (!session) redirect("/login");
 
   return (
-    <div className="relative min-h-screen flex flex-col items-center pt-40 px-6 z-10">
-      <div className="max-w-3xl w-full flex flex-col items-center text-center space-y-12">
+    <div className="relative min-h-screen lg:h-screen lg:max-h-screen lg:overflow-hidden flex flex-col items-center justify-center pt-24 lg:pt-14 px-6 z-10">
+      <div className="max-w-3xl w-full flex flex-col items-center text-center space-y-8 lg:space-y-6">
         
-        <div className="space-y-4">
-          <h1 className="font-cinzel text-5xl md:text-6xl text-[#f4ede0] font-bold tracking-wide drop-shadow-lg">
-            Captain's Quarters
+        <div className="space-y-3 lg:space-y-2">
+          <h1 className="font-cinzel text-4xl lg:text-5xl text-[#f4ede0] font-bold tracking-wide drop-shadow-lg">
+            Captain&apos;s Quarters
           </h1>
-          <div className="w-[1px] h-12 bg-gradient-to-b from-[#d4af37]/60 to-transparent mx-auto mt-6" />
+          <div className="w-[1px] h-8 lg:h-10 bg-gradient-to-b from-[#d4af37]/60 to-transparent mx-auto mt-4" />
         </div>
 
-        <div className="w-full bg-[#1a1714]/80 backdrop-blur-md border border-[#d4af37]/40 p-12 shadow-2xl relative overflow-hidden">
+        <div className="w-full bg-[#1a1714]/80 backdrop-blur-md border border-[#d4af37]/40 p-8 lg:p-8 shadow-2xl relative overflow-hidden rounded-2xl">
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#d4af37]/50 to-transparent" />
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-10 text-left">

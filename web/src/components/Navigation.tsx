@@ -15,7 +15,7 @@ export function Navigation({ session }: { session: any }) {
       initial={{ y: -50, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 1.5, ease: [0.16, 1, 0.3, 1] as any, delay: 0.2 }}
-      className="fixed top-0 w-full z-[100] px-12 py-8 grid grid-cols-3 items-center pointer-events-none mix-blend-difference"
+      className="fixed top-0 w-full z-[100] px-6 py-4 lg:px-10 lg:py-3.5 grid grid-cols-3 items-center pointer-events-none mix-blend-difference"
     >
       {/* LEFT: Home Button */}
       <div className="flex items-center justify-start">

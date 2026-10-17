@@ -260,14 +260,22 @@ body {
 /* Corner decoration for cards */
 .pirate-card-corner::before,
 .pirate-card-corner::after {
-  content: "✦";
+  content: "";
   position: absolute;
-  color: rgba(212, 175, 55, 0.35);
-  font-size: 10px;
-  line-height: 1;
+  width: 6px;
+  height: 6px;
+  border-top: 1px solid rgba(212, 175, 55, 0.4);
 }
-.pirate-card-corner::before { top: 8px; left: 8px; }
-.pirate-card-corner::after  { top: 8px; right: 8px; }
+.pirate-card-corner::before {
+  top: 8px;
+  left: 8px;
+  border-left: 1px solid rgba(212, 175, 55, 0.4);
+}
+.pirate-card-corner::after {
+  top: 8px;
+  right: 8px;
+  border-right: 1px solid rgba(212, 175, 55, 0.4);
+}
 
 /* ══════════════════════════════════════════════════════════════
    BUTTONS — FORGED IN THE CAPTAIN'S ARMORY
@@ -919,4 +927,31 @@ body {
 }
 .monaco-editor .minimap {
   opacity: 0.3;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   DESKTOP & LAPTOP VIEWPORT FITTING SYSTEM
+   Prevents unnecessary horizontal & vertical scrolling
+   ══════════════════════════════════════════════════════════════ */
+@media (min-width: 1024px) {
+  html, body {
+    overflow-x: hidden;
+    max-width: 100vw;
+  }
+
+  /* Desktop Viewport Fits for Battle Arena & Core Consoles */
+  .desktop-viewport-fit {
+    height: 100vh;
+    max-height: 100vh;
+    overflow: hidden;
+  }
+
+  .desktop-no-scroll {
+    overflow: hidden !important;
+  }
+
+  .desktop-scroll-y {
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+  }
 }
