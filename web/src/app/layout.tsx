@@ -15,6 +15,14 @@ import { auth } from "@/auth";
 export const metadata: Metadata = {
   title: "ECHONA 2K26 | Pirate Code Championship",
   description: "Live Algorithmic Pirate Battle Arena with Real-time synchronization and AI Debugging Engine.",
+  icons: {
+    icon: [
+      { url: "/icon.png", type: "image/png" },
+      { url: "/favicon.ico" },
+    ],
+    shortcut: "/favicon.ico",
+    apple: "/apple-touch-icon.png",
+  },
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {

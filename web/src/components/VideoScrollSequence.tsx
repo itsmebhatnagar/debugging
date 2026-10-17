@@ -3,6 +3,8 @@
 import { useEffect, useRef, useCallback } from "react";
 
 const TOTAL_FRAMES = 120;
+const CANVAS_WIDTH = 1280;
+const CANVAS_HEIGHT = 720;
 
 export function VideoScrollSequence() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -15,8 +17,9 @@ export function VideoScrollSequence() {
   const currentFrame = useRef(0);
   const lastDrawnIndex = useRef(-1);
   const rafIdRef = useRef<number | null>(null);
+  const isTickingRef = useRef(false);
 
-  // Helper to find the best available frame (exact -> nearest previous -> nearest next)
+  // Helper to find the best available frame
   const getBestFrame = useCallback((targetIdx: number): HTMLImageElement | null => {
     const images = imagesRef.current;
     const clampedIdx = Math.max(0, Math.min(targetIdx, TOTAL_FRAMES - 1));
@@ -26,14 +29,14 @@ export function VideoScrollSequence() {
       return images[clampedIdx];
     }
 
-    // 2. Scan backwards for the closest previous frame
+    // 2. Scan backwards
     for (let i = clampedIdx - 1; i >= 0; i--) {
       if (images[i]?.complete && (images[i]?.naturalWidth || 0) > 0) {
         return images[i];
       }
     }
 
-    // 3. Scan forwards for the closest next frame
+    // 3. Scan forwards
     for (let i = clampedIdx + 1; i < TOTAL_FRAMES; i++) {
       if (images[i]?.complete && (images[i]?.naturalWidth || 0) > 0) {
         return images[i];
@@ -43,7 +46,7 @@ export function VideoScrollSequence() {
     return null;
   }, []);
 
-  // Draw current frame to canvas using object-fit: cover math
+  // Instant 1:1 hardware blit (1280x720) - GPU handles object-fit: cover scaling
   const drawCurrentFrame = useCallback((frameFloat: number, forceRedraw = false) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -57,51 +60,13 @@ export function VideoScrollSequence() {
     }
 
     const img = getBestFrame(targetIdx);
-    if (!img) return; // Keep canvas as is, NEVER wipe with black!
+    if (!img) return; // Keep canvas as is, NEVER wipe with black
 
-    const imgWidth = img.naturalWidth || 1280;
-    const imgHeight = img.naturalHeight || 720;
-    const imgRatio = imgWidth / imgHeight;
-    const canvasRatio = canvas.width / canvas.height;
-
-    let drawWidth = canvas.width;
-    let drawHeight = canvas.height;
-    let offsetX = 0;
-    let offsetY = 0;
-
-    if (canvasRatio > imgRatio) {
-      drawHeight = canvas.width / imgRatio;
-      offsetY = (canvas.height - drawHeight) / 2;
-    } else {
-      drawWidth = canvas.height * imgRatio;
-      offsetX = (canvas.width - drawWidth) / 2;
-    }
-
-    ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
+    ctx.drawImage(img, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     lastDrawnIndex.current = targetIdx;
   }, [getBestFrame]);
 
-  // Handle canvas sizing for Retina / High-DPI screens
-  const updateCanvasSize = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const dpr = Math.min(typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1, 2);
-    const width = window.innerWidth;
-    const height = window.innerHeight;
-
-    const targetWidth = Math.round(width * dpr);
-    const targetHeight = Math.round(height * dpr);
-
-    if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
-      canvas.width = targetWidth;
-      canvas.height = targetHeight;
-    }
-
-    drawCurrentFrame(currentFrame.current, true);
-  }, [drawCurrentFrame]);
-
-  // Preload all frames progressively with concurrency
+  // Preload frames in background with asynchronous off-thread decoding
   useEffect(() => {
     let isCancelled = false;
     const images = imagesRef.current;
@@ -111,7 +76,6 @@ export function VideoScrollSequence() {
       return `/assets/video-frames/frame_${frameNumber}.webp`;
     };
 
-    // Load a single frame and return a promise
     const loadSingleFrame = (index: number): Promise<void> => {
       return new Promise((resolve) => {
         if (images[index]) {
@@ -126,11 +90,10 @@ export function VideoScrollSequence() {
           if (isCancelled) return;
           images[index] = img;
 
-          // If frame 0 is loaded, draw immediately to show instant initial frame
+          // Draw immediately on first frame
           if (index === 0 && lastDrawnIndex.current === -1) {
             drawCurrentFrame(0, true);
           } else {
-            // If the newly loaded frame is close to current view, redraw for crisp quality
             const currentIdx = Math.round(currentFrame.current);
             if (Math.abs(currentIdx - index) <= 1) {
               drawCurrentFrame(currentFrame.current, true);
@@ -142,24 +105,27 @@ export function VideoScrollSequence() {
         img.onerror = () => {
           resolve();
         };
+
+        if (typeof img.decode === "function") {
+          img.decode().catch(() => {});
+        }
       });
     };
 
-    // Preload strategy: Eager load first 10 frames, then stream the rest concurrently
     const startPreload = async () => {
-      // 1. First 10 frames high priority
-      for (let i = 0; i < Math.min(10, TOTAL_FRAMES); i++) {
+      // 1. Eager load first 8 frames sequentially for instant start
+      for (let i = 0; i < Math.min(8, TOTAL_FRAMES); i++) {
         await loadSingleFrame(i);
         if (isCancelled) return;
       }
 
-      // 2. Concurrently load all remaining frames in parallel pool of 6
+      // 2. Concurrently load all remaining frames in pool of 8
       const remainingIndices: number[] = [];
-      for (let i = 10; i < TOTAL_FRAMES; i++) {
+      for (let i = 8; i < TOTAL_FRAMES; i++) {
         remainingIndices.push(i);
       }
 
-      const CONCURRENCY = 6;
+      const CONCURRENCY = 8;
       let currentIndex = 0;
 
       const worker = async () => {
@@ -169,8 +135,7 @@ export function VideoScrollSequence() {
         }
       };
 
-      const workers = Array.from({ length: CONCURRENCY }, () => worker());
-      await Promise.all(workers);
+      await Promise.all(Array.from({ length: CONCURRENCY }, () => worker()));
     };
 
     startPreload();
@@ -182,24 +147,14 @@ export function VideoScrollSequence() {
 
   // Main scroll & animation controller
   useEffect(() => {
-    // Canvas sizing setup
-    updateCanvasSize();
-    window.addEventListener("resize", updateCanvasSize, { passive: true });
+    let maxScroll = Math.max(1, window.innerHeight * 3);
 
-    // Handle scroll calculation based on track position
-    const handleScroll = () => {
-      const track = trackRef.current;
-      if (!track) return;
+    const updateDimensions = () => {
+      maxScroll = Math.max(1, window.innerHeight * 3);
+      drawCurrentFrame(currentFrame.current, true);
+    };
 
-      const rect = track.getBoundingClientRect();
-      const totalScrollable = rect.height - window.innerHeight;
-      if (totalScrollable <= 0) return;
-
-      const currentScroll = -rect.top;
-      const progress = Math.max(0, Math.min(1, currentScroll / totalScrollable));
-
-      targetFrame.current = progress * (TOTAL_FRAMES - 1);
-
+    const updateVisuals = (progress: number) => {
       // Hero Title Overlay fadeout & float
       const overlay = heroOverlayRef.current;
       if (overlay) {
@@ -220,43 +175,65 @@ export function VideoScrollSequence() {
       }
     };
 
-    // Render loop with smooth damping
-    const renderLoop = () => {
+    // Responsive tick loop (runs only when animating, sleeps when settled)
+    const tick = () => {
       const diff = targetFrame.current - currentFrame.current;
 
-      if (Math.abs(diff) > 0.002) {
-        currentFrame.current += diff * 0.18; // smooth 0.18 responsiveness
+      if (Math.abs(diff) > 0.01) {
+        // Snappy, buttery smooth 0.35 factor: zero lag behind user scroll
+        currentFrame.current += diff * 0.35;
         drawCurrentFrame(currentFrame.current);
-      } else if (Math.abs(diff) > 0) {
+        rafIdRef.current = requestAnimationFrame(tick);
+      } else {
         currentFrame.current = targetFrame.current;
         drawCurrentFrame(currentFrame.current);
+        isTickingRef.current = false;
+        rafIdRef.current = null;
       }
+    };
 
-      rafIdRef.current = requestAnimationFrame(renderLoop);
+    const requestTick = () => {
+      if (!isTickingRef.current) {
+        isTickingRef.current = true;
+        rafIdRef.current = requestAnimationFrame(tick);
+      }
+    };
+
+    // Zero-reflow scroll handler
+    const handleScroll = () => {
+      const scrollY = window.scrollY || document.documentElement.scrollTop || 0;
+      const progress = Math.max(0, Math.min(1, scrollY / maxScroll));
+
+      targetFrame.current = progress * (TOTAL_FRAMES - 1);
+      updateVisuals(progress);
+      requestTick();
     };
 
     window.addEventListener("scroll", handleScroll, { passive: true });
+    window.addEventListener("resize", updateDimensions, { passive: true });
 
-    // Initial triggers
+    // Initial draw & setup
     handleScroll();
-    rafIdRef.current = requestAnimationFrame(renderLoop);
+    drawCurrentFrame(0, true);
 
     return () => {
-      window.removeEventListener("resize", updateCanvasSize);
       window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("resize", updateDimensions);
       if (rafIdRef.current) {
         cancelAnimationFrame(rafIdRef.current);
       }
     };
-  }, [updateCanvasSize, drawCurrentFrame]);
+  }, [drawCurrentFrame]);
 
   return (
     <>
       {/* FIXED BACKGROUND CANVAS */}
-      <div className="fixed inset-0 w-full h-full -z-50 bg-[#1a1714]">
+      <div className="fixed inset-0 w-full h-full -z-50 bg-[#1a1714] overflow-hidden">
         <canvas
           ref={canvasRef}
-          className="absolute inset-0 w-full h-full transform-gpu"
+          width={CANVAS_WIDTH}
+          height={CANVAS_HEIGHT}
+          className="absolute inset-0 w-full h-full object-cover transform-gpu pointer-events-none"
           style={{
             willChange: "contents",
           }}
@@ -265,7 +242,7 @@ export function VideoScrollSequence() {
         <div className="absolute inset-0 bg-gradient-to-b from-[#1a1714]/40 via-transparent to-[#1a1714]/80 pointer-events-none" />
       </div>
 
-      {/* HERO TITLE OVERLAY - Fades & floats out smoothly on scroll */}
+      {/* HERO TITLE OVERLAY */}
       <div
         ref={heroOverlayRef}
         id="hero-title-overlay"
@@ -283,7 +260,7 @@ export function VideoScrollSequence() {
 
       {/* SCROLL TRACK (400vh) */}
       <div ref={trackRef} style={{ height: "400vh" }} className="w-full relative pointer-events-none">
-        {/* Scroll Indicator at the bottom of the initial viewport */}
+        {/* Scroll Indicator */}
         <div
           ref={scrollIndicatorRef}
           className="absolute top-[85vh] left-1/2 -translate-x-1/2 flex flex-col items-center opacity-70 animate-bounce pointer-events-none"
