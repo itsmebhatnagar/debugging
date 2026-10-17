@@ -1,10 +1,8 @@
-import { PrismaClient } from "@prisma/client"
+import { prisma } from "@/lib/prisma"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { DeleteButton } from "@/components/DeleteButton"
 import { deleteRound } from "@/app/actions/admin"
-
-const prisma = new PrismaClient()
 
 export default async function AdminRoundDetailPage({
   params

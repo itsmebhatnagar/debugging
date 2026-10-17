@@ -7,8 +7,28 @@ import {
   activateRoundAdmin,
   endTestAdmin,
   triggerSeedChampionship,
+  updateParticipantStatus,
+  ParticipantStatus,
 } from "@/app/actions/admin"
 import Link from "next/link"
+import {
+  Crown,
+  Anchor,
+  Trophy,
+  Phone,
+  Bug,
+  Scroll,
+  ShieldCheck,
+  ShieldAlert,
+  AlertTriangle,
+  Skull,
+  Clock,
+  CheckCircle2,
+  Loader2,
+  X,
+  Swords,
+  RefreshCw,
+} from "lucide-react"
 
 interface AdminDeckProps {
   initialData: any
@@ -23,6 +43,8 @@ export function AdminControlDeck({ initialData }: AdminDeckProps) {
   const [loadingAction, setLoadingAction] = useState<string | null>(null)
   const [inspectedParticipant, setInspectedParticipant] = useState<any | null>(null)
   const [disqualifiedSailors, setDisqualifiedSailors] = useState<Record<string, string>>(data?.disqualifiedSailors || {})
+  const [updatingUserId, setUpdatingUserId] = useState<string | null>(null)
+  const [statusToast, setStatusToast] = useState<{ message: string; type: "success" | "error" } | null>(null)
   
   // Backend Timer display for Admin
   const [adminTimer, setAdminTimer] = useState<number>(data?.secondsRemaining || 0)
@@ -71,6 +93,34 @@ export function AdminControlDeck({ initialData }: AdminDeckProps) {
       }))
     })
 
+    socket.on("participant_status_changed", (payload: any) => {
+      const { userId, status, reason } = payload
+      if (status === "DISQUALIFIED") {
+        setDisqualifiedSailors(prev => ({
+          ...prev,
+          [userId]: reason || "ADMIN_DISQUALIFIED"
+        }))
+      } else {
+        setDisqualifiedSailors(prev => {
+          const next = { ...prev }
+          delete next[userId]
+          return next
+        })
+      }
+      setData((prev: any) => {
+        if (!prev?.competition?.participants) return prev
+        return {
+          ...prev,
+          competition: {
+            ...prev.competition,
+            participants: prev.competition.participants.map((p: any) =>
+              p.userId === userId ? { ...p, status } : p
+            )
+          }
+        }
+      })
+    })
+
     socket.on("attempt_exceeded", (payload: any) => {
       setDisqualifiedSailors(prev => ({
         ...prev,
@@ -116,6 +166,7 @@ export function AdminControlDeck({ initialData }: AdminDeckProps) {
       socket.off("test_ended")
       socket.off("leaderboard_updated")
       socket.off("participant_disqualified")
+      socket.off("participant_status_changed")
       socket.off("attempt_exceeded")
       socket.off("submission_created")
     }
@@ -230,6 +281,52 @@ export function AdminControlDeck({ initialData }: AdminDeckProps) {
     }
   }
 
+  // Handle Participant Status Override
+  const handleUpdateStatus = async (userId: string, newStatus: ParticipantStatus, userName?: string) => {
+    if (!competitionId) return
+    setUpdatingUserId(userId)
+    try {
+      setData((prev: any) => {
+        if (!prev?.competition?.participants) return prev
+        return {
+          ...prev,
+          competition: {
+            ...prev.competition,
+            participants: prev.competition.participants.map((p: any) =>
+              p.userId === userId ? { ...p, status: newStatus } : p
+            )
+          }
+        }
+      })
+
+      if (newStatus === "DISQUALIFIED") {
+        setDisqualifiedSailors((prev) => ({ ...prev, [userId]: "ADMIN_OVERRIDE" }))
+      } else {
+        setDisqualifiedSailors((prev) => {
+          const next = { ...prev }
+          delete next[userId]
+          return next
+        })
+      }
+
+      const res = await updateParticipantStatus(competitionId, userId, newStatus, "ADMIN_OVERRIDE")
+      if (res.success) {
+        setStatusToast({
+          message: `${userName || "Sailor"} marked as ${newStatus}`,
+          type: "success"
+        })
+      }
+    } catch (err: any) {
+      setStatusToast({
+        message: err.message || "Failed to update status",
+        type: "error"
+      })
+    } finally {
+      setUpdatingUserId(null)
+      setTimeout(() => setStatusToast(null), 3200)
+    }
+  }
+
   const comp = data?.competition
   const activeRound = data?.activeRound
   const participants = comp?.participants || []
@@ -239,13 +336,16 @@ export function AdminControlDeck({ initialData }: AdminDeckProps) {
   return (
     <div className="space-y-8">
       {/* Top Banner */}
-      <div className="bg-[#1a1714]/30 border border-[#d4af37]/20 rounded-2xl shadow-xl  rounded-2xl p-7 relative overflow-hidden">
-        <div className="absolute right-6 top-1/2 -translate-y-1/2 text-[100px] opacity-[0.04] pointer-events-none select-none" aria-hidden="true">
-          👑
+      <div className="bg-[#1a1714]/30 border border-[#d4af37]/20 rounded-2xl shadow-xl p-7 relative overflow-hidden">
+        <div className="absolute right-6 top-1/2 -translate-y-1/2 opacity-[0.05] pointer-events-none select-none text-[#d4af37]" aria-hidden="true">
+          <Crown className="w-28 h-28" />
         </div>
         <div className="flex flex-wrap items-center justify-between gap-6 relative z-10">
           <div>
-            <div className="badge-gold mb-3">👑 CAPTAIN&apos;S COMMAND DECK</div>
+            <div className="badge-gold mb-3 inline-flex items-center gap-1.5">
+              <Crown className="w-3.5 h-3.5 text-[#d4af37]" />
+              CAPTAIN&apos;S COMMAND DECK
+            </div>
             <h1 className="text-3xl sm:text-4xl font-black text-[#f4ede0] font-cinzel tracking-wider mt-2"
               style={{ textShadow: "0 4px 20px rgba(0,0,0,0.8)" }}>
               <span className="text-shimmer">{comp?.name || "PIRATE CHAMPIONSHIP CONTROL"}</span>
@@ -256,8 +356,9 @@ export function AdminControlDeck({ initialData }: AdminDeckProps) {
           </div>
           <div className="flex items-center gap-3">
             <button onClick={handleSeed} disabled={loadingAction === "SEED"}
-              className="btn-pirate-ghost rounded-xl px-4 py-2.5 text-sm disabled:opacity-50">
-              {loadingAction === "SEED" ? "SEEDING..." : "⚓ RESET / SEED 3 ROUNDS"}
+              className="btn-pirate-ghost rounded-xl px-4 py-2.5 text-sm disabled:opacity-50 inline-flex items-center gap-1.5">
+              <Anchor className="w-3.5 h-3.5 text-[#d4af37]" />
+              {loadingAction === "SEED" ? "SEEDING..." : "RESET / SEED 3 ROUNDS"}
             </button>
             <Link href="/admin/competitions" className="btn-pirate-ghost rounded-xl px-4 py-2.5 text-sm">
               MANAGE VOYAGES
@@ -310,7 +411,7 @@ export function AdminControlDeck({ initialData }: AdminDeckProps) {
                   disabled={loadingAction === "RESTART"}
                   className="border border-[#d4af37]/40 bg-[#d4af37]/10 hover:bg-[#d4af37]/20 font-cinzel font-bold tracking-widest text-[#d4af37] transition-all rounded-xl p-4 text-left disabled:border-[#d4af37]/20 disabled:bg-[#d4af37]/5 disabled:text-[#d4af37]/80 shadow-lg"
                 >
-                  <div className="text-xl mb-1">🔄</div>
+                  <RefreshCw className="w-5 h-5 mb-2 text-[#d4af37]" />
                   <div className="font-bold text-sm">RESTART TEST</div>
                   <div className="text-xs opacity-80 mt-0.5">Reset competition to ACTIVE status</div>
                 </button>
@@ -320,7 +421,7 @@ export function AdminControlDeck({ initialData }: AdminDeckProps) {
                   disabled={loadingAction === "START" || comp?.status === "ACTIVE"}
                   className="border border-[#d4af37]/40 bg-[#d4af37]/10 hover:bg-[#d4af37]/20 font-cinzel font-bold tracking-widest text-[#d4af37] transition-all rounded-xl p-4 text-left disabled:border-[#d4af37]/20 disabled:bg-[#d4af37]/5 disabled:text-[#d4af37]/80 shadow-lg"
                 >
-                  <div className="text-xl mb-1">⚔️</div>
+                  <Swords className="w-5 h-5 mb-2 text-[#d4af37]" />
                   <div className="font-bold text-sm">START TEST</div>
                   <div className="text-xs opacity-80 mt-0.5">Broadcasts 60s countdown to all sailors</div>
                 </button>
@@ -332,7 +433,7 @@ export function AdminControlDeck({ initialData }: AdminDeckProps) {
                 disabled={loadingAction === "END" || comp?.status === "ENDED"}
                 className="border border-[#ef4444]/40 bg-[#ef4444]/10 hover:bg-[#ef4444]/20 font-cinzel font-bold tracking-widest text-[#ef4444] transition-all rounded-xl p-4 text-left disabled:border-[#ef4444]/20 disabled:bg-[#ef4444]/5 disabled:text-[#ef4444]/80 transition-all shadow-lg"
               >
-                <div className="text-xl mb-1">🛑</div>
+                <ShieldAlert className="w-5 h-5 mb-2 text-[#ef4444]" />
                 <div className="font-bold text-sm">END TEST & EVALUATE</div>
                 <div className="text-xs opacity-80 mt-0.5">Auto-submits all codes & runs AI debugger</div>
               </button>
@@ -342,7 +443,7 @@ export function AdminControlDeck({ initialData }: AdminDeckProps) {
                 href={`/admin/competitions/${competitionId}`}
                 className="rounded-xl border border-[#d4af37]/60 bg-[#d4af37]/10/70 p-4 text-left hover:bg-[#d4af37]/10 transition-all shadow-lg block"
               >
-                <div className="text-xl mb-1">📜</div>
+                <Scroll className="w-5 h-5 mb-2 text-[#d4af37]" />
                 <div className="font-bold text-sm text-[#d4af37]">UPLOAD CODES & QUESTIONS</div>
                 <div className="text-xs text-[#f4ede0]/70 mt-0.5">Add custom questions round-wise</div>
               </Link>
@@ -383,8 +484,9 @@ export function AdminControlDeck({ initialData }: AdminDeckProps) {
           <div className="space-y-4 text-sm font-garamond">
             <div className="flex justify-between border-b border-[#8b7355]/30 pb-2">
               <span className="text-[#64748b]">Socket Relay:</span>
-              <span className={connected ? "text-emerald-400 font-bold" : "text-red-400 font-bold"}>
-                {connected ? "🟢 BROADCAST ACTIVE" : "🔴 OFFLINE"}
+              <span className={`inline-flex items-center gap-1.5 font-bold ${connected ? "text-emerald-400" : "text-red-400"}`}>
+                <span className={`w-2 h-2 rounded-full ${connected ? "bg-emerald-400 animate-pulse" : "bg-red-400"}`} />
+                {connected ? "BROADCAST ACTIVE" : "OFFLINE"}
               </span>
             </div>
 
@@ -409,7 +511,10 @@ export function AdminControlDeck({ initialData }: AdminDeckProps) {
           </div>
 
           <div className="mt-6 rounded-lg border border-[#8b7355]/30 bg-transparent border border-[#d4af37]/20 p-4 text-sm text-[#f4ede0]/70 space-y-1">
-            <div className="font-bold text-[#d4af37]">⚡ Real-Time Sync Rule:</div>
+            <div className="font-bold text-[#d4af37] flex items-center gap-1.5">
+              <ShieldAlert className="w-3.5 h-3.5 text-[#d4af37]" />
+              Real-Time Sync Rule:
+            </div>
             <p>
               When you click &quot;Start Test&quot;, every sailor&apos;s screen triggers the 60-second countdown instantly. When you click &quot;End Test&quot;, all tests auto-submit and the AI evaluates everyone.
             </p>
@@ -421,7 +526,7 @@ export function AdminControlDeck({ initialData }: AdminDeckProps) {
       {top3Winners.length > 0 && (
         <div className="bg-[#1a1714]/30 border border-[#d4af37]/20 rounded-2xl shadow-xl rounded-2xl p-8 border-2 border-[#ffd700] shadow-[0_0_40px_rgba(212,175,55,0.25)]">
           <div className="flex items-center space-x-3 mb-6">
-            <span className="text-3xl">👑</span>
+            <Crown className="w-8 h-8 text-[#ffd700]" />
             <div>
               <h2 className="text-2xl font-black text-[#d4af37]">
                 HIGH ADMIRAL AI VERDICT: TOP 3 WINNERS
@@ -446,8 +551,10 @@ export function AdminControlDeck({ initialData }: AdminDeckProps) {
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-3xl">
-                    {idx === 0 ? "🥇" : idx === 1 ? "🥈" : "🥉"}
+                  <span className="text-2xl">
+                    <Trophy className={`w-7 h-7 ${
+                      idx === 0 ? "text-[#ffd700]" : idx === 1 ? "text-[#94a3b8]" : "text-[#b45309]"
+                    }`} />
                   </span>
                   <span className="rounded-full px-2.5 py-0.5 text-xs font-garamond font-bold uppercase tracking-wider border border-[#ffd700]/40 text-[#d4af37]">
                     RANK #{idx + 1}
@@ -457,7 +564,10 @@ export function AdminControlDeck({ initialData }: AdminDeckProps) {
                 <h3 className="mt-4 text-lg font-black text-[#f4ede0] font-cinzel tracking-wider">{winner.name}</h3>
                 <p className="text-sm font-garamond text-[#8b7355]">{winner.email}</p>
                 {winner.mobile && (
-                  <p className="text-sm font-garamond text-[#f4ede0]/70 mt-0.5">📞 {winner.mobile}</p>
+                  <p className="text-sm font-garamond text-[#f4ede0]/70 mt-0.5 flex items-center gap-1.5">
+                    <Phone className="w-3 h-3 text-[#d4af37]" />
+                    {winner.mobile}
+                  </p>
                 )}
 
                 <div className="mt-5 space-y-1.5 border-t border-[#8b7355]/30 pt-3 text-sm font-garamond">
@@ -504,7 +614,7 @@ export function AdminControlDeck({ initialData }: AdminDeckProps) {
               <tr>
                 <th className="px-4 py-3">Pirate Sailor</th>
                 <th className="px-4 py-3">Contact Details</th>
-                <th className="px-4 py-3">Live Status</th>
+                <th className="px-4 py-3">Live Fleet Status & Controls</th>
                 <th className="px-4 py-3">Bounty Score</th>
                 <th className="px-4 py-3 text-right">Actions</th>
               </tr>
@@ -512,47 +622,122 @@ export function AdminControlDeck({ initialData }: AdminDeckProps) {
             <tbody className="divide-y divide-[#8b7355]/20">
               {participants.map((p: any) => {
                 const evaluated = allEvaluated.find((e: any) => e.userId === p.userId)
-                const isDisqualified = Boolean(disqualifiedSailors[p.userId])
+                const isDisqualified = Boolean(disqualifiedSailors[p.userId]) || p.status === "DISQUALIFIED"
                 const dqReason = disqualifiedSailors[p.userId]
+                const effectiveStatus: ParticipantStatus = isDisqualified
+                  ? "DISQUALIFIED"
+                  : p.status === "QUALIFIED"
+                  ? "QUALIFIED"
+                  : "WAITING"
 
                 return (
-                  <tr key={p.id} className="hover:bg-[#d4af37]/10/40 transition-colors">
+                  <tr key={p.id} className="hover:bg-[#d4af37]/10 transition-colors">
                     <td className="px-4 py-3 font-bold text-[#f4ede0] font-cinzel tracking-wider">
                       {p.user?.name || "Unknown Sailor"}
                       <div className="text-xs font-garamond text-[#64748b]">ID: {p.userId}</div>
                     </td>
                     <td className="px-4 py-3 font-garamond text-[#f4ede0]/70">
                       <div>{p.user?.email}</div>
-                      <div className="text-[#d4af37]">📞 {p.user?.mobile || "No Mobile"}</div>
+                      <div className="text-[#d4af37] flex items-center gap-1.5 mt-0.5">
+                        <Phone className="w-3 h-3 text-[#d4af37]" />
+                        {p.user?.mobile || "No Mobile"}
+                      </div>
                     </td>
                     <td className="px-4 py-3 font-garamond">
-                      {isDisqualified ? (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-red-950/60 border border-red-500/60 text-red-400">
-                          <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
-                          {dqReason === "FULLSCREEN_EXIT"
-                            ? "DISQUALIFIED (EXIT FS)"
-                            : dqReason === "TAB_SWITCH"
-                            ? "DISQUALIFIED (TAB SWITCH)"
-                            : dqReason === "WINDOW_BLUR"
-                            ? "DISQUALIFIED (FOCUS LOST)"
-                            : dqReason === "ATTEMPTS_EXCEEDED"
-                            ? "DISQUALIFIED (LIMIT)"
-                            : `DISQUALIFIED (${dqReason})`}
-                        </span>
-                      ) : comp?.status === "ACTIVE" ? (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-950/60 border border-emerald-500/60 text-emerald-400">
-                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                          QUALIFIED (IN BATTLE)
-                        </span>
-                      ) : comp?.status === "ENDED" ? (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-blue-950/60 border border-blue-500/60 text-blue-400">
-                          COMPLETED
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-amber-950/60 border border-amber-500/60 text-amber-400">
-                          WAITING
-                        </span>
-                      )}
+                      <div className="flex flex-col gap-2">
+                        {/* Live Status Pill */}
+                        {isDisqualified ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-red-950/60 border border-red-500/60 text-red-400 w-fit">
+                            <Skull className="w-3.5 h-3.5 text-red-400 animate-pulse" />
+                            {dqReason === "FULLSCREEN_EXIT"
+                              ? "DISQUALIFIED (EXIT FS)"
+                              : dqReason === "TAB_SWITCH"
+                              ? "DISQUALIFIED (TAB SWITCH)"
+                              : dqReason === "WINDOW_BLUR"
+                              ? "DISQUALIFIED (FOCUS LOST)"
+                              : dqReason === "ATTEMPTS_EXCEEDED"
+                              ? "DISQUALIFIED (LIMIT)"
+                              : `DISQUALIFIED (${dqReason || "ADMIN OVERRIDE"})`}
+                          </span>
+                        ) : effectiveStatus === "QUALIFIED" ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-950/60 border border-emerald-500/60 text-emerald-400 w-fit">
+                            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+                            QUALIFIED (IN BATTLE)
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-amber-950/60 border border-amber-500/60 text-amber-400 w-fit">
+                            <Clock className="w-3.5 h-3.5 text-amber-400" />
+                            WAITING (NOT STARTED)
+                          </span>
+                        )}
+
+                        {/* Interactive Status Switcher */}
+                        <div className="flex items-center gap-1 bg-[#0a0f1d]/85 border border-[#d4af37]/25 p-1 rounded-xl w-fit backdrop-blur-md">
+                          {/* WAITING */}
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateStatus(p.userId, "WAITING", p.user?.name)}
+                            disabled={updatingUserId === p.userId}
+                            title="Mark as Waiting (has not attempted the round yet)"
+                            className={`px-2.5 py-1 rounded-lg text-[10px] font-cinzel font-bold tracking-wider uppercase transition-all flex items-center gap-1 ${
+                              effectiveStatus === "WAITING"
+                                ? "bg-amber-500/25 border border-amber-400/80 text-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.25)]"
+                                : "text-[#8e8271] hover:text-amber-300 hover:bg-amber-500/10"
+                            } disabled:opacity-50`}
+                          >
+                            {updatingUserId === p.userId ? (
+                              <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                            ) : (
+                              <Clock className="w-2.5 h-2.5" />
+                            )}
+                            WAITING
+                          </button>
+
+                          {/* QUALIFIED */}
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateStatus(p.userId, "QUALIFIED", p.user?.name)}
+                            disabled={updatingUserId === p.userId}
+                            title="Mark as Qualified (active in round / clear disqualification)"
+                            className={`px-2.5 py-1 rounded-lg text-[10px] font-cinzel font-bold tracking-wider uppercase transition-all flex items-center gap-1 ${
+                              effectiveStatus === "QUALIFIED"
+                                ? "bg-emerald-500/25 border border-emerald-400/80 text-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.25)]"
+                                : "text-[#8e8271] hover:text-emerald-300 hover:bg-emerald-500/10"
+                            } disabled:opacity-50`}
+                          >
+                            {updatingUserId === p.userId ? (
+                              <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                            ) : (
+                              <ShieldCheck className="w-2.5 h-2.5" />
+                            )}
+                            QUALIFIED
+                          </button>
+
+                          {/* DISQUALIFIED */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (confirm(`Are you sure you want to DISQUALIFY ${p.user?.name || "this participant"}? They will be locked out and their round will auto-submit.`)) {
+                                handleUpdateStatus(p.userId, "DISQUALIFIED", p.user?.name)
+                              }
+                            }}
+                            disabled={updatingUserId === p.userId}
+                            title="Disqualify participant (permanently locks out participant)"
+                            className={`px-2.5 py-1 rounded-lg text-[10px] font-cinzel font-bold tracking-wider uppercase transition-all flex items-center gap-1 ${
+                              effectiveStatus === "DISQUALIFIED"
+                                ? "bg-red-500/25 border border-red-500/80 text-red-300 shadow-[0_0_10px_rgba(239,68,68,0.25)]"
+                                : "text-[#8e8271] hover:text-red-400 hover:bg-red-500/10"
+                            } disabled:opacity-50`}
+                          >
+                            {updatingUserId === p.userId ? (
+                              <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                            ) : (
+                              <Skull className="w-2.5 h-2.5" />
+                            )}
+                            DISQUALIFY
+                          </button>
+                        </div>
+                      </div>
                     </td>
                     <td className="px-4 py-3 font-garamond font-bold text-[#d4af37]">
                       {evaluated ? `${evaluated.compositeScore} pts (AI: ${evaluated.avgQuality}%)` : `${p.score || 0} pts`}
@@ -602,9 +787,9 @@ export function AdminControlDeck({ initialData }: AdminDeckProps) {
               </div>
               <button
                 onClick={() => setInspectedParticipant(null)}
-                className="text-lg font-bold text-[#64748b] hover:text-white px-2 py-1"
+                className="text-lg font-bold text-[#64748b] hover:text-white px-2 py-1 flex items-center"
               >
-                ✕
+                <X className="w-5 h-5" />
               </button>
             </div>
 
@@ -639,12 +824,18 @@ export function AdminControlDeck({ initialData }: AdminDeckProps) {
                   {sub.aiAnalysis && (
                     <div className="space-y-2">
                       <div className="rounded border border-[#991b1b]/40 bg-[#450a0a]/30 p-3 text-sm font-garamond text-[#fca5a5]">
-                        <div className="font-bold text-[#d4af37] mb-1">🐛 Identified Bugs & Warnings:</div>
+                        <div className="font-bold text-[#d4af37] mb-1 flex items-center gap-1.5">
+                          <Bug className="w-3.5 h-3.5 text-red-400" />
+                          Identified Bugs & Warnings:
+                        </div>
                         <pre className="whitespace-pre-wrap">{sub.aiAnalysis.bugs}</pre>
                       </div>
 
                       <div className="rounded border border-[#8b7355]/30 bg-transparent border border-[#d4af37]/20 p-3 text-sm font-garamond text-[#f4ede0]/70">
-                        <div className="font-bold text-[#d4af37] mb-1">📜 Admiral AI Feedback:</div>
+                        <div className="font-bold text-[#d4af37] mb-1 flex items-center gap-1.5">
+                          <Scroll className="w-3.5 h-3.5 text-[#d4af37]" />
+                          Admiral AI Feedback:
+                        </div>
                         <pre className="whitespace-pre-wrap">{sub.aiAnalysis.feedback}</pre>
                       </div>
                     </div>
@@ -670,6 +861,24 @@ export function AdminControlDeck({ initialData }: AdminDeckProps) {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Realtime Status Change Toast */}
+      {statusToast && (
+        <div className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 px-5 py-3 rounded-2xl border backdrop-blur-xl shadow-2xl transition-all ${
+          statusToast.type === "success"
+            ? "bg-[#0b1c14]/95 border-emerald-500/60 text-emerald-300"
+            : "bg-[#250d0d]/95 border-red-500/60 text-red-300"
+        }`}>
+          {statusToast.type === "success" ? (
+            <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+          ) : (
+            <AlertTriangle className="w-5 h-5 text-red-400" />
+          )}
+          <span className="font-cinzel text-xs font-bold tracking-wider uppercase">
+            {statusToast.message}
+          </span>
         </div>
       )}
     </div>

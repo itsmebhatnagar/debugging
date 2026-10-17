@@ -1,9 +1,8 @@
-import { PrismaClient, Prisma } from "@prisma/client"
+import { Prisma } from "@prisma/client"
+import { prisma } from "@/lib/prisma"
 import { getExecutionService } from "./execution"
 import { broadcastEvent } from "./realtime"
 import { analyzeSubmission, runAICompetitionEvaluation } from "./ai-debugger"
-
-const prisma = new PrismaClient()
 
 /**
  * Returns the currently active round for a competition, calculating endsAt
@@ -324,7 +323,7 @@ export async function submitSolution(
     },
   })
 
-  // Run against ALL test cases (public + hidden)
+  // Run against ALL test cases (public + hidden) concurrently
   const execService = getExecutionService()
   const allTestCases = await prisma.testCase.findMany({
     where: { questionId }
@@ -335,24 +334,29 @@ export async function submitSolution(
   let totalTimeMs = 0
   let executionLogs = ""
 
-  for (const tc of allTestCases) {
-    const res = await execService.execute({
-      language,
-      code,
-      input: tc.input,
-      expectedOutput: tc.expected
+  if (allTestCases.length > 0) {
+    const results = await Promise.all(
+      allTestCases.map(tc =>
+        execService.execute({
+          language,
+          code,
+          input: tc.input,
+          expectedOutput: tc.expected
+        })
+      )
+    )
+
+    results.forEach((res) => {
+      totalTimeMs += res.time
+      if (res.passed) {
+        passedCount++
+        executionLogs += `Test Case passed.\n`
+      } else {
+        allPassed = false
+        executionLogs += `Test Case failed. Output: ${res.stdout || res.stderr}\n`
+      }
     })
-    totalTimeMs += res.time
-    if (res.passed) {
-      passedCount++
-      executionLogs += `Test Case passed.\n`
-    } else {
-      allPassed = false
-      executionLogs += `Test Case failed. Output: ${res.stdout || res.stderr}\n`
-    }
-  }
-  
-  if (allTestCases.length === 0) {
+  } else {
     // Execute without inputs to get baseline execution info
     const res = await execService.execute({ language, code, input: "", expectedOutput: "" })
     totalTimeMs += res.time
@@ -507,48 +511,56 @@ export async function endCompetition(competitionId: string) {
     }
   })
 
-  // 2. Fetch all participants and questions
-  const participants = await prisma.competitionParticipant.findMany({
-    where: { competitionId }
-  })
+  // 2. Bulk fetch all participants, questions, existing submissions, and drafts
+  const [participants, questions] = await Promise.all([
+    prisma.competitionParticipant.findMany({ where: { competitionId } }),
+    prisma.question.findMany({ where: { round: { competitionId } } })
+  ])
 
-  const questions = await prisma.question.findMany({
-    where: {
-      round: { competitionId }
-    }
-  })
+  const userIds = participants.map(p => p.userId)
+  const questionIds = questions.map(q => q.id)
 
-  // 3. For any participant missing a submission for any question, auto-submit from draft or starter code
+  const [existingSubs, allDrafts] = await Promise.all([
+    prisma.submission.findMany({
+      where: {
+        userId: { in: userIds },
+        questionId: { in: questionIds }
+      },
+      select: { userId: true, questionId: true }
+    }),
+    prisma.draftCode.findMany({
+      where: {
+        userId: { in: userIds },
+        questionId: { in: questionIds }
+      }
+    })
+  ])
+
+  const submittedKeySet = new Set(existingSubs.map(s => `${s.userId}_${s.questionId}`))
+  const draftMap = new Map(allDrafts.map(d => [`${d.userId}_${d.questionId}`, d]))
+
+  // 3. Batch auto-submit missing submissions concurrently
+  const missingTasks: Array<() => Promise<any>> = []
   for (const p of participants) {
     for (const q of questions) {
-      const existingSub = await prisma.submission.findFirst({
-        where: {
-          userId: p.userId,
-          questionId: q.id
-        }
-      })
-
-      if (!existingSub) {
-        // Look for draft code
-        const draft = await prisma.draftCode.findUnique({
-          where: {
-            userId_questionId: {
-              userId: p.userId,
-              questionId: q.id
-            }
-          }
-        })
-
+      const key = `${p.userId}_${q.id}`
+      if (!submittedKeySet.has(key)) {
+        const draft = draftMap.get(key)
         const codeToSubmit = draft?.code || "// No solution provided prior to admiral end test order\n"
         const lang = draft?.language || "javascript"
-
-        try {
-          await submitSolution(p.userId, q.id, lang, codeToSubmit, true)
-        } catch (e) {
-          console.error(`Error auto-submitting for user ${p.userId} question ${q.id}:`, e)
-        }
+        missingTasks.push(() =>
+          submitSolution(p.userId, q.id, lang, codeToSubmit, true).catch(e =>
+            console.error(`Error auto-submitting for user ${p.userId} question ${q.id}:`, e)
+          )
+        )
       }
     }
+  }
+
+  // Execute in parallel batches of 8 to maintain optimal server load
+  const BATCH_SIZE = 8
+  for (let i = 0; i < missingTasks.length; i += BATCH_SIZE) {
+    await Promise.all(missingTasks.slice(i, i + BATCH_SIZE).map(fn => fn()))
   }
 
   // 4. Broadcast test_ended immediately so clients are unblocked

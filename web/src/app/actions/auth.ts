@@ -3,9 +3,7 @@
 import { signIn } from "@/auth"
 import { AuthError } from "next-auth"
 import bcrypt from "bcryptjs"
-import { PrismaClient } from "@prisma/client"
-
-const prisma = new PrismaClient()
+import { prisma } from "@/lib/prisma"
 
 const loginLimiter = new Map<string, { count: number; expiresAt: number }>()
 

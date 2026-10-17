@@ -1,10 +1,8 @@
 "use server"
 
 import { auth } from "@/auth"
-import { PrismaClient } from "@prisma/client"
+import { prisma } from "@/lib/prisma"
 import { requestCompile, submitSolution, saveDraftCode } from "@/lib/competition-engine"
-
-const prisma = new PrismaClient()
 
 export async function compileCode(questionId: string, language: string, code: string) {
   const session = await auth()
@@ -91,6 +89,23 @@ export async function startRoundNow(competitionId: string) {
     return { success: false, error: "Unauthorized" }
   }
 
+  // Set participant status to QUALIFIED so they are marked as actively in round
+  await prisma.competitionParticipant.upsert({
+    where: {
+      competitionId_userId: {
+        competitionId,
+        userId: session.user.id
+      }
+    },
+    update: { status: "QUALIFIED" },
+    create: {
+      competitionId,
+      userId: session.user.id,
+      score: 0,
+      status: "QUALIFIED"
+    }
+  })
+
   // Check if competition is in COUNTDOWN state
   const comp = await prisma.competition.findUnique({
     where: { id: competitionId },
@@ -120,6 +135,12 @@ export async function recordDisqualification(competitionId: string, reason: stri
 
   const userId = session.user.id
   try {
+    // Update participant status to DISQUALIFIED
+    await prisma.competitionParticipant.updateMany({
+      where: { competitionId, userId },
+      data: { status: "DISQUALIFIED" }
+    })
+
     // Persist disqualification in database so it remains locked even across page refresh
     await prisma.competitionEvent.create({
       data: {
@@ -176,30 +197,34 @@ export async function autoSubmitRound(
 
     if (!round) return { success: false, error: "Round not found" }
 
-    // Fetch existing submissions for this user in this round
-    const existingSubmissions = await prisma.submission.findMany({
-      where: {
-        userId,
-        questionId: { in: round.questions.map((q) => q.id) }
-      }
-    })
-    const submittedQIds = new Set(existingSubmissions.map((s) => s.questionId))
+    // Fetch existing submissions and drafts in parallel
+    const [existingSubmissions, drafts] = await Promise.all([
+      prisma.submission.findMany({
+        where: {
+          userId,
+          questionId: { in: round.questions.map((q) => q.id) }
+        }
+      }),
+      prisma.draftCode.findMany({
+        where: {
+          userId,
+          questionId: { in: round.questions.map((q) => q.id) }
+        }
+      })
+    ])
 
-    // Submit every question that hasn't been submitted yet
-    for (const q of round.questions) {
-      if (!submittedQIds.has(q.id)) {
+    const submittedQIds = new Set(existingSubmissions.map((s) => s.questionId))
+    const draftMap = new Map(drafts.map((d) => [d.questionId, d.code]))
+
+    // Submit remaining unsubmitted questions concurrently
+    const submitPromises = round.questions
+      .filter((q) => !submittedQIds.has(q.id))
+      .map(async (q) => {
         let codeToSubmit = codes[q.id]
         if (!codeToSubmit || !codeToSubmit.trim()) {
-          const draft = await prisma.draftCode.findUnique({
-            where: {
-              userId_questionId: {
-                userId,
-                questionId: q.id
-              }
-            }
-          })
-          if (draft?.code) {
-            codeToSubmit = draft.code
+          const draftCode = draftMap.get(q.id)
+          if (draftCode) {
+            codeToSubmit = draftCode
           } else {
             const starter = q.starterCodes.find((s) => s.language === language) || q.starterCodes[0]
             codeToSubmit = starter?.code || `// Autosubmitted solution\nfunction solve() {}\n`
@@ -208,7 +233,6 @@ export async function autoSubmitRound(
 
         try {
           const sub = await submitSolution(userId, q.id, language, codeToSubmit, true)
-          // Fire background AI analysis asynchronously
           if (sub?.id) {
             const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000"
             fetch(`${baseUrl}/api/submissions/evaluate`, {
@@ -220,8 +244,9 @@ export async function autoSubmitRound(
         } catch (subErr) {
           console.error(`Failed to auto-submit solution for question ${q.id}:`, subErr)
         }
-      }
-    }
+      })
+
+    await Promise.all(submitPromises)
 
     // Record disqualification and broadcast to admin
     await recordDisqualification(competitionId, reason)

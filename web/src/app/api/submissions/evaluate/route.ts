@@ -4,7 +4,7 @@ import { getExecutionService } from "@/lib/execution"
 import { evaluateCodeScore } from "@/lib/ai-debugger"
 import { broadcastEvent } from "@/lib/realtime"
 
-const prisma = new PrismaClient()
+import { prisma } from "@/lib/prisma"
 
 export async function POST(req: NextRequest) {
   try {

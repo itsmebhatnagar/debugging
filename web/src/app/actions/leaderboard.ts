@@ -1,8 +1,6 @@
 "use server"
 
-import { PrismaClient } from "@prisma/client"
-
-const prisma = new PrismaClient()
+import { prisma } from "@/lib/prisma"
 
 export async function getLeaderboard(competitionId: string) {
   // Fetch all participants with their users and summed scores

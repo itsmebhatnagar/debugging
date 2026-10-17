@@ -7,6 +7,25 @@ import ReactMarkdown from "react-markdown"
 import { compileCode, submitFinalCode, saveDraft, startRoundNow, recordDisqualification, autoSubmitRound } from "@/app/actions/participant"
 import Link from "next/link"
 import { Spotlight } from "@/components/ui/spotlight"
+import {
+  Anchor,
+  Compass,
+  Scroll,
+  Swords,
+  Waves,
+  ShieldAlert,
+  Radio,
+  Clock,
+  Trophy,
+  Crown,
+  Medal,
+  Flame,
+  AlertTriangle,
+  Skull,
+  Ship,
+  Maximize2,
+  CheckCircle2
+} from "lucide-react"
 
 interface QuestionData {
   id: string
@@ -51,12 +70,13 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
   const [fullscreenExitWarning, setFullscreenExitWarning] = useState(false)
   const [autoSubmitDone, setAutoSubmitDone] = useState(false)
   const [fullscreenExited, setFullscreenExited] = useState(false) // permanent lock once exited
-  const [dqReason, setDqReason] = useState<string>("FULLSCREEN_EXIT")
+  const [dqReason, setDqReason] = useState<string | null>("FULLSCREEN_EXIT")
   const [securityToast, setSecurityToast] = useState<string | null>(null)
   const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const isAutoSubmittingRound = useRef(false)
   const editorRef = useRef<any>(null)
   const [hasEnteredFullscreenOnce, setHasEnteredFullscreenOnce] = useState(false)
+  const currentUserIdRef = useRef<string | null>(null)
 
   const showSecurityToast = (msg: string) => {
     setSecurityToast(msg)
@@ -70,6 +90,7 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
     try {
       const res = await fetch(`/api/competition/${competitionId}/status`)
       const data = await res.json()
+      if (data.userId) currentUserIdRef.current = data.userId
       if (data.competitionName) setCompetitionName(data.competitionName)
 
       // If user was previously disqualified, persist lockout
@@ -78,6 +99,9 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
         setDqReason(data.dqReason || "FULLSCREEN_EXIT")
         setNeedsFullscreen(true)
         setAutoSubmitDone(true)
+      } else {
+        setFullscreenExited(false)
+        setDqReason(null)
       }
 
       if (data.status === "WAITING" || data.status === "WAITING_ROUND") {
@@ -223,13 +247,13 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
     const blockClipboard = (e: ClipboardEvent) => {
       e.preventDefault()
       e.stopPropagation()
-      showSecurityToast("⚔️ Action Blocked: Cut, copy, and paste are strictly prohibited!")
+      showSecurityToast("Action Blocked: Cut, copy, and paste are strictly prohibited!")
     }
 
     const blockContextMenu = (e: MouseEvent) => {
       e.preventDefault()
       e.stopPropagation()
-      showSecurityToast("⚔️ Action Blocked: Right-click context menu is disabled!")
+      showSecurityToast("Action Blocked: Right-click context menu is disabled!")
     }
 
     const blockDrag = (e: DragEvent) => {
@@ -282,7 +306,7 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
       ) {
         e.preventDefault()
         e.stopPropagation()
-        showSecurityToast("⚠️ Windows key is disabled during the tournament!")
+        showSecurityToast("Windows key is disabled during the tournament!")
         return false
       }
 
@@ -291,7 +315,7 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
         if (e.ctrlKey || e.altKey || e.metaKey) {
           e.preventDefault()
           e.stopPropagation()
-          showSecurityToast("🚨 Tab switching shortcuts are strictly forbidden!")
+          showSecurityToast("Tab switching shortcuts are strictly forbidden!")
           return false
         }
       }
@@ -300,7 +324,7 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
       if ((e.ctrlKey || e.metaKey) && (e.key === "PageUp" || e.key === "PageDown")) {
         e.preventDefault()
         e.stopPropagation()
-        showSecurityToast("🚨 Tab navigation is strictly forbidden!")
+        showSecurityToast("Tab navigation is strictly forbidden!")
         return false
       }
 
@@ -310,7 +334,7 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
         if (k === "t" || k === "n" || k === "w") {
           e.preventDefault()
           e.stopPropagation()
-          showSecurityToast("🚨 Opening or closing tabs is prohibited!")
+          showSecurityToast("Opening or closing tabs is prohibited!")
           return false
         }
       }
@@ -326,7 +350,7 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
       if (e.key === "Escape" || e.key === "F11") {
         e.preventDefault()
         e.stopPropagation()
-        showSecurityToast("⚠️ Exiting fullscreen will auto-submit your round and disqualify you!")
+        showSecurityToast("Exiting fullscreen will auto-submit your round and disqualify you!")
         return false
       }
 
@@ -340,7 +364,7 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
       ) {
         e.preventDefault()
         e.stopPropagation()
-        showSecurityToast("⚠️ Developer tools and reloading are strictly prohibited!")
+        showSecurityToast("Developer tools and reloading are strictly prohibited!")
         return false
       }
 
@@ -351,13 +375,13 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
       ) {
         e.preventDefault()
         e.stopPropagation()
-        showSecurityToast("⚔️ Action Blocked: Cut, copy, and paste are strictly prohibited!")
+        showSecurityToast("Action Blocked: Cut, copy, and paste are strictly prohibited!")
         return false
       }
       if (e.shiftKey && (e.key === "Insert" || e.key === "Delete")) {
         e.preventDefault()
         e.stopPropagation()
-        showSecurityToast("⚔️ Action Blocked: Cut, copy, and paste are strictly prohibited!")
+        showSecurityToast("Action Blocked: Cut, copy, and paste are strictly prohibited!")
         return false
       }
     }
@@ -391,25 +415,25 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
       ) {
         e.preventDefault()
         e.stopPropagation()
-        showSecurityToast("⚔️ Clipboard shortcuts are disabled in the editor!")
+        showSecurityToast("Clipboard shortcuts are disabled in the editor!")
         return
       }
       if (e.shiftKey && (e.code === "Insert" || e.code === "Delete")) {
         e.preventDefault()
         e.stopPropagation()
-        showSecurityToast("⚔️ Clipboard shortcuts are disabled in the editor!")
+        showSecurityToast("Clipboard shortcuts are disabled in the editor!")
         return
       }
       if (e.code === "Tab" && (e.ctrlKey || e.metaKey || e.altKey)) {
         e.preventDefault()
         e.stopPropagation()
-        showSecurityToast("🚨 Tab switching is strictly forbidden!")
+        showSecurityToast("Tab switching is strictly forbidden!")
         return
       }
       if (e.code === "MetaLeft" || e.code === "MetaRight") {
         e.preventDefault()
         e.stopPropagation()
-        showSecurityToast("⚠️ Windows key is disabled!")
+        showSecurityToast("Windows key is disabled!")
         return
       }
     })
@@ -421,7 +445,7 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
         (e: any) => {
           e.preventDefault()
           e.stopPropagation()
-          showSecurityToast("⚔️ Pasting code is strictly prohibited!")
+          showSecurityToast("Pasting code is strictly prohibited!")
         },
         true
       )
@@ -430,7 +454,7 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
         (e: any) => {
           e.preventDefault()
           e.stopPropagation()
-          showSecurityToast("⚔️ Copying code is strictly prohibited!")
+          showSecurityToast("Copying code is strictly prohibited!")
         },
         true
       )
@@ -439,7 +463,7 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
         (e: any) => {
           e.preventDefault()
           e.stopPropagation()
-          showSecurityToast("⚔️ Cutting code is strictly prohibited!")
+          showSecurityToast("Cutting code is strictly prohibited!")
         },
         true
       )
@@ -449,7 +473,7 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
           if (e.inputType === "insertFromPaste" || e.inputType === "insertFromDrop") {
             e.preventDefault()
             e.stopPropagation()
-            showSecurityToast("⚔️ Pasting is strictly prohibited!")
+            showSecurityToast("Pasting is strictly prohibited!")
           }
         },
         true
@@ -526,11 +550,39 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
       setArenaState("ENDED")
       if (data.top3Winners) setTop3Winners(data.top3Winners)
     })
+    socket.on("participant_disqualified", (data: any) => {
+      if (!currentUserIdRef.current || data.userId === currentUserIdRef.current) {
+        setFullscreenExited(true)
+        setDqReason(data.reason || "ADMIN_DISQUALIFIED")
+        setNeedsFullscreen(true)
+        setAutoSubmitDone(true)
+      }
+    })
+    socket.on("participant_status_changed", (data: any) => {
+      if (currentUserIdRef.current && data.userId === currentUserIdRef.current) {
+        if (data.status === "DISQUALIFIED") {
+          setFullscreenExited(true)
+          setDqReason(data.reason || "ADMIN_DISQUALIFIED")
+          setNeedsFullscreen(true)
+          setAutoSubmitDone(true)
+        } else if (data.status === "QUALIFIED") {
+          setFullscreenExited(false)
+          setDqReason(null)
+          fetchStatus()
+        } else if (data.status === "WAITING") {
+          setFullscreenExited(false)
+          setDqReason(null)
+          setArenaState("WAITING")
+        }
+      }
+    })
     return () => {
       socket.off("test_starting")
       socket.off("round_started")
       socket.off("attempt_exceeded")
       socket.off("test_ended")
+      socket.off("participant_disqualified")
+      socket.off("participant_status_changed")
     }
   }, [socket])
 
@@ -580,7 +632,7 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
       return
     }
     setIsCompiling(true)
-    setOutput("⚔️ Hoisting sails — compiling in the Captain's workshop...\n")
+    setOutput("[COMPILING] Hoisting sails — compiling in the Captain's workshop...\n")
     try {
       const res = await compileCode(currentQuestion.id, language, currentCode)
       setIsCompiling(false)
@@ -597,20 +649,20 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
       }
     } catch (err: any) {
       setIsCompiling(false)
-      setOutput(`❌ NETWORK ERROR: Failed to run code. Please try again.\nDetails: ${err.message}`)
+      setOutput(`[NETWORK ERROR] Failed to run code. Please try again.\nDetails: ${err.message}`)
     }
   }
 
   const handleSubmit = async () => {
     if (!currentQuestion) return
     setIsSubmitting(true)
-    setOutput("📜 Sealing your parchment — dispatching to the High Admiral's AI...\n")
+    setOutput("[DISPATCHING] Sealing your parchment — transmitting to the High Admiral's AI...\n")
     try {
       const res = await submitFinalCode(currentQuestion.id, language, currentCode)
       setIsSubmitting(false)
       if (res.success && res.submission) {
         setSubmissions((prev) => ({ ...prev, [currentQuestion.id]: res.submission.status }))
-        setOutput(`✅ SUBMISSION RECORDED!\nStatus: ${res.submission.status}\nYour scroll has been received by the Admiral.\n\n(AI is analyzing your code in the background for effort and logic points)`)
+        setOutput(`[SUCCESS] SUBMISSION RECORDED!\nStatus: ${res.submission.status}\nYour scroll has been received by the Admiral.\n\n(AI is analyzing your code in the background for effort and logic points)`)
         
         // Fire background AI analysis asynchronously (fire and forget)
         fetch('/api/submissions/evaluate', {
@@ -621,19 +673,18 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
         }).catch(() => {})
         
       } else {
-        setOutput(`❌ SUBMISSION FAILED: ${res.error}`)
+        setOutput(`[SUBMISSION FAILED] ${res.error}`)
       }
     } catch (err: any) {
       setIsSubmitting(false)
-      setOutput(`❌ NETWORK ERROR: Failed to reach the server. Please try again.\nDetails: ${err.message}`)
+      setOutput(`[NETWORK ERROR] Failed to reach the server. Please try again.\nDetails: ${err.message}`)
     }
   }
 
   // ── STATE: LOADING ────────────────────────────────────────────
   if (arenaState === "LOADING") {
     return (
-      <div className="ocean-bg flex min-h-[calc(100vh-65px)] flex-col items-center justify-center">
-        
+      <div className="relative min-h-[calc(100vh-80px)] pt-28 pb-16 px-4 flex flex-col items-center justify-center z-10">
         <div className="relative z-10 flex flex-col items-center gap-5">
           <div
             className="h-20 w-20 rounded-full animate-spin"
@@ -644,7 +695,7 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
               boxShadow: "0 0 30px rgba(212,175,55,0.3)",
             }}
           />
-          <p className="font-garamond text-sm font-bold uppercase tracking-[0.2em] text-[#d4af37]">
+          <p className="font-cinzel text-xs sm:text-sm font-bold uppercase tracking-[0.3em] text-[#d4af37]">
             CHARTING THE SEAS...
           </p>
         </div>
@@ -655,78 +706,199 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
   // ── STATE: WAITING ────────────────────────────────────────────
   if (arenaState === "WAITING") {
     return (
-      <div className="ocean-bg flex min-h-[calc(100vh-65px)] flex-col items-center justify-center p-6 text-center">
+      <div className="relative min-h-[calc(100vh-80px)] pt-28 pb-16 px-4 flex flex-col items-center justify-center z-10">
         
-        <div className="relative z-10 w-full max-w-2xl animate-treasure-in">
-          <div className="pirate-card pirate-card-corner rounded-2xl p-10 shadow-2xl">
-            {/* Animated anchor */}
-            <div
-              className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-2xl text-5xl animate-float"
-              style={{
-                background: "linear-gradient(135deg, #1e293b, #0a0f1d)",
-                border: "2px solid rgba(212,175,55,0.5)",
-                boxShadow: "0 0 40px rgba(212,175,55,0.2)",
-              }}
-            >
-              ⚓
-            </div>
+        {/* Subtle ambient nautical background glow */}
+        <div
+          className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] rounded-full opacity-60"
+          style={{
+            background: "radial-gradient(circle, rgba(212,175,55,0.08) 0%, rgba(14,24,44,0.3) 50%, transparent 75%)",
+          }}
+        />
 
-            <div className="badge-gold badge-live mb-5">
-              <span className="status-dot status-dot--live" />
-              HARBOR WAITING ROOM
-            </div>
-
-            <h1 className="text-4xl sm:text-5xl font-black tracking-tight text-[#fdf6e2] mt-3"
-              style={{ textShadow: "0 4px 24px rgba(0,0,0,0.8)" }}>
-              WAITING FOR THE CAPTAIN
-            </h1>
-            <p className="mt-4 text-sm text-[#64748b] leading-relaxed max-w-lg mx-auto">
-              The Admiral is reviewing maritime charts. As soon as the test begins, you will
-              receive a 1-minute countdown to prepare your cannons!
-            </p>
-
-            {/* Rules scroll */}
-            <div className="mt-8 rounded-xl border border-[rgba(139,115,85,0.25)] bg-[rgba(5,8,15,0.7)] p-5 text-left space-y-3">
-              <p className="text-xs font-bold uppercase tracking-[0.15em] text-[#d4af37] mb-3">
-                📜 Standing Orders:
-              </p>
-              {[
-                { icon: "🗺️", title: "Round 1", desc: "Quest for the Lost Treasure — 3 Questions | 5 Compile Attempts Max" },
-                { icon: "🐙", title: "Round 2", desc: "The Kraken's Trial — 2 Questions | 3 Compile Attempts Max" },
-                { icon: "💥", title: "Round 3", desc: "Clash of the Captains — 1 Question | 2 Compile Attempts Max" },
-              ].map((r) => (
-                <div key={r.title} className="flex items-start gap-3 text-sm font-garamond">
-                  <span>{r.icon}</span>
-                  <span>
-                    <span className="text-[#f0e8d0] font-bold">{r.title}:</span>{" "}
-                    <span className="text-[#64748b]">{r.desc}</span>
-                  </span>
-                </div>
-              ))}
-              <div className="flex items-start gap-3 text-sm font-garamond pt-2 border-t border-[rgba(139,115,85,0.2)]">
-                <span>⚠️</span>
-                <span className="text-amber-400 font-semibold">
-                  Timers run strictly in the backend — NOT shown on your screen!
-                </span>
-              </div>
-            </div>
-
-            {/* Socket status */}
-            <div className="mt-6 flex items-center justify-center gap-2 text-sm font-garamond text-[#2e3d5a]">
-              <span className={`status-dot ${connected ? "status-dot--live" : "status-dot--danger"}`} />
-              Live Flagship Socket:{" "}
-              <span className={connected ? "text-emerald-400" : "text-red-400"}>
-                {connected ? "Connected to Admiral" : "Connecting..."}
-              </span>
-            </div>
-          </div>
+        {/* Tactical Coordinates Header */}
+        <div className="relative z-10 mb-4 flex items-center gap-2 text-[10px] font-cinzel font-bold tracking-[0.3em] text-[#d4af37]/70 uppercase">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#d4af37]/60" />
+          <span>PORT ROYAL ANCHORAGE · 17°26&apos;N 76°48&apos;W</span>
+          <span className="w-1.5 h-1.5 rounded-full bg-[#d4af37]/60" />
         </div>
 
-        {/* Wave decorations */}
-        <div className="wave-layer wave-layer--1" aria-hidden="true">
-          <svg viewBox="0 0 1440 160" preserveAspectRatio="none" fill="none">
-            <path d="M0,80 C180,20 360,140 540,80 C720,20 900,140 1080,80 C1260,20 1440,100 1440,80 L1440,160 L0,160 Z" fill="rgba(20,60,120,0.4)" />
-          </svg>
+        <div className="relative z-10 w-full max-w-2xl animate-treasure-in">
+          {/* Dual-border luxury maritime glass container */}
+          <div className="relative w-full overflow-hidden rounded-[2.5rem] bg-gradient-to-b from-[#d4af37]/35 via-[#d4af37]/15 to-[#d4af37]/30 p-[1px] shadow-[0_25px_80px_rgba(0,0,0,0.85),0_0_50px_rgba(212,175,55,0.08)]">
+            <Spotlight className="from-[#f4ede0] via-[#d4af37] to-transparent blur-3xl opacity-35" size={500} />
+
+            <div className="relative w-full rounded-[2.5rem] bg-[#121620]/92 backdrop-blur-2xl p-7 sm:p-11 border border-[#d4af37]/15 flex flex-col items-center text-center">
+              
+              {/* Antique Brass Corner Rivets/Brackets */}
+              <span className="pointer-events-none absolute top-4 left-4 w-3.5 h-3.5 border-t-2 border-l-2 border-[#d4af37]/50" />
+              <span className="pointer-events-none absolute top-4 right-4 w-3.5 h-3.5 border-t-2 border-r-2 border-[#d4af37]/50" />
+              <span className="pointer-events-none absolute bottom-4 left-4 w-3.5 h-3.5 border-b-2 border-l-2 border-[#d4af37]/50" />
+              <span className="pointer-events-none absolute bottom-4 right-4 w-3.5 h-3.5 border-b-2 border-r-2 border-[#d4af37]/50" />
+
+              {/* Bespoke Nautical Astrolabe & Anchor Crest */}
+              <div className="relative mb-6 flex items-center justify-center">
+                {/* Sonar Ping Ring */}
+                <div className="absolute inset-0 rounded-full animate-ping opacity-20 bg-[#d4af37]" />
+                
+                {/* Rotating Celestial / Compass Degree Ring */}
+                <div className="absolute -inset-3.5 rounded-full border border-dashed border-[#d4af37]/30 animate-[spin_40s_linear_infinite]" />
+                <div className="absolute -inset-1 rounded-full border border-[#d4af37]/20" />
+
+                {/* Center Medallion */}
+                <div
+                  className="relative flex h-24 w-24 items-center justify-center rounded-2xl shadow-[0_0_35px_rgba(212,175,55,0.25)] border-2 border-[#d4af37]/60"
+                  style={{
+                    background: "radial-gradient(circle at 30% 30%, #1e293b 0%, #0a0f1d 75%)",
+                  }}
+                >
+                  <Anchor className="w-11 h-11 text-[#f4ede0] drop-shadow-[0_2px_10px_rgba(212,175,55,0.5)]" strokeWidth={1.75} />
+                </div>
+              </div>
+
+              {/* Harbor Telemetry Status Pill */}
+              <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full border border-[#d4af37]/35 bg-[#d4af37]/10 shadow-[0_0_15px_rgba(212,175,55,0.08)] mb-4">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400 shadow-[0_0_8px_#34d399]" />
+                </span>
+                <span className="font-cinzel text-[10px] sm:text-[11px] font-bold tracking-[0.25em] text-[#f4ede0] uppercase">
+                  HARBOR FLEET STANDBY · WAITING FOR COMMAND
+                </span>
+              </div>
+
+              {/* Majestic Headline in Cinzel */}
+              <h1 className="font-cinzel text-3xl sm:text-5xl font-black tracking-[0.08em] text-[#f4ede0] uppercase mt-2 drop-shadow-[0_4px_24px_rgba(0,0,0,0.9)]">
+                WAITING FOR THE CAPTAIN
+              </h1>
+
+              {/* Subtle Ornamental Gold Divider */}
+              <div className="flex items-center justify-center gap-3 my-4 w-full max-w-xs opacity-75">
+                <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-[#d4af37] to-[#d4af37]/40" />
+                <div className="w-1.5 h-1.5 rotate-45 border border-[#d4af37] bg-[#d4af37]/40" />
+                <div className="h-[1px] flex-1 bg-gradient-to-l from-transparent via-[#d4af37] to-[#d4af37]/40" />
+              </div>
+
+              {/* Dispatch Briefing */}
+              <p className="font-garamond text-base sm:text-lg text-[#c8b887] leading-relaxed max-w-lg mx-auto tracking-wide">
+                The High Admiral is reviewing maritime charts and calibrating the flagship battle arena. As soon as anchor is weighed, all crews will receive a 60-second preparation countdown to man their cannons!
+              </p>
+
+              {/* Standing Orders Dossier */}
+              <div className="mt-8 w-full rounded-2xl border border-[#d4af37]/25 bg-[#0a0f1d]/75 backdrop-blur-md p-5 sm:p-6 text-left shadow-[inset_0_1px_0_rgba(212,175,55,0.1)]">
+                
+                {/* Dossier Header */}
+                <div className="flex items-center justify-between pb-3 mb-3 border-b border-[#d4af37]/15">
+                  <div className="flex items-center gap-2.5">
+                    <Scroll className="w-4 h-4 text-[#d4af37]" />
+                    <span className="font-cinzel text-xs font-bold uppercase tracking-[0.2em] text-[#d4af37]">
+                      EXPEDITION STANDING ORDERS
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-cinzel font-semibold tracking-widest text-[#8e8271] uppercase hidden sm:inline-block">
+                    ARCHIPELAGO VOYAGE · 3 ROUNDS
+                  </span>
+                </div>
+
+                {/* Round Cards */}
+                <div className="space-y-2.5">
+                  {[
+                    {
+                      order: "ROUND I",
+                      title: "Quest for the Lost Treasure",
+                      lore: "Algorithmic discovery & foundational problem solving",
+                      questions: "3 Questions",
+                      attempts: "5 Compiles Max",
+                      icon: Compass,
+                      colorClass: "text-[#d4af37] border-[#d4af37]/30 bg-[#d4af37]/10",
+                    },
+                    {
+                      order: "ROUND II",
+                      title: "The Kraken's Trial",
+                      lore: "Data structures & treacherous ocean whirlpools",
+                      questions: "2 Questions",
+                      attempts: "3 Compiles Max",
+                      icon: Waves,
+                      colorClass: "text-cyan-400 border-cyan-500/30 bg-cyan-950/30",
+                    },
+                    {
+                      order: "ROUND III",
+                      title: "Clash of the Captains",
+                      lore: "Final computational duel for the legendary bounty",
+                      questions: "1 Question",
+                      attempts: "2 Compiles Max",
+                      icon: Swords,
+                      colorClass: "text-amber-400 border-amber-500/30 bg-amber-950/30",
+                    },
+                  ].map((r) => {
+                    const IconComponent = r.icon
+                    return (
+                      <div
+                        key={r.order}
+                        className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 sm:px-4 sm:py-3 rounded-xl bg-[#131a29]/60 border border-[#d4af37]/15 hover:border-[#d4af37]/35 transition-all"
+                      >
+                        <div className="flex items-center gap-3.5">
+                          <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border ${r.colorClass}`}>
+                            <IconComponent className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-cinzel text-[11px] font-bold text-[#d4af37] tracking-wider">
+                                {r.order}:
+                              </span>
+                              <span className="font-cinzel text-xs font-bold text-[#f4ede0] tracking-wide">
+                                {r.title}
+                              </span>
+                            </div>
+                            <div className="font-garamond text-xs text-[#8e8271]">
+                              {r.lore}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+                          <span className="px-2.5 py-1 rounded-md border border-[#d4af37]/25 bg-black/40 text-[10px] font-cinzel font-bold text-[#d4af37] tracking-wider">
+                            {r.questions}
+                          </span>
+                          <span className="px-2.5 py-1 rounded-md border border-white/10 bg-black/30 text-[10px] font-cinzel text-[#8e8271] tracking-wider">
+                            {r.attempts}
+                          </span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                {/* Critical Directive (Replaces emoji warning) */}
+                <div className="mt-3.5 flex items-center gap-3 p-3.5 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-200">
+                  <ShieldAlert className="w-4 h-4 text-amber-400 shrink-0" />
+                  <div className="text-[11px] font-cinzel tracking-wider leading-relaxed">
+                    <span className="font-bold text-amber-300 uppercase">CHRONOMETER PROTOCOL:</span>{" "}
+                    <span className="font-garamond text-xs text-amber-200/90 font-medium normal-case">
+                      Battle timers run strictly on the High Admiral&apos;s flagship server — hidden from your console to enforce true maritime focus.
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Live Flagship Socket Telemetry */}
+              <div className="mt-7 pt-4 w-full border-t border-[#d4af37]/15 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs font-cinzel">
+                <div className="flex items-center gap-2 text-[#8e8271]">
+                  <Radio className="w-3.5 h-3.5 text-[#d4af37]" />
+                  <span className="tracking-[0.15em] uppercase text-[10px]">LIVE FLAGSHIP TELEMETRY:</span>
+                  <span className={connected ? "text-emerald-400 font-bold tracking-wider" : "text-red-400 font-bold tracking-wider"}>
+                    {connected ? "SECURE UPLINK ESTABLISHED" : "CONNECTING TO FLEET..."}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2 text-[10px] tracking-widest text-[#695e50] uppercase">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#d4af37]/50" />
+                  <span>COMMUNICATION FREQUENCY 4.8 GHZ</span>
+                </div>
+              </div>
+
+            </div>
+          </div>
         </div>
       </div>
     )
@@ -736,71 +908,129 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
   if (arenaState === "COUNTDOWN") {
     const isUrgent = countdownSeconds <= 10
     return (
-      <div className="ocean-bg flex min-h-[calc(100vh-65px)] flex-col items-center justify-center p-6 text-center">
-        
-
-        {/* Central ambient orb */}
+      <div className="relative min-h-[calc(100vh-80px)] pt-28 pb-16 px-4 flex flex-col items-center justify-center z-10 text-center">
+        {/* Subtle ambient nautical background glow */}
         <div
-          className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full"
-          style={{ background: "radial-gradient(circle, rgba(212,175,55,0.08) 0%, transparent 70%)", animation: "orbPulse 3s ease-in-out infinite" }}
+          className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] rounded-full opacity-60"
+          style={{
+            background: isUrgent
+              ? "radial-gradient(circle, rgba(239,68,68,0.12) 0%, rgba(14,24,44,0.3) 50%, transparent 75%)"
+              : "radial-gradient(circle, rgba(212,175,55,0.08) 0%, rgba(14,24,44,0.3) 50%, transparent 75%)",
+            animation: "orbPulse 3s ease-in-out infinite",
+          }}
         />
 
+        {/* Tactical Coordinates Header */}
+        <div className="relative z-10 mb-4 flex items-center gap-2 text-[10px] font-cinzel font-bold tracking-[0.3em] text-[#d4af37]/70 uppercase">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#d4af37]/60" />
+          <span>PORT ROYAL BATTLE STATIONS · 17°26&apos;N 76°48&apos;W</span>
+          <span className="w-1.5 h-1.5 rounded-full bg-[#d4af37]/60" />
+        </div>
+
         <div className="relative z-10 w-full max-w-xl animate-treasure-in">
+          {/* Dual-border luxury maritime glass container */}
           <div
-            className="pirate-card pirate-card-corner rounded-2xl p-10 shadow-2xl"
-            style={{ borderColor: isUrgent ? "rgba(239,68,68,0.6)" : "rgba(212,175,55,0.35)" }}
+            className={`relative w-full overflow-hidden rounded-[2.5rem] p-[1px] shadow-[0_25px_80px_rgba(0,0,0,0.85)] transition-all ${
+              isUrgent
+                ? "bg-gradient-to-b from-red-500/50 via-red-500/20 to-red-500/40 shadow-[0_0_60px_rgba(239,68,68,0.25)]"
+                : "bg-gradient-to-b from-[#d4af37]/35 via-[#d4af37]/15 to-[#d4af37]/30"
+            }`}
           >
-            <div className="text-5xl mb-4 animate-float">⚔️</div>
+            <Spotlight className={isUrgent ? "from-red-500/30 via-[#d4af37]/20 to-transparent blur-3xl opacity-35" : "from-[#f4ede0] via-[#d4af37] to-transparent blur-3xl opacity-35"} size={500} />
 
-            <div className="badge-crimson mb-4 animate-flicker">
-              🔥 BATTLE COMMENCING
-            </div>
+            <div className="relative w-full rounded-[2.5rem] bg-[#121620]/92 backdrop-blur-2xl p-7 sm:p-11 border border-[#d4af37]/15 flex flex-col items-center text-center">
+              
+              {/* Antique Brass Corner Rivets/Brackets */}
+              <span className={`pointer-events-none absolute top-4 left-4 w-3.5 h-3.5 border-t-2 border-l-2 ${isUrgent ? "border-red-500/60" : "border-[#d4af37]/50"}`} />
+              <span className={`pointer-events-none absolute top-4 right-4 w-3.5 h-3.5 border-t-2 border-r-2 ${isUrgent ? "border-red-500/60" : "border-[#d4af37]/50"}`} />
+              <span className={`pointer-events-none absolute bottom-4 left-4 w-3.5 h-3.5 border-b-2 border-l-2 ${isUrgent ? "border-red-500/60" : "border-[#d4af37]/50"}`} />
+              <span className={`pointer-events-none absolute bottom-4 right-4 w-3.5 h-3.5 border-b-2 border-r-2 ${isUrgent ? "border-red-500/60" : "border-[#d4af37]/50"}`} />
 
-            <h1 className="text-3xl sm:text-4xl font-black text-[#fdf6e2]"
-              style={{ textShadow: "0 4px 20px rgba(0,0,0,0.9)" }}>
-              PREPARE YE CANNONS!
-            </h1>
-            <p className="mt-2 text-sm text-[#64748b]">
-              Next Voyage:{" "}
-              <span className="font-bold text-[#ffd700]">{splashRoundName}</span>
-            </p>
+              {/* Bespoke Crossed Cutlasses Emblem */}
+              <div className="relative mb-5 flex items-center justify-center">
+                <div className={`absolute inset-0 rounded-full animate-ping opacity-25 ${isUrgent ? "bg-red-500" : "bg-[#d4af37]"}`} />
+                <div className={`absolute -inset-3.5 rounded-full border border-dashed animate-[spin_40s_linear_infinite] ${isUrgent ? "border-red-500/40" : "border-[#d4af37]/30"}`} />
+                <div className={`absolute -inset-1 rounded-full border ${isUrgent ? "border-red-500/30" : "border-[#d4af37]/20"}`} />
 
-            {/* Big countdown ring */}
-            <div className="my-8 flex justify-center">
-              <div
-                className="relative flex h-40 w-40 items-center justify-center rounded-full"
-                style={{
-                  background: "linear-gradient(135deg, #1e293b, #0a0f1d)",
-                  border: `4px solid ${isUrgent ? "#ef4444" : "#ffd700"}`,
-                  boxShadow: `0 0 ${isUrgent ? "50px rgba(239,68,68,0.6)" : "30px rgba(255,215,0,0.3)"}`,
-                }}
-              >
-                <span
-                  className="font-garamond text-6xl font-black leading-none"
+                <div
+                  className={`relative flex h-24 w-24 items-center justify-center rounded-2xl shadow-[0_0_35px_rgba(212,175,55,0.25)] border-2 ${
+                    isUrgent ? "border-red-500/70" : "border-[#d4af37]/60"
+                  }`}
                   style={{
-                    color: isUrgent ? "#ef4444" : "#ffd700",
-                    textShadow: `0 0 20px ${isUrgent ? "rgba(239,68,68,0.8)" : "rgba(255,215,0,0.6)"}`,
-                    animation: isUrgent ? "urgentPulse 0.8s ease-in-out infinite" : undefined,
+                    background: isUrgent
+                      ? "radial-gradient(circle at 30% 30%, #260808 0%, #0d0202 75%)"
+                      : "radial-gradient(circle at 30% 30%, #1e293b 0%, #0a0f1d 75%)",
                   }}
                 >
-                  {countdownSeconds}
-                </span>
-                <span className="absolute bottom-5 font-garamond text-sm text-[#4a5568] tracking-wider">
-                  SECONDS
-                </span>
+                  <Swords className={`w-11 h-11 ${isUrgent ? "text-red-400 drop-shadow-[0_2px_12px_rgba(239,68,68,0.7)]" : "text-[#ffd700] drop-shadow-[0_2px_10px_rgba(212,175,55,0.5)]"}`} strokeWidth={1.75} />
+                </div>
               </div>
+
+              {/* Status Pill */}
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-red-500/40 bg-red-950/40 text-red-400 mb-4 font-cinzel text-xs font-bold tracking-[0.2em] uppercase">
+                <Flame className="w-3.5 h-3.5 text-red-400 animate-pulse" />
+                BATTLE COMMENCING · CANNONS PRIMED
+              </div>
+
+              {/* Headline */}
+              <h1 className="font-cinzel text-3xl sm:text-5xl font-black text-[#fdf6e2] uppercase tracking-[0.08em] drop-shadow-[0_4px_24px_rgba(0,0,0,0.9)]">
+                PREPARE YE CANNONS!
+              </h1>
+
+              {/* Subtle Ornamental Gold Divider */}
+              <div className="flex items-center justify-center gap-3 my-4 w-full max-w-xs opacity-75">
+                <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-[#d4af37] to-[#d4af37]/40" />
+                <div className="w-1.5 h-1.5 rotate-45 border border-[#d4af37] bg-[#d4af37]/40" />
+                <div className="h-[1px] flex-1 bg-gradient-to-l from-transparent via-[#d4af37] to-[#d4af37]/40" />
+              </div>
+
+              <p className="font-garamond text-base sm:text-lg text-[#c8b887] leading-relaxed max-w-lg mx-auto">
+                Next Voyage:{" "}
+                <span className="font-cinzel font-bold text-[#ffd700] tracking-wider">{splashRoundName}</span>
+              </p>
+
+              {/* Big countdown chronometer ring */}
+              <div className="my-7 flex justify-center">
+                <div
+                  className="relative flex h-44 w-44 items-center justify-center rounded-full p-2"
+                  style={{
+                    background: "radial-gradient(circle at 35% 35%, #1e293b 0%, #0a0f1d 75%)",
+                    border: `4px solid ${isUrgent ? "#ef4444" : "#ffd700"}`,
+                    boxShadow: `0 0 ${isUrgent ? "50px rgba(239,68,68,0.5)" : "35px rgba(255,215,0,0.3)"}`,
+                  }}
+                >
+                  <div className="absolute -inset-3 rounded-full border border-dashed border-[#d4af37]/30 animate-[spin_50s_linear_infinite]" />
+                  <div className="flex flex-col items-center justify-center">
+                    <span
+                      className="font-cinzel text-6xl font-black leading-none"
+                      style={{
+                        color: isUrgent ? "#ef4444" : "#ffd700",
+                        textShadow: `0 0 20px ${isUrgent ? "rgba(239,68,68,0.8)" : "rgba(255,215,0,0.6)"}`,
+                        animation: isUrgent ? "urgentPulse 0.8s ease-in-out infinite" : undefined,
+                      }}
+                    >
+                      {countdownSeconds}
+                    </span>
+                    <span className="font-cinzel text-[11px] font-bold text-[#8e8271] tracking-[0.25em] uppercase mt-2">
+                      SECONDS
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-sm font-garamond text-[#8e8271] mb-6">
+                Click below to enter immediately, or the sails hoist automatically!
+              </p>
+
+              <button
+                onClick={handleStartTestNow}
+                className="flex items-center justify-center gap-3 border border-[#d4af37]/60 bg-gradient-to-r from-[#d4af37]/20 via-[#ffd700]/25 to-[#d4af37]/20 hover:from-[#d4af37]/35 hover:to-[#ffd700]/40 font-cinzel text-[#f4ede0] w-full rounded-2xl py-4 text-xs sm:text-sm font-bold tracking-[0.25em] uppercase transition-all shadow-[0_0_30px_rgba(212,175,55,0.2)]"
+              >
+                <Swords className="w-4 h-4 text-[#ffd700]" />
+                ENTER BATTLE ARENA NOW
+                <Swords className="w-4 h-4 text-[#ffd700]" />
+              </button>
             </div>
-
-            <p className="text-sm text-[#64748b] mb-6">
-              Click below to enter immediately, or the sails hoist automatically!
-            </p>
-
-            <button
-              onClick={handleStartTestNow}
-              className="border border-[#d4af37]/40 bg-[#d4af37]/10 hover:bg-[#d4af37]/20 font-cinzel tracking-widest text-[#d4af37] w-full rounded-xl py-4 text-sm font-black tracking-widest"
-            >
-              ⚔️ START THE TEST NOW ⚔️
-            </button>
           </div>
         </div>
       </div>
@@ -810,25 +1040,91 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
   // ── STATE: ROUND SPLASH ───────────────────────────────────────
   if (arenaState === "SPLASH") {
     return (
-      <div className="round-splash">
-        <div className="round-splash-orb" />
-        <div className="relative z-10 flex flex-col items-center gap-6 animate-treasure-in">
-          <div className="text-7xl animate-float">🏴‍☠️</div>
-          <p className="font-garamond text-sm font-bold uppercase tracking-[0.25em] text-[#d4af37] opacity-70">
-            ENTERING ARENA
-          </p>
-          <h1 className="text-4xl sm:text-6xl font-black tracking-wide text-shimmer px-6">
-            {splashRoundName}
-          </h1>
-          <p className="text-sm font-garamond text-[#4a5568] mt-2">
-            Hoisting code scrolls... May fortune favor your algorithms!
-          </p>
-          {/* Loading bar */}
-          <div className="mt-4 w-64 h-0.5 bg-[#0a1224] rounded-full overflow-hidden">
-            <div
-              className="h-full bg-gradient-to-r from-[#d4af37] to-[#ffd700] rounded-full"
-              style={{ animation: "scanLine 2.5s linear forwards", width: "100%" }}
-            />
+      <div className="relative min-h-[calc(100vh-80px)] pt-28 pb-16 px-4 flex flex-col items-center justify-center z-10 text-center">
+        {/* Subtle ambient nautical background glow */}
+        <div
+          className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] rounded-full opacity-60"
+          style={{
+            background: "radial-gradient(circle, rgba(212,175,55,0.08) 0%, rgba(14,24,44,0.3) 50%, transparent 75%)",
+          }}
+        />
+
+        {/* Tactical Coordinates Header */}
+        <div className="relative z-10 mb-4 flex items-center gap-2 text-[10px] font-cinzel font-bold tracking-[0.3em] text-[#d4af37]/70 uppercase">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#d4af37]/60" />
+          <span>PORT ROYAL ADMIRALTY · ENTERING ARENA VOYAGE</span>
+          <span className="w-1.5 h-1.5 rounded-full bg-[#d4af37]/60" />
+        </div>
+
+        <div className="relative z-10 w-full max-w-2xl animate-treasure-in">
+          {/* Dual-border luxury maritime glass container */}
+          <div className="relative w-full overflow-hidden rounded-[2.5rem] bg-gradient-to-b from-[#d4af37]/35 via-[#d4af37]/15 to-[#d4af37]/30 p-[1px] shadow-[0_25px_80px_rgba(0,0,0,0.85),0_0_50px_rgba(212,175,55,0.08)]">
+            <Spotlight className="from-[#f4ede0] via-[#d4af37] to-transparent blur-3xl opacity-35" size={500} />
+
+            <div className="relative w-full rounded-[2.5rem] bg-[#121620]/92 backdrop-blur-2xl p-8 sm:p-12 border border-[#d4af37]/15 flex flex-col items-center text-center">
+              
+              {/* Antique Brass Corner Rivets/Brackets */}
+              <span className="pointer-events-none absolute top-4 left-4 w-3.5 h-3.5 border-t-2 border-l-2 border-[#d4af37]/50" />
+              <span className="pointer-events-none absolute top-4 right-4 w-3.5 h-3.5 border-t-2 border-r-2 border-[#d4af37]/50" />
+              <span className="pointer-events-none absolute bottom-4 left-4 w-3.5 h-3.5 border-b-2 border-l-2 border-[#d4af37]/50" />
+              <span className="pointer-events-none absolute bottom-4 right-4 w-3.5 h-3.5 border-b-2 border-r-2 border-[#d4af37]/50" />
+
+              {/* Bespoke Nautical Crest */}
+              <div className="relative mb-6 flex items-center justify-center">
+                <div className="absolute inset-0 rounded-full animate-ping opacity-20 bg-[#d4af37]" />
+                <div className="absolute -inset-3.5 rounded-full border border-dashed border-[#d4af37]/30 animate-[spin_40s_linear_infinite]" />
+                <div className="absolute -inset-1 rounded-full border border-[#d4af37]/20" />
+
+                <div
+                  className="relative flex h-24 w-24 items-center justify-center rounded-2xl shadow-[0_0_35px_rgba(212,175,55,0.25)] border-2 border-[#d4af37]/60"
+                  style={{
+                    background: "radial-gradient(circle at 30% 30%, #1e293b 0%, #0a0f1d 75%)",
+                  }}
+                >
+                  <Ship className="w-12 h-12 text-[#ffd700] drop-shadow-[0_2px_10px_rgba(212,175,55,0.5)]" strokeWidth={1.75} />
+                </div>
+              </div>
+
+              {/* Status Pill */}
+              <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full border border-[#d4af37]/35 bg-[#d4af37]/10 shadow-[0_0_15px_rgba(212,175,55,0.08)] mb-4">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400 shadow-[0_0_8px_#34d399]" />
+                </span>
+                <span className="font-cinzel text-[10px] sm:text-[11px] font-bold tracking-[0.25em] text-[#f4ede0] uppercase">
+                  ENTERING ARENA · HOISTING CODE SCROLLS
+                </span>
+              </div>
+
+              {/* Majestic Headline */}
+              <h1 className="font-cinzel text-3xl sm:text-5xl font-black tracking-[0.08em] text-[#f4ede0] uppercase mt-2 drop-shadow-[0_4px_24px_rgba(0,0,0,0.9)]">
+                {splashRoundName}
+              </h1>
+
+              {/* Subtle Ornamental Gold Divider */}
+              <div className="flex items-center justify-center gap-3 my-4 w-full max-w-xs opacity-75">
+                <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-[#d4af37] to-[#d4af37]/40" />
+                <div className="w-1.5 h-1.5 rotate-45 border border-[#d4af37] bg-[#d4af37]/40" />
+                <div className="h-[1px] flex-1 bg-gradient-to-l from-transparent via-[#d4af37] to-[#d4af37]/40" />
+              </div>
+
+              {/* Dispatch Briefing */}
+              <p className="font-garamond text-base sm:text-lg text-[#c8b887] leading-relaxed max-w-lg mx-auto tracking-wide">
+                Hoisting code scrolls and charting battle coordinates... May fortune favor your algorithms in the trials ahead!
+              </p>
+
+              {/* Animated Gold Loading Bar */}
+              <div className="mt-8 w-full max-w-md h-2 bg-[#0a1224] rounded-full overflow-hidden border border-[#d4af37]/30 p-[1px] shadow-[0_0_20px_rgba(212,175,55,0.15)]">
+                <div
+                  className="h-full bg-gradient-to-r from-[#d4af37] via-[#ffe066] to-[#ffd700] rounded-full"
+                  style={{ animation: "scanLine 2.5s linear forwards", width: "100%" }}
+                />
+              </div>
+
+              <span className="font-cinzel text-[10px] tracking-[0.25em] text-[#8e8271] uppercase mt-4">
+                INITIALIZING MONACO COMPILER & FLEET TELEMETRY...
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -838,62 +1134,83 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
   // ── STATE: ENDED ──────────────────────────────────────────────
   if (arenaState === "ENDED") {
     return (
-      <div className="ocean-bg flex min-h-[calc(100vh-65px)] flex-col items-center justify-center p-6 text-center">
-        
+      <div className="relative min-h-[calc(100vh-80px)] pt-28 pb-16 px-4 flex flex-col items-center justify-center z-10 text-center">
         <div className="relative z-10 w-full max-w-3xl animate-treasure-in">
-          <div className="pirate-card pirate-card-corner rounded-2xl p-10 shadow-2xl">
-            <div className="text-6xl mb-4 animate-float">🏆</div>
-            <div className="badge-gold mb-4">TOURNAMENT CONCLUDED</div>
-            <h1 className="text-3xl sm:text-4xl font-black text-[#fdf6e2] mt-3"
-              style={{ textShadow: "0 4px 20px rgba(0,0,0,0.8)" }}>
-              ALL ANCHORS DROPPED
-            </h1>
-            <p className="mt-3 text-sm text-[#64748b] max-w-md mx-auto leading-relaxed">
-              The Admiral has ended the test. All submissions have been evaluated by the High Admiral AI!
-            </p>
+          <div className="relative w-full overflow-hidden rounded-[2.5rem] bg-gradient-to-b from-[#d4af37]/35 via-[#d4af37]/15 to-[#d4af37]/30 p-[1px] shadow-[0_25px_80px_rgba(0,0,0,0.85)]">
+            <Spotlight className="from-[#f4ede0] via-[#d4af37] to-transparent blur-3xl opacity-35" size={500} />
 
-            {top3Winners.length > 0 && (
-              <div className="mt-10">
-                <div className="rope-divider rope-divider-gold mb-6">
-                  <span className="font-garamond text-sm font-bold uppercase tracking-widest text-[#d4af37]">
-                    👑 TOP 3 CHAMPIONS
-                  </span>
-                </div>
-                <div className="grid gap-4 sm:grid-cols-3">
-                  {top3Winners.map((w, idx) => (
-                    <div
-                      key={idx}
-                      className={`pirate-card rounded-xl p-5 text-left ${
-                        idx === 0 ? "podium-1" : idx === 1 ? "podium-2" : "podium-3"
-                      }`}
-                    >
-                      <div className="text-2xl font-black mb-2">
-                        {idx === 0 ? "🥇" : idx === 1 ? "🥈" : "🥉"}
-                      </div>
-                      <div className="font-bold text-[#fdf6e2] text-sm">{w.name}</div>
-                      <div className="text-xs font-garamond text-[#4a5568] mt-0.5">{w.email}</div>
-                      <div className="mt-3 text-sm font-bold text-[#ffd700]">
-                        {w.compositeScore} pts
-                      </div>
-                    </div>
-                  ))}
-                </div>
+            <div className="relative w-full rounded-[2.5rem] bg-[#121620]/92 backdrop-blur-2xl p-7 sm:p-11 border border-[#d4af37]/15 flex flex-col items-center text-center">
+              {/* Corner brackets */}
+              <span className="pointer-events-none absolute top-4 left-4 w-3.5 h-3.5 border-t-2 border-l-2 border-[#d4af37]/50" />
+              <span className="pointer-events-none absolute top-4 right-4 w-3.5 h-3.5 border-t-2 border-r-2 border-[#d4af37]/50" />
+              <span className="pointer-events-none absolute bottom-4 left-4 w-3.5 h-3.5 border-b-2 border-l-2 border-[#d4af37]/50" />
+              <span className="pointer-events-none absolute bottom-4 right-4 w-3.5 h-3.5 border-b-2 border-r-2 border-[#d4af37]/50" />
+
+              <div className="flex h-20 w-20 items-center justify-center rounded-2xl mx-auto mb-4 border-2 border-[#d4af37]/60 shadow-[0_0_35px_rgba(212,175,55,0.3)] bg-gradient-to-br from-[#1e293b] to-[#0a0f1d] animate-float">
+                <Trophy className="w-10 h-10 text-[#ffd700]" />
               </div>
-            )}
 
-            <div className="mt-8 flex flex-wrap justify-center gap-3">
-              <Link
-                href="/standings"
-                className="border border-[#d4af37]/40 bg-[#d4af37]/10 hover:bg-[#d4af37]/20 font-cinzel tracking-widest text-[#d4af37] rounded-xl px-6 py-3 text-sm"
-              >
-                VIEW FULL BOUNTY BOARD
-              </Link>
-              <Link
-                href="/dashboard"
-                className="btn-pirate-ghost rounded-xl px-6 py-3 text-sm"
-              >
-                RETURN TO HARBOR
-              </Link>
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#d4af37]/35 bg-[#d4af37]/10 text-[#d4af37] mb-4 font-cinzel text-xs font-bold tracking-[0.2em] uppercase">
+                TOURNAMENT CONCLUDED
+              </div>
+
+              <h1 className="font-cinzel text-3xl sm:text-4xl font-black text-[#fdf6e2] uppercase tracking-wider drop-shadow-md">
+                ALL ANCHORS DROPPED
+              </h1>
+              <p className="mt-3 text-sm font-garamond text-[#b8a990] max-w-md mx-auto leading-relaxed">
+                The Admiral has ended the test. All submissions have been evaluated by the High Admiral AI!
+              </p>
+
+              {top3Winners.length > 0 && (
+                <div className="mt-10 w-full">
+                  <div className="flex items-center justify-center gap-2 mb-6 font-cinzel text-xs font-bold uppercase tracking-[0.25em] text-[#d4af37]">
+                    <Crown className="w-4 h-4 text-[#ffd700]" />
+                    TOP 3 FLEET CHAMPIONS
+                  </div>
+
+                  <div className="grid gap-4 sm:grid-cols-3">
+                    {top3Winners.map((w, idx) => (
+                      <div
+                        key={idx}
+                        className={`rounded-2xl p-5 text-left border ${
+                          idx === 0
+                            ? "bg-[#d4af37]/15 border-[#d4af37]/50 shadow-[0_0_20px_rgba(212,175,55,0.2)]"
+                            : idx === 1
+                            ? "bg-slate-800/40 border-slate-400/30"
+                            : "bg-amber-950/30 border-amber-600/30"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 mb-2 font-cinzel font-bold text-xs tracking-wider">
+                          <Medal className={`w-4 h-4 ${idx === 0 ? "text-[#ffd700]" : idx === 1 ? "text-slate-300" : "text-amber-600"}`} />
+                          <span className={idx === 0 ? "text-[#ffd700]" : idx === 1 ? "text-slate-300" : "text-amber-600"}>
+                            {idx === 0 ? "1ST PLACE" : idx === 1 ? "2ND PLACE" : "3RD PLACE"}
+                          </span>
+                        </div>
+                        <div className="font-cinzel font-bold text-[#fdf6e2] text-sm">{w.name}</div>
+                        <div className="text-xs font-garamond text-[#8e8271] mt-0.5">{w.email}</div>
+                        <div className="mt-3 text-sm font-cinzel font-bold text-[#ffd700]">
+                          {w.compositeScore} PTS
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="mt-8 flex flex-wrap justify-center gap-3">
+                <Link
+                  href="/standings"
+                  className="border border-[#d4af37]/60 bg-[#d4af37]/15 hover:bg-[#d4af37]/25 font-cinzel tracking-widest text-[#d4af37] rounded-xl px-6 py-3 text-xs uppercase font-bold transition-all"
+                >
+                  VIEW FULL BOUNTY BOARD
+                </Link>
+                <Link
+                  href="/dashboard"
+                  className="border border-white/10 hover:border-[#d4af37]/30 bg-black/40 hover:bg-black/60 font-cinzel tracking-widest text-[#8e8271] hover:text-[#f4ede0] rounded-xl px-6 py-3 text-xs uppercase font-bold transition-all"
+                >
+                  RETURN TO HARBOR
+                </Link>
+              </div>
             </div>
           </div>
         </div>
@@ -908,7 +1225,7 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
       {/* ── SECURITY HUD WARNING TOAST ─────────────────────────── */}
       {securityToast && (
         <div className="fixed top-8 left-1/2 -translate-x-1/2 z-[10000] flex items-center gap-3 px-6 py-3.5 rounded-2xl bg-[#140808]/95 border-2 border-red-500/80 shadow-[0_0_40px_rgba(239,68,68,0.6)] backdrop-blur-xl animate-bounce">
-          <span className="text-2xl animate-pulse">⚔️</span>
+          <ShieldAlert className="w-6 h-6 text-red-400 shrink-0 animate-pulse" />
           <div>
             <div className="text-[10px] font-cinzel font-black tracking-[0.25em] text-red-400 uppercase">
               SECURITY PROTOCOL ENFORCEMENT
@@ -923,11 +1240,11 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
       {/* ── FULLSCREEN OVERLAY ───────────────────────────────────── */}
       {needsFullscreen && (!isFullscreen || fullscreenExited) && (
         <div
-          className="fixed inset-0 z-[9999] flex flex-col items-center justify-center text-center"
+          className="fixed inset-0 z-[9999] flex flex-col items-center justify-center p-6 text-center"
           style={{
             background: fullscreenExited
-              ? "linear-gradient(135deg, #0f0505 0%, #0a0000 60%, #0f0500 100%)"
-              : "linear-gradient(135deg, #0a0f1d 0%, #050810 60%, #0f0a00 100%)",
+              ? "radial-gradient(ellipse at center, rgba(30,5,5,0.96) 0%, rgba(10,0,0,0.98) 70%)"
+              : "radial-gradient(ellipse at center, rgba(12,18,32,0.95) 0%, rgba(5,8,16,0.98) 70%)",
             backdropFilter: "blur(20px)",
           }}
         >
@@ -942,139 +1259,169 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
             }}
           />
 
-          <div className="relative z-10 flex flex-col items-center gap-6 px-6 max-w-lg">
+          {/* Tactical Coordinates Header */}
+          <div className="relative z-10 mb-4 flex items-center gap-2 text-[10px] font-cinzel font-bold tracking-[0.3em] uppercase">
+            <span className={`w-1.5 h-1.5 rounded-full ${fullscreenExited ? "bg-red-400" : "bg-[#d4af37]"}`} />
+            <span className={fullscreenExited ? "text-red-400/80" : "text-[#d4af37]/80"}>
+              {fullscreenExited ? "ADMIRALTY COURT MARTIAL · CODE OF THE HIGH SEAS" : "BATTLE PROTOCOL · SECURE ARENA ENTRY"}
+            </span>
+            <span className={`w-1.5 h-1.5 rounded-full ${fullscreenExited ? "bg-red-400" : "bg-[#d4af37]"}`} />
+          </div>
 
+          <div className="relative z-10 w-full max-w-xl animate-treasure-in">
             {fullscreenExited ? (
-              /* ── PERMANENT LOCKOUT SCREEN ── */
-              <>
-                <div
-                  className="flex h-28 w-28 items-center justify-center rounded-3xl text-6xl"
-                  style={{
-                    background: "linear-gradient(135deg, #1a0000, #0f0000)",
-                    border: "2px solid rgba(239,68,68,0.6)",
-                    boxShadow: "0 0 60px rgba(239,68,68,0.25), 0 0 120px rgba(239,68,68,0.08)",
-                    animation: "float 3s ease-in-out infinite",
-                  }}
-                >
-                  ☠️
-                </div>
+              /* ── PERMANENT LOCKOUT SCREEN (MAROONED) ── */
+              <div className="relative w-full overflow-hidden rounded-[2.5rem] bg-gradient-to-b from-red-500/40 via-[#d4af37]/20 to-red-500/35 p-[1px] shadow-[0_25px_80px_rgba(0,0,0,0.9),0_0_50px_rgba(239,68,68,0.15)]">
+                <Spotlight className="from-red-500/30 via-[#d4af37]/20 to-transparent blur-3xl opacity-35" size={450} />
 
-                <div
-                  className="text-[10px] font-cinzel font-bold uppercase tracking-[0.35em] px-4 py-1.5 rounded-full"
-                  style={{
-                    color: "#ef4444",
-                    border: "1px solid rgba(239,68,68,0.5)",
-                    background: "rgba(239,68,68,0.08)",
-                    animation: "urgentPulse 1.5s ease-in-out infinite",
-                  }}
-                >
-                  🚨 DISQUALIFIED FROM THIS ROUND
-                </div>
+                <div className="relative w-full rounded-[2.5rem] bg-[#120a0a]/94 backdrop-blur-2xl p-7 sm:p-11 border border-red-500/20 flex flex-col items-center text-center">
+                  {/* Corner brackets */}
+                  <span className="pointer-events-none absolute top-4 left-4 w-3.5 h-3.5 border-t-2 border-l-2 border-red-500/60" />
+                  <span className="pointer-events-none absolute top-4 right-4 w-3.5 h-3.5 border-t-2 border-r-2 border-red-500/60" />
+                  <span className="pointer-events-none absolute bottom-4 left-4 w-3.5 h-3.5 border-b-2 border-l-2 border-red-500/60" />
+                  <span className="pointer-events-none absolute bottom-4 right-4 w-3.5 h-3.5 border-b-2 border-r-2 border-red-500/60" />
 
-                <h1
-                  className="text-4xl sm:text-5xl font-black tracking-tight"
-                  style={{
-                    color: "#fdf6e2",
-                    textShadow: "0 4px 30px rgba(0,0,0,0.9), 0 0 60px rgba(239,68,68,0.2)",
-                  }}
-                >
-                  {dqReason === "TAB_SWITCH"
-                    ? "MUTINY DETECTED!"
-                    : "MAROONED!"}
-                </h1>
+                  {/* Skull Crest Medallion */}
+                  <div className="relative mb-5 flex items-center justify-center">
+                    <div className="absolute inset-0 rounded-full animate-ping opacity-25 bg-red-500" />
+                    <div className="absolute -inset-3.5 rounded-full border border-dashed border-red-500/40 animate-[spin_40s_linear_infinite]" />
+                    <div className="absolute -inset-1 rounded-full border border-red-500/30" />
 
-                <p className="text-sm font-garamond leading-relaxed" style={{ color: "#64748b" }}>
-                  {dqReason === "TAB_SWITCH"
-                    ? "You switched tabs or minimized the arena window during an active battle."
-                    : "You exited fullscreen during an active battle."}{" "}
-                  All questions in this round have been{" "}
-                  <strong style={{ color: "#ef4444" }}>automatically submitted</strong> to the Captain. You cannot
-                  attempt any more questions in this round.
-                </p>
+                    <div
+                      className="relative flex h-24 w-24 items-center justify-center rounded-2xl shadow-[0_0_35px_rgba(239,68,68,0.3)] border-2 border-red-500/60"
+                      style={{
+                        background: "radial-gradient(circle at 30% 30%, #260808 0%, #0d0202 75%)",
+                      }}
+                    >
+                      <Skull className="w-12 h-12 text-red-400 drop-shadow-[0_2px_12px_rgba(239,68,68,0.7)]" strokeWidth={1.75} />
+                    </div>
+                  </div>
 
-                {/* Status card */}
-                <div
-                  className="w-full rounded-2xl p-5 text-center"
-                  style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.35)" }}
-                >
-                  <div className="text-2xl mb-2">⚓</div>
-                  <p className="text-sm font-cinzel font-bold text-red-400 tracking-wider">
-                    {autoSubmitDone ? "ALL QUESTIONS AUTO-SUBMITTED" : "SUBMITTING ALL QUESTIONS..."}
+                  {/* Status Pill */}
+                  <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-red-500/50 bg-red-950/50 text-red-400 mb-4 font-cinzel text-xs font-bold tracking-[0.2em] uppercase">
+                    <AlertTriangle className="w-3.5 h-3.5 text-red-400 animate-pulse" />
+                    DISQUALIFIED FROM THIS ROUND
+                  </div>
+
+                  {/* Headline */}
+                  <h1 className="font-cinzel text-3xl sm:text-5xl font-black text-[#fdf6e2] uppercase tracking-[0.08em] drop-shadow-[0_4px_24px_rgba(0,0,0,0.9)]">
+                    {dqReason === "TAB_SWITCH" ? "MUTINY DETECTED!" : "MAROONED!"}
+                  </h1>
+
+                  {/* Subtle Ornamental Crimson Divider */}
+                  <div className="flex items-center justify-center gap-3 my-4 w-full max-w-xs opacity-75">
+                    <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-red-500 to-red-500/40" />
+                    <div className="w-1.5 h-1.5 rotate-45 border border-red-500 bg-red-500/40" />
+                    <div className="h-[1px] flex-1 bg-gradient-to-l from-transparent via-red-500 to-red-500/40" />
+                  </div>
+
+                  <p className="font-garamond text-base sm:text-lg text-[#c8b887] leading-relaxed max-w-lg mx-auto">
+                    {dqReason === "TAB_SWITCH"
+                      ? "You switched tabs or minimized the arena window during an active battle."
+                      : "You exited fullscreen during an active battle."}{" "}
+                    All questions in this round have been{" "}
+                    <strong className="text-red-400 font-bold">automatically submitted</strong> to the High Admiral. You cannot attempt any more questions in this round.
                   </p>
-                  <p className="text-xs font-garamond mt-2 leading-relaxed" style={{ color: "#94a3b8" }}>
-                    {autoSubmitDone
-                      ? "All your answer scrolls have been sealed and dispatched to the Admiral. Wait for the round to end."
-                      : "Dispatching your answer scrolls to the Admiral's ship..."}
+
+                  {/* Status Dossier Card */}
+                  <div className="w-full rounded-2xl border border-red-500/30 bg-[#1e0a0a]/80 backdrop-blur-md p-5 text-center mt-6 shadow-[inset_0_1px_0_rgba(239,68,68,0.15)]">
+                    <Anchor className="w-7 h-7 text-red-400 mx-auto mb-2 opacity-80" />
+                    <p className="text-xs sm:text-sm font-cinzel font-bold text-red-400 tracking-[0.2em] uppercase">
+                      {autoSubmitDone ? "ALL QUESTIONS AUTO-SUBMITTED" : "TRANSMITTING SCROLLS TO ADMIRAL..."}
+                    </p>
+                    <p className="text-xs font-garamond text-[#a09483] mt-1.5 leading-relaxed">
+                      {autoSubmitDone
+                        ? "All your answer scrolls have been sealed and logged in the Fleet Registry. Wait for the round to end."
+                        : "Dispatching your answer scrolls to the Admiral's flagship..."}
+                    </p>
+                  </div>
+
+                  {/* Action Navigation Buttons */}
+                  <div className="mt-7 flex flex-wrap justify-center gap-3 w-full">
+                    <Link
+                      href="/standings"
+                      className="border border-[#d4af37]/60 bg-[#d4af37]/15 hover:bg-[#d4af37]/25 font-cinzel tracking-widest text-[#d4af37] rounded-xl px-6 py-3 text-xs uppercase font-bold transition-all shadow-[0_0_20px_rgba(212,175,55,0.1)]"
+                    >
+                      VIEW BOUNTY BOARD
+                    </Link>
+                    <Link
+                      href="/dashboard"
+                      className="border border-white/10 hover:border-[#d4af37]/30 bg-black/40 hover:bg-black/60 font-cinzel tracking-widest text-[#8e8271] hover:text-[#f4ede0] rounded-xl px-6 py-3 text-xs uppercase font-bold transition-all"
+                    >
+                      RETURN TO HARBOR
+                    </Link>
+                  </div>
+
+                  <p className="text-[10px] font-cinzel text-[#695e50] tracking-widest uppercase mt-4">
+                    THE ROUND CONTINUES FOR OTHER PIRATES · RESULTS WILL BE SHOWN AT SESSION CLOSE
                   </p>
                 </div>
-
-                <p className="text-[10px] font-garamond" style={{ color: "#334155" }}>
-                  The round continues for other pirates. Results will be shown when the Admiral ends the session.
-                </p>
-              </>
+              </div>
             ) : (
               /* ── INITIAL FULLSCREEN REQUEST ── */
-              <>
-                <div
-                  className="flex h-28 w-28 items-center justify-center rounded-3xl text-6xl"
-                  style={{
-                    background: "linear-gradient(135deg, #1e293b, #0a0f1d)",
-                    border: "2px solid rgba(212,175,55,0.6)",
-                    boxShadow: "0 0 60px rgba(212,175,55,0.25), 0 0 120px rgba(212,175,55,0.08)",
-                    animation: "float 3s ease-in-out infinite",
-                  }}
-                >
-                  🏴‍☠️
+              <div className="relative w-full overflow-hidden rounded-[2.5rem] bg-gradient-to-b from-[#d4af37]/35 via-[#d4af37]/15 to-[#d4af37]/30 p-[1px] shadow-[0_25px_80px_rgba(0,0,0,0.85)]">
+                <Spotlight className="from-[#f4ede0] via-[#d4af37] to-transparent blur-3xl opacity-35" size={450} />
+
+                <div className="relative w-full rounded-[2.5rem] bg-[#121620]/92 backdrop-blur-2xl p-7 sm:p-11 border border-[#d4af37]/15 flex flex-col items-center text-center">
+                  {/* Corner brackets */}
+                  <span className="pointer-events-none absolute top-4 left-4 w-3.5 h-3.5 border-t-2 border-l-2 border-[#d4af37]/50" />
+                  <span className="pointer-events-none absolute top-4 right-4 w-3.5 h-3.5 border-t-2 border-r-2 border-[#d4af37]/50" />
+                  <span className="pointer-events-none absolute bottom-4 left-4 w-3.5 h-3.5 border-b-2 border-l-2 border-[#d4af37]/50" />
+                  <span className="pointer-events-none absolute bottom-4 right-4 w-3.5 h-3.5 border-b-2 border-r-2 border-[#d4af37]/50" />
+
+                  {/* Ship Crest Medallion */}
+                  <div className="relative mb-5 flex items-center justify-center">
+                    <div className="absolute inset-0 rounded-full animate-ping opacity-20 bg-[#d4af37]" />
+                    <div className="absolute -inset-3.5 rounded-full border border-dashed border-[#d4af37]/30 animate-[spin_40s_linear_infinite]" />
+                    <div className="absolute -inset-1 rounded-full border border-[#d4af37]/20" />
+
+                    <div
+                      className="relative flex h-24 w-24 items-center justify-center rounded-2xl shadow-[0_0_35px_rgba(212,175,55,0.25)] border-2 border-[#d4af37]/60"
+                      style={{
+                        background: "radial-gradient(circle at 30% 30%, #1e293b 0%, #0a0f1d 75%)",
+                      }}
+                    >
+                      <Ship className="w-12 h-12 text-[#ffd700] drop-shadow-[0_2px_10px_rgba(212,175,55,0.5)]" strokeWidth={1.75} />
+                    </div>
+                  </div>
+
+                  {/* Status Pill */}
+                  <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#d4af37]/40 bg-[#d4af37]/10 text-[#d4af37] mb-4 font-cinzel text-xs font-bold tracking-[0.2em] uppercase">
+                    <Swords className="w-3.5 h-3.5 text-[#d4af37]" />
+                    BATTLE STATIONS · ACTION REQUIRED
+                  </div>
+
+                  {/* Headline */}
+                  <h1 className="font-cinzel text-3xl sm:text-5xl font-black text-[#fdf6e2] uppercase tracking-[0.08em] drop-shadow-[0_4px_24px_rgba(0,0,0,0.9)]">
+                    ENTER FULLSCREEN
+                  </h1>
+
+                  {/* Subtle Ornamental Gold Divider */}
+                  <div className="flex items-center justify-center gap-3 my-4 w-full max-w-xs opacity-75">
+                    <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-[#d4af37] to-[#d4af37]/40" />
+                    <div className="w-1.5 h-1.5 rotate-45 border border-[#d4af37] bg-[#d4af37]/40" />
+                    <div className="h-[1px] flex-1 bg-gradient-to-l from-transparent via-[#d4af37] to-[#d4af37]/40" />
+                  </div>
+
+                  <p className="font-garamond text-base sm:text-lg text-[#c8b887] leading-relaxed max-w-lg mx-auto">
+                    The Captain has started the round! You must enter{" "}
+                    <strong className="text-[#d4af37]">fullscreen mode</strong> to access the coding arena. Exiting fullscreen, switching tabs (Windows+Tab, Ctrl+Tab), or cutting/copying/pasting will{" "}
+                    <strong className="text-red-400">permanently lock you out</strong> and auto-submit all questions in this round.
+                  </p>
+
+                  <button
+                    onClick={enterFullscreen}
+                    className="mt-7 flex items-center justify-center gap-3 border border-[#d4af37]/60 bg-gradient-to-r from-[#d4af37]/20 via-[#ffd700]/25 to-[#d4af37]/20 hover:from-[#d4af37]/35 hover:to-[#ffd700]/40 font-cinzel text-[#f4ede0] w-full rounded-2xl py-4 text-xs sm:text-sm font-bold tracking-[0.25em] uppercase transition-all shadow-[0_0_30px_rgba(212,175,55,0.2)]"
+                  >
+                    <Maximize2 className="w-4 h-4 text-[#ffd700]" />
+                    HOIST THE SAILS — ENTER FULLSCREEN
+                  </button>
+
+                  <p className="text-[10px] font-cinzel text-[#695e50] tracking-widest uppercase mt-4">
+                    PRESS F11 OR CLICK ABOVE · EXITING FULLSCREEN OR SWITCHING TABS = PERMANENT LOCKOUT
+                  </p>
                 </div>
-
-                <div
-                  className="text-[10px] font-cinzel font-bold uppercase tracking-[0.35em] px-4 py-1.5 rounded-full"
-                  style={{
-                    color: "#d4af37",
-                    border: "1px solid rgba(212,175,55,0.4)",
-                    background: "rgba(212,175,55,0.08)",
-                    animation: "urgentPulse 1.5s ease-in-out infinite",
-                  }}
-                >
-                  ⚔️ BATTLE STATIONS — ACTION REQUIRED
-                </div>
-
-                <h1
-                  className="text-4xl sm:text-5xl font-black tracking-tight"
-                  style={{
-                    color: "#fdf6e2",
-                    textShadow: "0 4px 30px rgba(0,0,0,0.9), 0 0 60px rgba(212,175,55,0.15)",
-                  }}
-                >
-                  ENTER FULLSCREEN
-                </h1>
-
-                <p className="text-sm font-garamond leading-relaxed" style={{ color: "#64748b" }}>
-                  The Captain has started the round! You must enter{" "}
-                  <strong style={{ color: "#d4af37" }}>fullscreen mode</strong> to access the coding
-                  arena. Exiting fullscreen, switching tabs (Windows+Tab, Ctrl+Tab), or cutting/copying/pasting will{" "}
-                  <strong style={{ color: "#ef4444" }}>permanently lock you out</strong> and
-                  auto-submit all questions in this round.
-                </p>
-
-                <button
-                  onClick={enterFullscreen}
-                  className="w-full rounded-xl py-4 font-cinzel font-black text-sm tracking-[0.25em] uppercase transition-all"
-                  style={{
-                    background: "linear-gradient(135deg, #d4af37, #b8962e)",
-                    color: "#0a0f1d",
-                    boxShadow: "0 0 30px rgba(212,175,55,0.5), 0 4px 20px rgba(0,0,0,0.4)",
-                  }}
-                  onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 0 50px rgba(212,175,55,0.7), 0 4px 20px rgba(0,0,0,0.4)" }}
-                  onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 0 30px rgba(212,175,55,0.5), 0 4px 20px rgba(0,0,0,0.4)" }}
-                >
-                  ⛵ HOIST THE SAILS — ENTER FULLSCREEN
-                </button>
-
-                <p className="text-[10px] font-garamond" style={{ color: "#334155" }}>
-                  Press F11 or click the button above · Exiting fullscreen or switching tabs = permanent lockout
-                </p>
-              </>
+              </div>
             )}
           </div>
         </div>
@@ -1103,8 +1450,9 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
                       {currentQuestion.points} BOUNTY PTS
                     </span>
                     {isQuestionSubmitted && (
-                      <span className="rounded bg-emerald-900/40 border border-emerald-500/40 px-2 py-0.5 text-xs font-bold font-garamond text-emerald-400">
-                        ✓ SUBMITTED
+                      <span className="inline-flex items-center gap-1 rounded bg-emerald-900/40 border border-emerald-500/40 px-2 py-0.5 text-xs font-bold font-garamond text-emerald-400">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                        SUBMITTED
                       </span>
                     )}
                   </div>

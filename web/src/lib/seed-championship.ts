@@ -1,10 +1,7 @@
-import { PrismaClient } from "@prisma/client"
-import bcrypt from "bcryptjs"
-
-const prisma = new PrismaClient()
+import { prisma } from "@/lib/prisma"
 
 export async function seedPirateChampionship() {
-  console.log("⚓ Seeding Pirate Code Championship...")
+  console.log(" Seeding Pirate Code Championship...")
 
   // 1. Find or create the flagship Championship
   let competition = await prisma.competition.findFirst({
@@ -96,7 +93,7 @@ export async function seedPirateChampionship() {
   // Round 1 - Question 1
   await createOrUpdateQuestion(round1.id, {
     title: "The Lost Island Coordinates",
-    description: `### 🏴‍☠️ Mission Briefing
+    description: `###  Mission Briefing
 The navigator found an ancient maritime chart with coded bearing numbers. Write a function \`findCoordinates(bearings)\` that finds the single maximum peak coordinates representing the hidden treasure island.
 
 ### Input Format:
@@ -149,7 +146,7 @@ int findCoordinates(const std::string& bearings) {
   // Round 1 - Question 2
   await createOrUpdateQuestion(round1.id, {
     title: "Deciphering Blackbeard's Cipher",
-    description: `### 🏴‍☠️ Mission Briefing
+    description: `###  Mission Briefing
 Blackbeard encrypted his orders by shifting every alphabetical character backward by 1 position (e.g., 'B' -> 'A', 'a' -> 'z', 'A' -> 'Z').
 Write \`decipher(cipherText)\` to decode the pirate text!
 
@@ -195,7 +192,7 @@ The decoded plaintext string.
   // Round 1 - Question 3
   await createOrUpdateQuestion(round1.id, {
     title: "Distribute the Cursed Doubloons",
-    description: `### 🏴‍☠️ Mission Briefing
+    description: `###  Mission Briefing
 Captain Jack must split a chest containing $N$ golden doubloons equally among $K$ crew members. Any leftover doubloons are thrown into the ocean to appease Poseidon.
 Write \`distributeDoubloons(input)\` where input is \`"N K"\` separated by a space.
 
@@ -258,7 +255,7 @@ Return \`"Each: X, Sacrificed: Y"\`.
   // Round 2 - Question 1
   await createOrUpdateQuestion(round2.id, {
     title: "Escape the Kraken's Whirlpool",
-    description: `### 🦑 The Trial of the Abyss
+    description: `###  The Trial of the Abyss
 The Kraken has formed a whirlpool of radius $R$ nautical leagues. For every nautical league your vessel travels, it burns $F$ barrels of rum fuel. If fuel remaining drops below 0 before escaping, the ship sinks!
 Write \`escapeWhirlpool(input)\` taking \`"Distance Fuel BurnRate"\`.
 Return \`"ESCAPED with X fuel left"\` or \`"SUNKEN"\`.
@@ -285,7 +282,7 @@ Return \`"ESCAPED with X fuel left"\` or \`"SUNKEN"\`.
   // Round 2 - Question 2
   await createOrUpdateQuestion(round2.id, {
     title: "Targeting the Monster's Core",
-    description: `### 🦑 Weak Points Calculation
+    description: `###  Weak Points Calculation
 Given an array of tentacle resistance values, calculate the sum of all prime values to strike the monster's vital core.
 Write \`solve(input)\` where input is space-separated numbers.
 `,
@@ -344,7 +341,7 @@ Write \`solve(input)\` where input is space-separated numbers.
   // Round 3 - Question 1
   await createOrUpdateQuestion(round3.id, {
     title: "The Final Flagship Duel: Cannonball Trajectory",
-    description: `### ⚔️ The Ultimate Showdown
+    description: `###  The Ultimate Showdown
 Two colossal pirate flagships exchange broadside cannon fire.
 Given an array of incoming cannonball trajectories with their velocities, find the maximum continuous subarray sum of impact forces using Kadane's algorithm.
 Write \`solve(input)\` taking a space-separated sequence of integers (can include negative values).
@@ -371,7 +368,7 @@ Write \`solve(input)\` taking a space-separated sequence of integers (can includ
     ]
   })
 
-  console.log("✅ Pirate Championship successfully seeded with all 3 rounds and questions!")
+  console.log(" Pirate Championship successfully seeded with all 3 rounds and questions!")
   return competition
 }
 

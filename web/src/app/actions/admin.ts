@@ -1,7 +1,7 @@
 "use server"
 
 import { auth } from "@/auth"
-import { PrismaClient } from "@prisma/client"
+import { prisma } from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import {
@@ -13,8 +13,6 @@ import {
 } from "@/lib/competition-engine"
 import { seedPirateChampionship } from "@/lib/seed-championship"
 import { runAICompetitionEvaluation } from "@/lib/ai-debugger"
-
-const prisma = new PrismaClient()
 
 async function checkAdmin() {
   const session = await auth()
@@ -373,3 +371,93 @@ export async function getLiveAdminData(competitionId: string) {
     disqualifiedSailors
   }
 }
+
+export type ParticipantStatus = "QUALIFIED" | "DISQUALIFIED" | "WAITING"
+
+export async function updateParticipantStatus(
+  competitionId: string,
+  userId: string,
+  status: ParticipantStatus,
+  reason: string = "ADMIN_OVERRIDE"
+) {
+  const session = await checkAdmin()
+
+  // Verify participant exists
+  const participant = await prisma.competitionParticipant.findUnique({
+    where: {
+      competitionId_userId: {
+        competitionId,
+        userId
+      }
+    },
+    include: { user: true }
+  })
+
+  if (!participant) {
+    throw new Error("Participant not enrolled in this competition.")
+  }
+
+  // 1. Update status on CompetitionParticipant record
+  await prisma.competitionParticipant.update({
+    where: {
+      competitionId_userId: {
+        competitionId,
+        userId
+      }
+    },
+    data: { status }
+  })
+
+  const { broadcastEvent } = await import("@/lib/realtime")
+
+  if (status === "DISQUALIFIED") {
+    // Record disqualification event in database
+    await prisma.competitionEvent.create({
+      data: {
+        competitionId,
+        userId,
+        eventType: "PARTICIPANT_DISQUALIFIED",
+        payload: JSON.stringify({
+          reason,
+          by: session.user?.name || "Admin",
+          at: new Date().toISOString()
+        })
+      }
+    })
+
+    // Broadcast realtime disqualification event
+    await broadcastEvent(competitionId, "participant_disqualified", {
+      competitionId,
+      userId,
+      reason,
+      status: "DISQUALIFIED"
+    })
+  } else {
+    // If QUALIFIED or WAITING, purge any active disqualification events
+    await prisma.competitionEvent.deleteMany({
+      where: {
+        competitionId,
+        userId,
+        eventType: "PARTICIPANT_DISQUALIFIED"
+      }
+    })
+  }
+
+  // Broadcast realtime status change to all participants and admins
+  await broadcastEvent(competitionId, "participant_status_changed", {
+    competitionId,
+    userId,
+    status,
+    reason: status === "DISQUALIFIED" ? reason : null,
+    userName: participant.user.name,
+    userEmail: participant.user.email
+  })
+
+  revalidatePath(`/admin`)
+  revalidatePath(`/admin/competitions/${competitionId}`)
+  revalidatePath(`/admin/competitions/${competitionId}/leaderboard`)
+  revalidatePath(`/competition/${competitionId}`)
+
+  return { success: true, status }
+}
+

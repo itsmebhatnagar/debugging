@@ -1,10 +1,8 @@
 import { getLeaderboard } from "@/app/actions/leaderboard"
+import { prisma } from "@/lib/prisma"
 import LeaderboardRefresher from "@/components/LeaderboardRefresher"
 import Link from "next/link"
-import { PrismaClient } from "@prisma/client"
 import { notFound } from "next/navigation"
-
-const prisma = new PrismaClient()
 
 export default async function AdminLeaderboardPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: competitionId } = await params

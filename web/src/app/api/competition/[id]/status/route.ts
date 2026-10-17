@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/auth"
-import { PrismaClient } from "@prisma/client"
-
-const prisma = new PrismaClient()
+import { prisma } from "@/lib/prisma"
 
 export async function GET(
   req: NextRequest,
@@ -42,6 +40,7 @@ export async function GET(
 
     if (comp.status === "WAITING" || comp.status === "DRAFT") {
       return NextResponse.json({
+        userId: session?.user?.id,
         status: "WAITING",
         competitionName: comp.name,
         description: comp.description
@@ -64,6 +63,7 @@ export async function GET(
       }
 
       return NextResponse.json({
+        userId: session?.user?.id,
         status: "COUNTDOWN",
         competitionName: comp.name,
         countdownSeconds: remainingSeconds,
@@ -73,6 +73,7 @@ export async function GET(
 
     if (comp.status === "ENDED") {
       return NextResponse.json({
+        userId: session?.user?.id,
         status: "ENDED",
         competitionName: comp.name
       })
@@ -82,6 +83,7 @@ export async function GET(
     const activeRound = comp.rounds.find(r => r.status === "ACTIVE")
     if (!activeRound) {
       return NextResponse.json({
+        userId: session?.user?.id,
         status: "WAITING_ROUND",
         competitionName: comp.name
       })
@@ -90,59 +92,66 @@ export async function GET(
     // Fetch user's compile attempts count and submission status per question
     const questionIds = activeRound.questions.map(q => q.id)
 
-    const attempts = await prisma.compileAttempt.groupBy({
-      by: ["questionId"],
-      where: {
-        userId: session.user.id,
-        questionId: { in: questionIds }
-      },
-      _count: { id: true }
-    })
+    // Fetch attempts, submissions, drafts, participant status, and disqualifications in parallel
+    const [attempts, submissions, drafts, participant, dqEvent] = await Promise.all([
+      prisma.compileAttempt.groupBy({
+        by: ["questionId"],
+        where: {
+          userId: session.user.id,
+          questionId: { in: questionIds }
+        },
+        _count: { id: true }
+      }),
+      prisma.submission.findMany({
+        where: {
+          userId: session.user.id,
+          questionId: { in: questionIds }
+        },
+        select: {
+          questionId: true,
+          status: true
+        }
+      }),
+      prisma.draftCode.findMany({
+        where: {
+          userId: session.user.id,
+          questionId: { in: questionIds }
+        }
+      }),
+      prisma.competitionParticipant.findUnique({
+        where: {
+          competitionId_userId: {
+            competitionId,
+            userId: session.user.id
+          }
+        }
+      }),
+      prisma.competitionEvent.findFirst({
+        where: {
+          competitionId,
+          userId: session.user.id,
+          eventType: "PARTICIPANT_DISQUALIFIED"
+        },
+        orderBy: { createdAt: "desc" }
+      })
+    ])
 
     const attemptMap = attempts.reduce((acc, curr) => {
       acc[curr.questionId] = curr._count.id
       return acc
     }, {} as Record<string, number>)
 
-    const submissions = await prisma.submission.findMany({
-      where: {
-        userId: session.user.id,
-        questionId: { in: questionIds }
-      },
-      select: {
-        questionId: true,
-        status: true
-      }
-    })
-
     const submissionMap = submissions.reduce((acc, curr) => {
       acc[curr.questionId] = curr.status
       return acc
     }, {} as Record<string, string>)
-
-    // User's drafts
-    const drafts = await prisma.draftCode.findMany({
-      where: {
-        userId: session.user.id,
-        questionId: { in: questionIds }
-      }
-    })
 
     const draftMap = drafts.reduce((acc, curr) => {
       acc[curr.questionId] = { code: curr.code, language: curr.language }
       return acc
     }, {} as Record<string, { code: string; language: string }>)
 
-    // Check if participant has been disqualified for fullscreen exit or tab switching
-    const dqEvent = await prisma.competitionEvent.findFirst({
-      where: {
-        competitionId,
-        userId: session.user.id,
-        eventType: "PARTICIPANT_DISQUALIFIED"
-      },
-      orderBy: { createdAt: "desc" }
-    })
-
+    const isDisqualified = participant?.status === "DISQUALIFIED" || !!dqEvent
     let dqReason: string | null = null
     if (dqEvent?.payload) {
       try {
@@ -150,13 +159,33 @@ export async function GET(
       } catch {
         dqReason = "FULLSCREEN_EXIT"
       }
+    } else if (participant?.status === "DISQUALIFIED") {
+      dqReason = "ADMIN_DISQUALIFIED"
+    }
+
+    const participantStatus = isDisqualified ? "DISQUALIFIED" : (participant?.status || "WAITING")
+
+    // If participant is specifically set to WAITING (has not started/attempted the round yet)
+    if (participantStatus === "WAITING") {
+      return NextResponse.json({
+        userId: session?.user?.id,
+        status: "WAITING",
+        participantStatus: "WAITING",
+        competitionName: comp.name,
+        isDisqualified: false,
+        dqReason: null,
+        roundName: activeRound.name,
+        roundOrder: activeRound.order
+      })
     }
 
     // NOTICE: PER SPECIFICATION, THE TIMER RUNS IN BACKEND AND IS NOT SENT TO THE USER SCREEN!
     return NextResponse.json({
+      userId: session?.user?.id,
       status: "ACTIVE_ROUND",
+      participantStatus,
       competitionName: comp.name,
-      isDisqualified: !!dqEvent,
+      isDisqualified,
       dqReason,
       round: {
         id: activeRound.id,

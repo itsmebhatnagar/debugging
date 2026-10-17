@@ -3,6 +3,7 @@
 import { useActionState, use } from "react"
 import { createQuestionWithStarterCodes } from "@/app/actions/admin"
 import Link from "next/link"
+import { ScrollText, Swords, Target, AlertTriangle } from "lucide-react"
 
 export default function NewQuestionPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: roundId } = use(params)
@@ -24,7 +25,7 @@ export default function NewQuestionPage({ params }: { params: Promise<{ id: stri
       <div className="mx-auto max-w-4xl bg-[#1a1714]/80 backdrop-blur-md border border-[#d4af37]/20 shadow-[0_0_15px_rgba(212,175,55,0.05)] rounded-2xl p-8 shadow-2xl border border-[#d4af37]/40">
         <div className="mb-6 border-b border-[#8b7355]/40 pb-4">
           <div className="inline-flex items-center space-x-2 rounded-full border border-[#d4af37]/40 bg-[#d4af37]/10 px-3 py-1 text-xs font-bold text-[#ffd700] mb-2">
-            <span>📜</span>
+            <ScrollText className="w-3.5 h-3.5 text-[#ffd700]" />
             <span>ROUND QUESTION & STARTER CODES UPLOAD</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-black tracking-wide text-[#f4ede0] font-cinzel tracking-wider">
@@ -82,8 +83,9 @@ export default function NewQuestionPage({ params }: { params: Promise<{ id: stri
 
           {/* Starter Codes Section */}
           <div className="border-t border-[#8b7355]/30 pt-6">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-[#ffd700] mb-4">
-              ⚔️ Upload Starter Codes (Distributed to All Sailors)
+            <h3 className="text-sm font-bold uppercase tracking-wider text-[#ffd700] mb-4 flex items-center gap-2">
+              <Swords className="w-4 h-4 text-[#ffd700]" />
+              <span>Upload Starter Codes (Distributed to All Sailors)</span>
             </h3>
 
             <div className="space-y-4">
@@ -127,8 +129,9 @@ export default function NewQuestionPage({ params }: { params: Promise<{ id: stri
 
           {/* Test Cases Section */}
           <div className="border-t border-[#8b7355]/30 pt-6">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-[#ffd700] mb-4">
-              🎯 Test Vectors (Public & Hidden)
+            <h3 className="text-sm font-bold uppercase tracking-wider text-[#ffd700] mb-4 flex items-center gap-2">
+              <Target className="w-4 h-4 text-[#ffd700]" />
+              <span>Test Vectors (Public & Hidden)</span>
             </h3>
 
             <div className="grid gap-4 sm:grid-cols-2">
@@ -167,8 +170,9 @@ export default function NewQuestionPage({ params }: { params: Promise<{ id: stri
           </div>
 
           {errorMessage && (
-            <div className="rounded-lg border border-[#ef4444] bg-[#450a0a] p-3 text-xs text-[#fca5a5]">
-              ⚠️ {errorMessage}
+            <div className="rounded-lg border border-[#ef4444] bg-[#450a0a] p-3 text-xs text-[#fca5a5] flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 flex-shrink-0 text-[#ef4444]" />
+              <span>{errorMessage}</span>
             </div>
           )}
 

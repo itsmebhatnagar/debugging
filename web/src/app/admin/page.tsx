@@ -1,11 +1,9 @@
 import { auth } from "@/auth"
 import { redirect } from "next/navigation"
-import { PrismaClient } from "@prisma/client"
+import { prisma } from "@/lib/prisma"
 import { AdminControlDeck } from "./AdminControlDeck"
 import { getLiveAdminData } from "@/app/actions/admin"
 import { Spotlight } from "@/components/ui/spotlight"
-
-const prisma = new PrismaClient()
 
 export default async function AdminPage() {
   const session = await auth()

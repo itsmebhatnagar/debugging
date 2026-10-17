@@ -1,9 +1,8 @@
 import { getLeaderboard } from "@/app/actions/leaderboard"
-import { PrismaClient } from "@prisma/client"
+import { prisma } from "@/lib/prisma"
 import { Spotlight } from "@/components/ui/spotlight"
 import LeaderboardRefresher from "@/components/LeaderboardRefresher"
-
-const prisma = new PrismaClient()
+import { Ship, Crown, Swords, Anchor, Trophy } from "lucide-react"
 
 export default async function StandingsPage() {
   // Get the most recent competition
@@ -32,7 +31,9 @@ export default async function StandingsPage() {
             <Spotlight className="from-[#f4ede0] via-[#d4af37] to-transparent blur-3xl" size={400} />
             
             <div className="flex flex-col items-center justify-center py-12 space-y-6 relative z-10">
-              <div className="text-6xl mb-4 opacity-80">🏴‍☠️</div>
+              <div className="mb-4 opacity-80 flex items-center justify-center">
+                <Ship className="w-16 h-16 text-[#d4af37]" />
+              </div>
               <p className="font-garamond text-xl text-[#f4ede0]/70 max-w-lg text-center leading-relaxed">
                 {competition 
                   ? "The tournament is currently underway! The final ledgers will remain strictly hidden until the High Admiral officially ends the test."
@@ -58,7 +59,7 @@ export default async function StandingsPage() {
         
         <div className="space-y-4">
           <div className="inline-flex items-center space-x-2 rounded-full border border-[#d4af37]/40 bg-[#d4af37]/10 px-3 py-1 text-xs font-bold text-[#ffd700] mb-2 shadow-[0_0_15px_rgba(212,175,55,0.2)]">
-            <span>🏆</span>
+            <Trophy className="w-3.5 h-3.5 text-[#ffd700]" />
             <span>FINAL RESULTS DECLARED</span>
           </div>
           <h1 className="font-cinzel text-5xl md:text-6xl text-[#ffd700] font-black tracking-wide drop-shadow-[0_4px_20px_rgba(0,0,0,0.8)]">
@@ -85,8 +86,14 @@ export default async function StandingsPage() {
                 {idx === 0 && <Spotlight className="from-[#ffd700] via-[#d4af37] to-transparent blur-3xl opacity-50" size={300} />}
                 
                 <div className="relative z-10">
-                  <div className="text-5xl mb-4 drop-shadow-lg">
-                    {idx === 0 ? "👑" : idx === 1 ? "⚔️" : "⚓"}
+                  <div className="flex items-center justify-center mb-4 drop-shadow-lg">
+                    {idx === 0 ? (
+                      <Crown className="w-12 h-12 text-[#ffd700]" />
+                    ) : idx === 1 ? (
+                      <Swords className="w-12 h-12 text-[#94a3b8]" />
+                    ) : (
+                      <Anchor className="w-12 h-12 text-[#b45309]" />
+                    )}
                   </div>
                   <div className="text-xs font-garamond font-bold uppercase tracking-widest text-[#ffd700] mb-2">
                     RANK #{idx + 1}
@@ -118,7 +125,13 @@ export default async function StandingsPage() {
                   className="hover:bg-[#d4af37]/5 transition-colors"
                 >
                   <td className="px-8 py-5 font-garamond font-bold text-[#f4ede0] text-lg">
-                    {participant.rank === 1 ? <span className="text-[#ffd700]">👑 1</span> : `#${participant.rank}`}
+                    {participant.rank === 1 ? (
+                      <span className="inline-flex items-center gap-1.5 text-[#ffd700]">
+                        <Crown className="w-4 h-4 text-[#ffd700]" /> 1
+                      </span>
+                    ) : (
+                      `#${participant.rank}`
+                    )}
                   </td>
                   <td className="px-8 py-5 font-bold text-[#f4ede0] font-cinzel tracking-widest">
                     {participant.name}

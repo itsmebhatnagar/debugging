@@ -1,6 +1,4 @@
-import { PrismaClient } from "@prisma/client"
-
-const prisma = new PrismaClient()
+import { prisma } from "@/lib/prisma"
 
 export interface AIAnalysisResult {
   correctness: number // 0 - 100
@@ -85,7 +83,7 @@ async function callOpenRouter(
       let cleaned = rawContent.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim()
       
       // Just return the raw text, the caller handles JSON parsing based on their own schema
-      console.log(`[AI Debugger] ✅ Routed via: ${actualModel}`)
+      console.log(`[AI Debugger] Routed via: ${actualModel}`)
       return { model: actualModel, result: cleaned }
     } catch (err: any) {
       console.warn(`[AI Debugger] ${model} failed: ${err.message}`)
@@ -124,24 +122,24 @@ function analyzeCodeLocally(
   const efficiencyScore = hasLoops ? 70 : 85
 
   const bugsList: string[] = []
-  if (!hasEdgeCaseChecks) bugsList.push("⚠️ No edge-case handling detected for empty or null inputs")
-  if (!hasComments) bugsList.push("⚠️ No comments found — code readability reduced for crew review")
-  if (lineCount > 80) bugsList.push("⚠️ Code exceeds 80 lines — consider refactoring into smaller functions")
-  if (!executionPassed) bugsList.push("🐛 CRITICAL: Code did not pass execution test cases — logic error likely")
+  if (!hasEdgeCaseChecks) bugsList.push("No edge-case handling detected for empty or null inputs")
+  if (!hasComments) bugsList.push("No comments found — code readability reduced for crew review")
+  if (lineCount > 80) bugsList.push("Code exceeds 80 lines — consider refactoring into smaller functions")
+  if (!executionPassed) bugsList.push("CRITICAL: Code did not pass execution test cases — logic error likely")
 
   const greeting = executionPassed
-    ? "☠️ Ahoy Captain! Yer code survived the kraken's gauntlet!"
-    : "⚓ Avast! Yer code was dragged to Davy Jones' Locker by failing test cases."
+    ? "Ahoy Captain! Yer code survived the kraken's gauntlet!"
+    : "Avast! Yer code was dragged to Davy Jones' Locker by failing test cases."
 
   const feedback = `
 ${greeting}
 
-### 🧭 Algorithmic Appraisal:
+### Algorithmic Appraisal:
 - **Language**: ${language.toUpperCase()}
 - **Implementation Footprint**: ${lineCount} effective lines
 - **Structural Integrity**: ${codeQuality >= 80 ? "Sturdy as the Black Pearl" : "Fair winds, but needs reinforcing against rogue waves"}
 
-### ⚔️ Tactical Recommendations:
+### Tactical Recommendations:
 1. **Time Complexity**: ${hasLoops ? "O(N) to O(N log N) flow observed. Keep loops streamlined to avoid timeouts in the storm." : "Constant time or direct evaluation detected."}
 2. **Robustness**: ${hasEdgeCaseChecks ? "Good defensive checks for boundary conditions." : "Bolster defensive checks for empty or null payloads to prevent shipwreck."}
 3. **Purity**: Strive to minimize auxiliary space allocation during heavy computational surges.
@@ -315,26 +313,34 @@ export async function runAICompetitionEvaluation(competitionId: string) {
     }
   })
 
-  // Aggregate participant stats with AI scores
-  const evaluatedParticipants = await Promise.all(
-    participants.map(async (p) => {
-      const userSubmissions = await prisma.submission.findMany({
-        where: {
-          userId: p.userId,
-          question: {
-            round: { competitionId }
-          }
-        },
-        include: {
-          question: {
-            include: { round: true }
-          },
-          aiAnalysis: true,
-          score: true
-        }
-      })
+  // Bulk fetch all submissions across this competition in 1 single query
+  const allSubmissions = await prisma.submission.findMany({
+    where: {
+      question: {
+        round: { competitionId }
+      }
+    },
+    include: {
+      question: {
+        include: { round: true }
+      },
+      aiAnalysis: true,
+      score: true
+    }
+  })
 
-      const testCasePoints = p.scores.reduce((acc, s) => acc + s.pointsEarned, 0)
+  // Group submissions by userId in-memory for instant O(1) lookup
+  const userSubmissionsMap = new Map<string, typeof allSubmissions>()
+  for (const sub of allSubmissions) {
+    const list = userSubmissionsMap.get(sub.userId) || []
+    list.push(sub)
+    userSubmissionsMap.set(sub.userId, list)
+  }
+
+  // Aggregate participant stats with AI scores
+  const evaluatedParticipants = participants.map((p) => {
+    const userSubmissions = userSubmissionsMap.get(p.userId) || []
+    const testCasePoints = p.scores.reduce((acc, s) => acc + s.pointsEarned, 0)
       
       // Calculate AI Quality & Correctness Bonus
       let totalAICorrectness = 0
@@ -368,7 +374,6 @@ export async function runAICompetitionEvaluation(competitionId: string) {
         submissions: userSubmissions
       }
     })
-  )
 
   // Sort descending by composite score
   evaluatedParticipants.sort((a, b) => b.compositeScore - a.compositeScore)
@@ -376,7 +381,7 @@ export async function runAICompetitionEvaluation(competitionId: string) {
   const top3Winners = evaluatedParticipants.slice(0, 3).map((winner, idx) => ({
     ...winner,
     rank: idx + 1,
-    title: idx === 0 ? "Grand Admiral of the High Seas 👑" : idx === 1 ? "First Mate Commodore ⚔️" : "Master Gunner ⚓"
+    title: idx === 0 ? "Grand Admiral of the High Seas" : idx === 1 ? "First Mate Commodore" : "Master Gunner"
   }))
 
   return {
