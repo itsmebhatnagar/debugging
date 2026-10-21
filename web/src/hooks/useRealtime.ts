@@ -13,10 +13,17 @@ export function useRealtime(competitionId: string) {
   useEffect(() => {
     if (!competitionId) return
 
-    const newSocket = io(REALTIME_SERVER_URL)
-    setSocket(newSocket)
+    const newSocket = io(REALTIME_SERVER_URL, {
+      timeout: 10_000,
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 500,
+      reconnectionDelayMax: 5_000,
+      randomizationFactor: 0.5,
+    })
 
     newSocket.on("connect", () => {
+      setSocket(newSocket)
       setConnected(true)
       newSocket.emit("join_competition", competitionId)
     })
@@ -25,8 +32,11 @@ export function useRealtime(competitionId: string) {
       setConnected(false)
     })
 
+    newSocket.on("connect_error", () => {
+      setConnected(false)
+    })
+
     return () => {
-      newSocket.emit("leave_competition", competitionId)
       newSocket.disconnect()
     }
   }, [competitionId])

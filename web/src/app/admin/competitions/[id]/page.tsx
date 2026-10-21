@@ -3,12 +3,17 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import { DeleteButton } from "@/components/DeleteButton"
 import { deleteCompetition } from "@/app/actions/admin"
+import { auth } from "@/auth"
+import { redirect } from "next/navigation"
 
 export default async function AdminCompetitionDetailPage({
   params
 }: {
   params: Promise<{ id: string }>
 }) {
+  const session = await auth()
+  if (session?.user?.role !== "ADMIN") redirect("/login")
+
   const { id } = await params
   const comp = await prisma.competition.findUnique({
     where: { id },
@@ -42,6 +47,27 @@ export default async function AdminCompetitionDetailPage({
               confirmText="Are you sure you want to permanently delete this competition? This will destroy all rounds, questions, and submissions inside it!" 
             />
           </div>
+        </div>
+
+        <div className="mb-6 flex flex-wrap gap-3">
+          <Link
+            href={`/admin/competitions/${comp.id}/leaderboard`}
+            className="rounded bg-[#d4af37] px-4 py-2 text-sm font-bold text-[#1a1714] transition-colors hover:bg-[#f0cf58]"
+          >
+            WATCH LIVE LEADERBOARD
+          </Link>
+          <a
+            href={`/api/admin/competitions/${comp.id}/export?type=leaderboard`}
+            className="rounded border border-[#d4af37] px-4 py-2 text-sm font-bold text-[#d4af37] transition-colors hover:bg-[#d4af37]/10"
+          >
+            DOWNLOAD LEADERBOARD CSV
+          </a>
+          <a
+            href={`/api/admin/competitions/${comp.id}/export?type=participants`}
+            className="rounded border border-[#8b7355] px-4 py-2 text-sm font-bold text-[#d4cbb3] transition-colors hover:bg-white/5"
+          >
+            DOWNLOAD PARTICIPANTS CSV
+          </a>
         </div>
 
         <div className="mb-6 flex items-center justify-between">

@@ -3,7 +3,6 @@
 import { useActionState, useState } from "react"
 import { registerUser as register } from "@/app/actions/auth"
 import Link from "next/link"
-import { Spotlight } from "@/components/ui/spotlight"
 
 export default function RegisterPage() {
   const [errorMessage, dispatch, isPending] = useActionState(register, undefined)
@@ -14,35 +13,30 @@ export default function RegisterPage() {
   const [inviteCode, setInviteCode] = useState("")
 
   return (
-    <div className="relative min-h-screen lg:h-screen lg:max-h-screen lg:overflow-hidden flex flex-col items-center justify-center p-6 lg:p-4 z-10 pt-24 lg:pt-14">
+    <div className="auth-screen relative z-10 flex flex-col items-center justify-center">
       
-      <div className="relative w-full max-w-xl overflow-hidden rounded-[2rem] bg-[#d4af37]/20 p-[2px] shadow-2xl">
-        <Spotlight 
-          className="from-[#f4ede0] via-[#d4af37] to-transparent blur-3xl" 
-          size={500} 
-        />
-        
-        <div className="relative w-full h-full rounded-[2rem] bg-[#1a1714]/70 backdrop-blur-md p-8 lg:p-7 flex flex-col items-center border border-[#d4af37]/10 max-h-[92vh] overflow-y-auto scrollbar-none">
+      <div className="auth-card relative w-full max-w-xl overflow-hidden rounded-[2rem] bg-[#d4af37]/20 p-[2px] shadow-2xl">
+        <div className="auth-card-inner relative flex w-full flex-col items-center rounded-[2rem] border border-[#d4af37]/10 bg-[#1a1714]/85 p-8 backdrop-blur-md">
           
           {/* Header */}
-          <div className="mb-6 lg:mb-4 text-center space-y-3 lg:space-y-1.5">
-            <div className="mx-auto w-14 h-14 lg:w-16 lg:h-16 rounded-full border border-[#d4af37]/50 flex items-center justify-center bg-[#1a1714]/80 shadow-[0_0_15px_rgba(212,175,55,0.2)]">
+          <div className="auth-heading mb-6 text-center">
+            <div className="auth-icon mx-auto flex h-14 w-14 items-center justify-center rounded-full border border-[#d4af37]/50 bg-[#1a1714]/80 shadow-[0_0_15px_rgba(212,175,55,0.2)]">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#d4af37" strokeWidth="1.5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4"></path>
               </svg>
             </div>
             
-            <h1 className="text-3xl font-cinzel font-bold tracking-[0.15em] text-[#f4ede0] drop-shadow-[0_0_10px_rgba(244,237,224,0.3)]">
+            <h1 className="auth-title mt-3 font-cinzel font-bold tracking-[0.15em] text-[#f4ede0] drop-shadow-[0_0_10px_rgba(244,237,224,0.3)]">
               ENLIST IN THE CREW
             </h1>
-            <p className="text-xs font-garamond font-semibold text-[#f4ede0]/70 tracking-wide uppercase">
+            <p className="auth-subtitle mt-2 text-xs font-garamond font-semibold uppercase tracking-wide text-[#f4ede0]/70">
               Sign the Articles and claim your spot
             </p>
           </div>
 
           {/* Form */}
-          <form action={dispatch} className="w-full space-y-5">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <form action={dispatch} className="auth-form w-full">
+            <div className="auth-form-row">
               <div className="space-y-2">
                 <label className="block text-[10px] font-cinzel font-bold uppercase tracking-[0.15em] text-[#d4af37]" htmlFor="name">
                   Pirate Name
@@ -51,6 +45,7 @@ export default function RegisterPage() {
                   id="name"
                   name="name"
                   type="text"
+                  autoComplete="name"
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
@@ -67,6 +62,7 @@ export default function RegisterPage() {
                   id="email"
                   name="email"
                   type="email"
+                  autoComplete="email"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -76,7 +72,7 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="auth-form-row">
               <div className="space-y-2">
                 <label className="block text-[10px] font-cinzel font-bold uppercase tracking-[0.15em] text-[#d4af37]" htmlFor="mobile">
                   Mobile Number (Optional)
@@ -85,6 +81,7 @@ export default function RegisterPage() {
                   id="mobile"
                   name="mobile"
                   type="tel"
+                  autoComplete="tel"
                   value={mobile}
                   onChange={(e) => setMobile(e.target.value)}
                   placeholder="+1 234 567 890"
@@ -100,6 +97,7 @@ export default function RegisterPage() {
                   id="inviteCode"
                   name="inviteCode"
                   type="text"
+                  autoComplete="off"
                   value={inviteCode}
                   onChange={(e) => setInviteCode(e.target.value)}
                   placeholder="Optional Admin Code"
@@ -116,6 +114,7 @@ export default function RegisterPage() {
                 id="password"
                 name="password"
                 type="password"
+                autoComplete="new-password"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -133,14 +132,14 @@ export default function RegisterPage() {
             <button
               type="submit"
               disabled={isPending}
-              className="w-full rounded-xl border border-[#d4af37]/60 bg-[#1a1714]/80 hover:bg-[#d4af37]/20 py-4 text-xs font-cinzel font-bold tracking-[0.2em] text-[#d4af37] uppercase transition-all mt-4 disabled:border-[#d4af37]/20 disabled:bg-[#d4af37]/5 disabled:text-[#d4af37]/80"
+              className="auth-submit mt-4 w-full rounded-xl border border-[#d4af37]/60 bg-[#1a1714]/80 py-4 text-xs font-cinzel font-bold uppercase tracking-[0.2em] text-[#d4af37] transition-colors hover:bg-[#d4af37]/20 disabled:border-[#d4af37]/20 disabled:bg-[#d4af37]/5 disabled:text-[#d4af37]/80"
             >
               {isPending ? "SIGNING ARTICLES..." : "SIGN THE ARTICLES"}
             </button>
           </form>
 
           {/* Footer link */}
-          <div className="mt-8 text-center">
+          <div className="auth-footer mt-8 text-center">
             <p className="text-xs font-garamond font-semibold text-[#f4ede0]/60">
               Already swore the oath?{" "}
               <Link href="/login" className="font-bold text-[#d4af37] hover:text-[#f4ede0] transition-colors">

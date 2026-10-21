@@ -1,6 +1,6 @@
 "use client"
 
-import { use, useEffect, useState, useRef } from "react"
+import { use, useCallback, useEffect, useState, useRef } from "react"
 import { useRealtime } from "@/hooks/useRealtime"
 import Editor from "@monaco-editor/react"
 import ReactMarkdown from "react-markdown"
@@ -64,6 +64,8 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [attemptErrorModal, setAttemptErrorModal] = useState<string | null>(null)
   const [top3Winners, setTop3Winners] = useState<any[]>([])
+  const [statusUnavailable, setStatusUnavailable] = useState(false)
+  const statusRequestInFlight = useRef(false)
 
   // ── FULLSCREEN & ANTI-CHEAT ENFORCEMENT ─────────────────────────
   const [isFullscreen, setIsFullscreen] = useState(false)
@@ -74,6 +76,8 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
   const [dqReason, setDqReason] = useState<string | null>("FULLSCREEN_EXIT")
   const [securityToast, setSecurityToast] = useState<string | null>(null)
   const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const draftSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pendingDraftRef = useRef<{ questionId: string; code: string } | null>(null)
   const isAutoSubmittingRound = useRef(false)
   const editorRef = useRef<any>(null)
   const [hasEnteredFullscreenOnce, setHasEnteredFullscreenOnce] = useState(false)
@@ -87,10 +91,17 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
     }, 2800)
   }
 
-  const fetchStatus = async () => {
+  const fetchStatus = useCallback(async () => {
+    if (statusRequestInFlight.current) return
+    statusRequestInFlight.current = true
     try {
-      const res = await fetch(`/api/competition/${competitionId}/status`)
+      const res = await fetch(`/api/competition/${competitionId}/status`, {
+        cache: "no-store",
+        signal: AbortSignal.timeout(12_000),
+      })
+      if (!res.ok) throw new Error(`Status request failed (${res.status})`)
       const data = await res.json()
+      setStatusUnavailable(false)
       if (data.userId) currentUserIdRef.current = data.userId
       if (data.competitionName) setCompetitionName(data.competitionName)
 
@@ -144,11 +155,31 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
         setArenaState("ENDED")
       }
     } catch {
-      setArenaState("WAITING")
+      setStatusUnavailable(true)
+      setArenaState((current) => current === "LOADING" ? "WAITING" : current)
+    } finally {
+      statusRequestInFlight.current = false
     }
-  }
+  }, [competitionId])
 
-  useEffect(() => { fetchStatus() }, [competitionId])
+  useEffect(() => { void fetchStatus() }, [fetchStatus])
+
+  useEffect(() => () => {
+    if (draftSaveTimeoutRef.current) clearTimeout(draftSaveTimeoutRef.current)
+    const pendingDraft = pendingDraftRef.current
+    if (pendingDraft) {
+      void saveDraft(pendingDraft.questionId, CODE_LANGUAGE, pendingDraft.code).catch((error) => {
+        console.error("Final draft save failed:", error)
+      })
+    }
+  }, [])
+
+  useEffect(() => {
+    if (arenaState !== "WAITING" && arenaState !== "COUNTDOWN") return
+    if (connected) return
+    const interval = setInterval(() => { void fetchStatus() }, 15_000)
+    return () => clearInterval(interval)
+  }, [arenaState, connected, fetchStatus])
 
   // ── FULLSCREEN REQUEST & KEYBOARD LOCK ──────────────────────────
   const enterFullscreen = async () => {
@@ -623,7 +654,21 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
     if (!currentQuestion) return
     const updated = newVal || ""
     setCodes((prev) => ({ ...prev, [currentQuestion.id]: updated }))
-    saveDraft(currentQuestion.id, language, updated).catch(() => {})
+    pendingDraftRef.current = { questionId: currentQuestion.id, code: updated }
+    if (draftSaveTimeoutRef.current) clearTimeout(draftSaveTimeoutRef.current)
+    draftSaveTimeoutRef.current = setTimeout(() => {
+      draftSaveTimeoutRef.current = null
+      void saveDraft(currentQuestion.id, language, updated).then((result) => {
+        if (result.success && pendingDraftRef.current?.questionId === currentQuestion.id &&
+          pendingDraftRef.current.code === updated) {
+          pendingDraftRef.current = null
+        } else if (!result.success) {
+          console.error("Draft save was rejected by the server.")
+        }
+      }).catch((error) => {
+        console.error("Draft save failed:", error)
+      })
+    }, 600)
   }
 
   const handleCompile = async () => {
@@ -791,13 +836,21 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
                     <div className="flex items-center gap-1.5">
                       <Radio className="w-3 h-3 text-[#d4af37]" />
                       <span className={connected ? "text-emerald-400 font-bold" : "text-red-400 font-bold"}>
-                        {connected ? "SECURE UPLINK ESTABLISHED" : "CONNECTING TO FLEET..."}
+                        {connected ? "LIVE CONNECTION" : statusUnavailable ? "RETRYING CONNECTION..." : "CONNECTING TO FLEET..."}
                       </span>
                     </div>
                     <span className="text-[9px] text-[#695e50] tracking-wider uppercase hidden sm:inline-block">
                       FREQ 4.8 GHZ
                     </span>
                   </div>
+
+                  <Link
+                    href="/dashboard"
+                    prefetch={false}
+                    className="mt-3 inline-flex min-h-10 items-center justify-center self-center rounded-lg border border-[#d4af37]/40 bg-[#d4af37]/10 px-5 py-2 font-cinzel text-[10px] font-bold tracking-[0.16em] text-[#d4af37] transition-colors hover:bg-[#d4af37]/20 lg:self-start"
+                  >
+                    GO TO DASHBOARD
+                  </Link>
                 </div>
 
                 {/* ── RIGHT COLUMN: Expedition Standing Orders ───────── */}
@@ -1290,7 +1343,7 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
 
           <div className="relative z-10 w-full max-w-xl animate-treasure-in max-h-[96vh] lg:max-h-[92vh] flex flex-col">
             {fullscreenExited ? (
-              /* ── PERMANENT LOCKOUT SCREEN (MAROONED) ── */
+              /* ── PERMANENT LOCKOUT SCREEN ── */
               <div className="relative w-full overflow-hidden rounded-[2.5rem] bg-gradient-to-b from-red-500/40 via-[#d4af37]/20 to-red-500/35 p-[1px] shadow-[0_25px_80px_rgba(0,0,0,0.9),0_0_50px_rgba(239,68,68,0.15)] flex flex-col min-h-0">
                 <Spotlight className="from-red-500/30 via-[#d4af37]/20 to-transparent blur-3xl opacity-35" size={450} />
 
@@ -1325,7 +1378,7 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
 
                   {/* Headline */}
                   <h1 className="font-cinzel text-2xl sm:text-3xl lg:text-2xl font-black text-[#fdf6e2] uppercase tracking-[0.08em] drop-shadow-[0_4px_24px_rgba(0,0,0,0.9)]">
-                    {dqReason === "TAB_SWITCH" ? "MUTINY DETECTED!" : "MAROONED!"}
+                    {dqReason === "TAB_SWITCH" ? "MUTINY DETECTED!" : "DISQUALIFIED"}
                   </h1>
 
                   {/* Subtle Ornamental Crimson Divider */}

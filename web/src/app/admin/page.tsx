@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma"
 import { AdminControlDeck } from "./AdminControlDeck"
 import { getLiveAdminData } from "@/app/actions/admin"
 import { Spotlight } from "@/components/ui/spotlight"
+import Link from "next/link"
 
 export default async function AdminPage() {
   const session = await auth()
@@ -31,6 +32,20 @@ export default async function AdminPage() {
           <Spotlight className="from-[#f4ede0] via-[#d4af37] to-transparent blur-3xl" size={600} />
           
           <div className="relative w-full h-full rounded-[2rem] bg-[#1a1714]/25 backdrop-blur-md p-4 sm:p-6 md:p-8 flex flex-col border border-[#d4af37]/10">
+            <div className="mb-5 flex flex-wrap gap-3">
+              <Link
+                href={`/admin/competitions/${competition.id}/leaderboard`}
+                className="rounded-lg border border-[#d4af37]/50 bg-[#d4af37]/10 px-4 py-2 text-xs font-bold tracking-wide text-[#ffd700] transition-colors hover:bg-[#d4af37]/20"
+              >
+                WATCH LIVE LEADERBOARD
+              </Link>
+              <a href={`/api/admin/competitions/${competition.id}/export?type=leaderboard`} className="rounded-lg border border-[#d4af37]/30 px-4 py-2 text-xs font-bold tracking-wide text-[#d4af37] transition-colors hover:bg-[#d4af37]/10">
+                LEADERBOARD CSV
+              </a>
+              <a href={`/api/admin/competitions/${competition.id}/export?type=participants`} className="rounded-lg border border-[#8b7355]/50 px-4 py-2 text-xs font-bold tracking-wide text-[#d4cbb3] transition-colors hover:bg-white/5">
+                PARTICIPANTS CSV
+              </a>
+            </div>
             <AdminControlDeck initialData={liveData} />
           </div>
         </div>
