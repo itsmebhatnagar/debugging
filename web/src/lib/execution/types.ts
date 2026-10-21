@@ -13,6 +13,7 @@ export interface ExecutionResult {
   memory: number // in KB
   statusId: number // Judge0 standard status IDs (3 = Accepted, 4 = Wrong Answer, etc)
   passed: boolean
+  compilerVersion?: string
 }
 
 export interface ExecutionService {

@@ -3,6 +3,7 @@
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
 import { requestCompile, submitSolution, saveDraftCode } from "@/lib/competition-engine"
+import { C_STARTER_CODE, CODE_LANGUAGE } from "@/lib/code-language"
 
 export async function compileCode(questionId: string, language: string, code: string) {
   const session = await auth()
@@ -214,7 +215,7 @@ export async function autoSubmitRound(
     ])
 
     const submittedQIds = new Set(existingSubmissions.map((s) => s.questionId))
-    const draftMap = new Map(drafts.map((d) => [d.questionId, d.code]))
+    const draftMap = new Map(drafts.map((draft) => [draft.questionId, draft]))
 
     // Submit remaining unsubmitted questions concurrently
     const submitPromises = round.questions
@@ -222,12 +223,12 @@ export async function autoSubmitRound(
       .map(async (q) => {
         let codeToSubmit = codes[q.id]
         if (!codeToSubmit || !codeToSubmit.trim()) {
-          const draftCode = draftMap.get(q.id)
-          if (draftCode) {
-            codeToSubmit = draftCode
+          const draft = draftMap.get(q.id)
+          if (draft?.language === CODE_LANGUAGE) {
+            codeToSubmit = draft.code
           } else {
-            const starter = q.starterCodes.find((s) => s.language === language) || q.starterCodes[0]
-            codeToSubmit = starter?.code || `// Autosubmitted solution\nfunction solve() {}\n`
+            const starter = q.starterCodes.find((s) => s.language === CODE_LANGUAGE)
+            codeToSubmit = starter?.code || C_STARTER_CODE
           }
         }
 
@@ -257,4 +258,3 @@ export async function autoSubmitRound(
     return { success: false, error: err.message }
   }
 }
-

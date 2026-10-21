@@ -7,6 +7,7 @@ import ReactMarkdown from "react-markdown"
 import { compileCode, submitFinalCode, saveDraft, startRoundNow, recordDisqualification, autoSubmitRound } from "@/app/actions/participant"
 import Link from "next/link"
 import { Spotlight } from "@/components/ui/spotlight"
+import { C_STARTER_CODE, CODE_LANGUAGE } from "@/lib/code-language"
 import {
   Anchor,
   Compass,
@@ -54,7 +55,7 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
   const [splashRoundName, setSplashRoundName] = useState("Quest for the Lost Treasure")
   const [round, setRound] = useState<RoundData | null>(null)
   const [selectedQuestionIndex, setSelectedQuestionIndex] = useState(0)
-  const [language, setLanguage] = useState("javascript")
+  const language = CODE_LANGUAGE
   const [codes, setCodes] = useState<Record<string, string>>({})
   const [attempts, setAttempts] = useState<Record<string, number>>({})
   const [submissions, setSubmissions] = useState<Record<string, string>>({})
@@ -130,11 +131,11 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
           const newCodes: Record<string, string> = {}
           data.round.questions.forEach((q: QuestionData) => {
             const draft = data.userState.drafts?.[q.id]
-            if (draft?.code) {
+            if (draft?.code && draft.language === CODE_LANGUAGE) {
               newCodes[q.id] = draft.code
             } else {
-              const starter = q.starterCodes.find((s) => s.language === "javascript") || q.starterCodes[0]
-              newCodes[q.id] = starter?.code || `// Solution for ${q.title}\nfunction solve(input) {\n  return "";\n}\n`
+              const starter = q.starterCodes.find((s) => s.language === CODE_LANGUAGE)
+              newCodes[q.id] = starter?.code || C_STARTER_CODE
             }
           })
           setCodes(newCodes)
@@ -534,8 +535,8 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
         setRound({ id: data.roundId, name: data.roundName, order: data.roundOrder, maxCompileAttempts: data.maxCompileAttempts, questions: data.questions })
         const initialCodes: Record<string, string> = {}
         data.questions.forEach((q: QuestionData) => {
-          const starter = q.starterCodes?.find((s) => s.language === "javascript") || q.starterCodes?.[0]
-          initialCodes[q.id] = starter?.code || `// Solution for ${q.title}\nfunction solve(input) {\n  return "";\n}\n`
+          const starter = q.starterCodes?.find((s) => s.language === CODE_LANGUAGE)
+          initialCodes[q.id] = starter?.code || C_STARTER_CODE
         })
         setCodes(initialCodes)
         setSelectedQuestionIndex(0)
@@ -1522,15 +1523,9 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#d4af37" strokeWidth="2">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
                   </svg>
-                  <select
-                    value={language}
-                    onChange={(e) => setLanguage(e.target.value)}
-                    className="bg-transparent text-[#d4af37] text-xs font-cinzel font-bold uppercase tracking-wider outline-none cursor-pointer"
-                  >
-                    <option value="javascript" className="bg-[#1a1714]">JavaScript</option>
-                    <option value="python" className="bg-[#1a1714]">Python 3</option>
-                    <option value="cpp" className="bg-[#1a1714]">C++ 20</option>
-                  </select>
+                  <span className="text-[#d4af37] text-xs font-cinzel font-bold uppercase tracking-wider">
+                    C — GCC Latest
+                  </span>
                 </div>
                 
                 <div className="flex items-center gap-2">
@@ -1546,7 +1541,7 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
                 <Editor
                   height="100%"
                   theme="vs-dark"
-                  language={language === "cpp" ? "cpp" : language}
+                  language="c"
                   value={currentCode}
                   onChange={handleCodeChange}
                   onMount={handleEditorMount}
@@ -1626,7 +1621,6 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
                   key={q.id}
                   onClick={() => {
                     setSelectedQuestionIndex(idx)
-                    setLanguage("javascript")
                     setOutput("")
                   }}
                   className={`flex items-center justify-center w-8 h-8 rounded-full text-xs font-cinzel font-bold transition-all ${

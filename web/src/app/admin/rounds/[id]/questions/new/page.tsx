@@ -2,6 +2,7 @@
 
 import { useActionState, use } from "react"
 import { createQuestionWithStarterCodes } from "@/app/actions/admin"
+import CStarterCodeEditor from "@/components/CStarterCodeEditor"
 import Link from "next/link"
 import { ScrollText, Swords, Target, AlertTriangle } from "lucide-react"
 
@@ -85,44 +86,15 @@ export default function NewQuestionPage({ params }: { params: Promise<{ id: stri
           <div className="border-t border-[#8b7355]/30 pt-6">
             <h3 className="text-sm font-bold uppercase tracking-wider text-[#ffd700] mb-4 flex items-center gap-2">
               <Swords className="w-4 h-4 text-[#ffd700]" />
-              <span>Upload Starter Codes (Distributed to All Sailors)</span>
+              <span>C Starter Code (Distributed to All Sailors)</span>
             </h3>
 
             <div className="space-y-4">
               <div>
                 <label className="block text-xs font-garamond text-[#cbd5e1] mb-1">
-                  JavaScript Starter Code:
+                  C (GCC) Starter Code:
                 </label>
-                <textarea
-                  className="w-full rounded-lg border border-[#8b7355]/40 bg-[#070b14] p-3 text-xs font-garamond text-[#cbd5e1] focus:border-[#ffd700] focus:outline-none"
-                  name="jsStarter"
-                  rows={4}
-                  defaultValue={`function solve(input) {\n  // Write your code here\n  return "";\n}`}
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-garamond text-[#cbd5e1] mb-1">
-                  Python Starter Code:
-                </label>
-                <textarea
-                  className="w-full rounded-lg border border-[#8b7355]/40 bg-[#070b14] p-3 text-xs font-garamond text-[#cbd5e1] focus:border-[#ffd700] focus:outline-none"
-                  name="pyStarter"
-                  rows={4}
-                  defaultValue={`def solve(input_str: str) -> str:\n    # Write your code here\n    return ""`}
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-garamond text-[#cbd5e1] mb-1">
-                  C++ Starter Code:
-                </label>
-                <textarea
-                  className="w-full rounded-lg border border-[#8b7355]/40 bg-[#070b14] p-3 text-xs font-garamond text-[#cbd5e1] focus:border-[#ffd700] focus:outline-none"
-                  name="cppStarter"
-                  rows={4}
-                  defaultValue={`#include <iostream>\n#include <string>\n\nstd::string solve(const std::string& input) {\n    return "";\n}`}
-                />
+                <CStarterCodeEditor />
               </div>
             </div>
           </div>
