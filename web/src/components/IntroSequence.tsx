@@ -44,7 +44,7 @@ export const IntroSequence: React.FC<IntroSequenceProps> = ({ onComplete }) => {
     for (let i = 0; i < FRAME_COUNT; i++) {
       const img = new Image();
       img.src = IMG_PATH(i + 1);
-      img.onload = () => {
+      const onDone = () => {
         loadedCount++;
         setLoadProgress(Math.floor((loadedCount / FRAME_COUNT) * 100));
         if (loadedCount === FRAME_COUNT) {
@@ -52,10 +52,8 @@ export const IntroSequence: React.FC<IntroSequenceProps> = ({ onComplete }) => {
           setFramesLoaded(true);
         }
       };
-      img.onerror = () => {
-        loadedCount++;
-        setLoadProgress(Math.floor((loadedCount / FRAME_COUNT) * 100));
-      };
+      img.onload = onDone;
+      img.onerror = onDone;
       images[i] = img;
     }
 
@@ -71,16 +69,30 @@ export const IntroSequence: React.FC<IntroSequenceProps> = ({ onComplete }) => {
     const video = videoRef.current;
     if (!video) return;
 
+    let fallbackTimeout: NodeJS.Timeout;
+
     const handleEnded = () => {
-      // Seamless handoff: video ends on black, scroll starts on black
+      clearTimeout(fallbackTimeout);
       window.scrollTo(0, 0);
       setPhase('scroll');
     };
 
     video.addEventListener('ended', handleEnded);
-    video.play().catch(() => {});
+    video.addEventListener('error', handleEnded);
 
-    return () => video.removeEventListener('ended', handleEnded);
+    // Safety fallback: if video is blocked, 404, or stalls, transition seamlessly
+    fallbackTimeout = setTimeout(handleEnded, 8000);
+
+    video.play().catch(() => {
+      // Browser blocked autoplay
+      setTimeout(handleEnded, 2000);
+    });
+
+    return () => {
+      clearTimeout(fallbackTimeout);
+      video.removeEventListener('ended', handleEnded);
+      video.removeEventListener('error', handleEnded);
+    };
   }, []);
 
   // ═══════════════════════════════════════════════════════
@@ -90,7 +102,7 @@ export const IntroSequence: React.FC<IntroSequenceProps> = ({ onComplete }) => {
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext('2d');
     const img = imagesRef.current[frameIndex];
-    if (!canvas || !ctx || !img || !img.complete) return;
+    if (!canvas || !ctx || !img || !img.complete || img.naturalWidth === 0) return;
 
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
@@ -179,16 +191,31 @@ export const IntroSequence: React.FC<IntroSequenceProps> = ({ onComplete }) => {
   // PHASE: INK VIDEO
   if (phase === 'ink') {
     return (
-      <div className="fixed inset-0 z-[200] bg-black">
+      <div 
+        className="fixed inset-0 z-[200] bg-black cursor-pointer select-none"
+        onClick={() => {
+          window.scrollTo(0, 0);
+          setPhase('scroll');
+        }}
+      >
         <video
           ref={videoRef}
-          className="w-full h-full object-cover"
+          className="w-full h-full object-cover pointer-events-none"
           src="/echona_ink_intro.mp4"
           muted
           playsInline
           preload="auto"
         />
-
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            window.scrollTo(0, 0);
+            setPhase('scroll');
+          }}
+          className="absolute top-6 right-6 z-[210] px-3 py-1.5 text-xs tracking-widest text-[#D4AF37]/80 hover:text-[#D4AF37] border border-[#D4AF37]/40 rounded bg-black/60 backdrop-blur transition-all font-mono"
+        >
+          SKIP
+        </button>
       </div>
     );
   }

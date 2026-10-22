@@ -41,8 +41,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# Frame sequences (large animation assets)
-/public/frames/
 
 # Intermediate cursor assets & screenshots
 /public/alternate.png

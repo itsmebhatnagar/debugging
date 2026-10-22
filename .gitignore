@@ -1,5 +1,6 @@
 # Video files
 *.mp4
+!web/public/echona_ink_intro.mp4
 
 # Gemini
 .gemini/
@@ -109,9 +110,6 @@ dist
 .DS_Store
 Thumbs.db
 
-# Frame sequences & large animation frames
-web/public/frames/
-frames/
 
 # Reference images and screenshots
 alternate.png
