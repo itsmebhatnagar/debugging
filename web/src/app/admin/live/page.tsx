@@ -78,7 +78,7 @@ export default function LiveControlPage() {
       return;
     }
 
-    const newSocket = io(`${realtimeUrl}/admin`, {
+    const newSocket = io(realtimeUrl, {
       auth: { token },
       withCredentials: true,
       reconnectionAttempts: 3
@@ -129,48 +129,51 @@ export default function LiveControlPage() {
     if (!confirmAction) return;
     
     const { action, roundId } = confirmAction;
-    socket?.emit(action, { roundId });
-    addLog(`Command issued: ${action}`, 'warning');
-    
     try {
       if (action === 'quiz:reset') {
         const res = await fetch(`/api/quizzes/${activeQuizId}/reset`, { method: 'POST', credentials: 'include' });
-        if (res.ok) {
-          showToast('success', 'EXPEDITION RESET', 'All scores, timers, and stages have been restored.');
-          addLog('Expedition successfully reset to waiting state.', 'success');
-        }
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.error || 'Could not reset expedition.');
+        showToast('success', 'EXPEDITION RESET', 'All scores, timers, and stages have been restored.');
+        addLog('Expedition successfully reset to waiting state.', 'success');
       } else if (action === 'quiz:restart') {
         const res = await fetch(`/api/quizzes/${activeQuizId}/restart`, { method: 'POST', credentials: 'include' });
-        if (res.ok) {
-          showToast('success', 'EXPEDITION RESTARTED', 'Round 1 is now underway.');
-          addLog('Expedition restarted from Round 1.', 'success');
-        }
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.error || 'Could not restart expedition.');
+        showToast('success', 'EXPEDITION RESTARTED', 'Round 1 is now underway.');
+        addLog('Expedition restarted from Round 1.', 'success');
       } else if (action === 'quiz:restore_seed') {
         const res = await fetch('/api/admin/restore-seed', { method: 'POST', credentials: 'include' });
-        if (res.ok) {
-          showToast('success', 'DATABASE RESTORED', 'All rounds and questions restored.');
-          addLog('Pirate championship database restored.', 'success');
-        }
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.error || 'Could not restore database.');
+        showToast('success', 'DATABASE RESTORED', 'All rounds and questions restored.');
+        addLog('Pirate championship database restored.', 'success');
+      } else if (action === 'round:start') {
+        const res = await fetch(`/api/quizzes/rounds/${roundId}/start`, { method: 'POST', credentials: 'include' });
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.error || 'Could not start stage.');
+        showToast('success', 'ROUND UNDERWAY', 'The stage has been initiated.');
+        addLog(`Stage ${roundId} started.`, 'success');
       } else if (action === 'round:reset') {
         const res = await fetch(`/api/quizzes/rounds/${roundId}/reset`, { method: 'POST', credentials: 'include' });
-        if (res.ok) {
-          showToast('success', 'STAGE RESET', 'The stage has been reset to pending.');
-          addLog(`Stage ${roundId} reset.`, 'success');
-        }
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.error || 'Could not reset stage.');
+        showToast('success', 'STAGE RESET', 'The stage has been reset to pending.');
+        addLog(`Stage ${roundId} reset.`, 'success');
       } else if (action === 'round:restart') {
         const res = await fetch(`/api/quizzes/rounds/${roundId}/restart`, { method: 'POST', credentials: 'include' });
-        if (res.ok) {
-          showToast('success', 'STAGE RESTARTED', 'The stage has been restarted and is now live.');
-          addLog(`Stage ${roundId} restarted.`, 'success');
-        }
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.error || 'Could not restart stage.');
+        showToast('success', 'STAGE RESTARTED', 'The stage has been restarted and is now live.');
+        addLog(`Stage ${roundId} restarted.`, 'success');
       } else {
-        if (action === 'round:start') showToast('success', 'ROUND UNDERWAY', 'The stage has been initiated.');
         if (action === 'round:pause') showToast('warning', 'ROUND PAUSED', 'The expedition is currently halted.');
         if (action === 'round:end') showToast('success', 'ROUND COMPLETED', 'All responses have been recorded.');
       }
-    } catch (err: any) {
-      showToast('error', 'ACTION FAILED', err.message || 'Error occurred');
-      addLog(`Failed to execute ${action}: ${err.message}`, 'error');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Error occurred';
+      showToast('error', 'ACTION FAILED', message);
+      addLog(`Failed to execute ${action}: ${message}`, 'error');
     }
     
     setConfirmAction(null);

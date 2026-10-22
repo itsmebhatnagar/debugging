@@ -703,6 +703,15 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
       setArenaState("ENDED")
       if (data.top3Winners) setTop3Winners(data.top3Winners)
     })
+    socket.on("round_reset", (data: any) => {
+      if (round?.id !== data.roundId) return
+      setRound(null)
+      setAttempts({})
+      setSubmissions({})
+      setCodes({})
+      setSelectedQuestionIndex(0)
+      setArenaState("WAITING")
+    })
     socket.on("participant_disqualified", (data: any) => {
       if (!currentUserIdRef.current || data.userId === currentUserIdRef.current) {
         setFullscreenExited(true)
@@ -734,10 +743,11 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
       socket.off("round_started")
       socket.off("attempt_exceeded")
       socket.off("test_ended")
+      socket.off("round_reset")
       socket.off("participant_disqualified")
       socket.off("participant_status_changed")
     }
-  }, [socket])
+  }, [socket, round?.id])
 
   useEffect(() => {
     if (arenaState !== "COUNTDOWN") return

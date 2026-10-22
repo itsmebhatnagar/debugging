@@ -76,6 +76,24 @@ export async function activateRoundAdmin(competitionId: string, roundOrder: numb
   return { success: true, round }
 }
 
+export async function startRoundAdmin(roundId: string) {
+  await checkAdmin()
+
+  const round = await prisma.round.findUnique({
+    where: { id: roundId },
+    select: { competitionId: true, order: true }
+  })
+
+  if (!round) throw new Error("Round not found")
+
+  const startedRound = await activateRound(round.competitionId, round.order)
+  revalidatePath("/admin/live")
+  revalidatePath(`/admin/competitions/${round.competitionId}`)
+  revalidatePath(`/competition/${round.competitionId}`)
+
+  return { success: true, round: startedRound }
+}
+
 export async function endTestAdmin(competitionId: string) {
   await checkAdmin()
   const result = await endCompetition(competitionId)
@@ -633,6 +651,36 @@ export async function resetRoundAdmin(roundId: string) {
     })
   }
 
+  const participants = await prisma.competitionParticipant.findMany({
+    where: { competitionId: round.competitionId },
+    select: {
+      id: true,
+      scores: { select: { pointsEarned: true } }
+    }
+  })
+  await Promise.all(participants.map(participant =>
+    prisma.competitionParticipant.update({
+      where: { id: participant.id },
+      data: {
+        score: participant.scores.reduce((total, score) => total + score.pointsEarned, 0)
+      }
+    })
+  ))
+
+  if (round.status === "ACTIVE") {
+    const activeRound = await prisma.round.findFirst({
+      where: { competitionId: round.competitionId, status: "ACTIVE" },
+      select: { id: true }
+    })
+
+    if (!activeRound) {
+      await prisma.competition.update({
+        where: { id: round.competitionId },
+        data: { status: "WAITING", startedAt: null }
+      })
+    }
+  }
+
   // Broadcast event
   await broadcastEvent(round.competitionId, "round_reset", {
     roundId,
@@ -650,54 +698,18 @@ export async function resetRoundAdmin(roundId: string) {
 
 export async function restartRoundAdmin(roundId: string) {
   await checkAdmin()
-  const { broadcastEvent } = await import("@/lib/realtime")
 
   // Reset round data first
   await resetRoundAdmin(roundId)
 
   const round = await prisma.round.findUnique({
     where: { id: roundId },
-    include: {
-      questions: {
-        include: {
-          starterCodes: true,
-          testCases: { where: { isHidden: false } }
-        }
-      }
-    }
+    select: { competitionId: true, order: true }
   })
 
   if (!round) throw new Error("Round not found")
 
-  // Activate round
-  const updatedRound = await prisma.round.update({
-    where: { id: roundId },
-    data: {
-      status: "ACTIVE",
-      startedAt: new Date(),
-    }
-  })
-
-  await prisma.competition.update({
-    where: { id: round.competitionId },
-    data: { status: "ACTIVE" }
-  })
-
-  await broadcastEvent(round.competitionId, "round_started", {
-    roundId: round.id,
-    roundName: round.name,
-    roundOrder: round.order,
-    startedAt: updatedRound.startedAt,
-    durationSeconds: round.durationSeconds,
-    maxCompileAttempts: round.maxCompileAttempts,
-    questions: round.questions.map(q => ({
-      id: q.id,
-      title: q.title,
-      description: q.description,
-      points: q.points,
-      starterCodes: q.starterCodes
-    }))
-  })
+  const updatedRound = await activateRound(round.competitionId, round.order)
 
   revalidatePath("/admin")
   revalidatePath("/admin/live")
