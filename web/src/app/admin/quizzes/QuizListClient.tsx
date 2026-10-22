@@ -68,7 +68,7 @@ export function QuizListClient({ initialQuizzes }: QuizListClientProps) {
       if (res.ok) {
         setShowNewForm(false);
         setNewQuiz({ name: '', description: '', maxParticipants: '' });
-        showToast('success', 'EXPEDITION CHARTED', 'The new quiz has been added to the captain\'s log.');
+        showToast('success', 'EXPEDITION CHARTED', 'The new debugging challenge has been added to the captain\'s log.');
         fetchQuizzes();
       } else {
         showToast('error', 'NAVIGATION ERROR', 'Failed to chart expedition.');
@@ -87,7 +87,7 @@ export function QuizListClient({ initialQuizzes }: QuizListClientProps) {
         method: 'DELETE',
         credentials: 'include'
       });
-      showToast('success', 'EXPEDITION ABANDONED', 'The quiz has been successfully deleted.');
+      showToast('success', 'EXPEDITION ABANDONED', 'The debugging challenge has been successfully deleted.');
       fetchQuizzes();
     } catch (e) {
       showToast('error', 'ERROR', 'Could not delete expedition.');

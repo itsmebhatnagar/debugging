@@ -133,6 +133,44 @@ export default function RoundManagerPage() {
     showToast('success', 'LOG EXPORTED', 'The scoreboard has been downloaded as a manifest.');
   };
 
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  const handleResetRound = async () => {
+    if (!confirm("Are you sure you want to RESET this stage? All test attempts and submissions for this round will be cleared!")) return;
+    setActionLoading("RESET");
+    try {
+      const res = await fetch(`/api/quizzes/rounds/${roundId}/reset`, { method: "POST", credentials: "include" });
+      if (res.ok) {
+        showToast("success", "STAGE RESET", "The stage has been reset to pending state.");
+        fetchData();
+      } else {
+        showToast("error", "ERROR", "Failed to reset stage.");
+      }
+    } catch {
+      showToast("error", "ERROR", "Network error occurred.");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleRestartRound = async () => {
+    if (!confirm("Are you sure you want to RESTART this stage? All previous answers will be wiped and the stage will start immediately!")) return;
+    setActionLoading("RESTART");
+    try {
+      const res = await fetch(`/api/quizzes/rounds/${roundId}/restart`, { method: "POST", credentials: "include" });
+      if (res.ok) {
+        showToast("success", "STAGE RESTARTED", "The stage is now actively running with fresh attempts.");
+        fetchData();
+      } else {
+        showToast("error", "ERROR", "Failed to restart stage.");
+      }
+    } catch {
+      showToast("error", "ERROR", "Network error occurred.");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   if (loading) return <div className="p-10"><EchonaLoader text="CHARTING STAGE..." /></div>;
   if (!round) return <EchonaEmptyState title="STAGE LOST" description="The requested stage could not be found." />;
 
@@ -141,18 +179,40 @@ export default function RoundManagerPage() {
       <ToastComponent />
       
       {/* ── Header ── */}
-      <header className="mb-10 border-b border-[#8B5E34]/30 pb-6">
-        <Link href={`/admin/quizzes/${quizId}`} className="text-[#C7A04A] hover:text-[#F4E7C7] text-[10px] font-bold tracking-[0.2em] uppercase flex items-center gap-2 mb-4 transition-colors">
-          <span className="text-lg">←</span> RETURN TO EXPEDITION LOG
-        </Link>
-        <div className="flex items-center gap-4">
-          <CompassRose className="w-12 h-12 text-[#C7A04A]" />
-          <div>
-            <p className="text-[#8B5E34] text-[10px] font-bold tracking-[0.2em] uppercase mb-1">Stage Management</p>
-            <h2 className="text-3xl text-[#F4E7C7] font-bold tracking-wider uppercase" style={{ fontFamily: '"Cinzel Decorative", serif' }}>
-              {round.name}
-            </h2>
+      <header className="mb-10 border-b border-[#8B5E34]/30 pb-6 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+        <div>
+          <Link href={`/admin/quizzes/${quizId}`} className="text-[#C7A04A] hover:text-[#F4E7C7] text-[10px] font-bold tracking-[0.2em] uppercase flex items-center gap-2 mb-4 transition-colors">
+            <span className="text-lg">←</span> RETURN TO EXPEDITION LOG
+          </Link>
+          <div className="flex items-center gap-4">
+            <CompassRose className="w-12 h-12 text-[#C7A04A]" />
+            <div>
+              <p className="text-[#8B5E34] text-[10px] font-bold tracking-[0.2em] uppercase mb-1">Stage Management</p>
+              <h2 className="text-3xl text-[#F4E7C7] font-bold tracking-wider uppercase" style={{ fontFamily: '"Cinzel Decorative", serif' }}>
+                {round.name}
+              </h2>
+            </div>
           </div>
+        </div>
+
+        {/* Reset & Restart Round Controls */}
+        <div className="flex flex-wrap items-center gap-3">
+          <EchonaButton 
+            variant="secondary" 
+            onClick={handleResetRound}
+            disabled={actionLoading !== null}
+            className="text-[10px] px-3 py-2"
+          >
+            {actionLoading === "RESET" ? "RESETTING..." : "⟳ RESET STAGE"}
+          </EchonaButton>
+          <EchonaButton 
+            variant="primary" 
+            onClick={handleRestartRound}
+            disabled={actionLoading !== null}
+            className="text-[10px] px-3 py-2 bg-gradient-to-r from-[#10B981] to-[#059669] text-white hover:brightness-110"
+          >
+            {actionLoading === "RESTART" ? "RESTARTING..." : "▶ RESTART STAGE"}
+          </EchonaButton>
         </div>
       </header>
 
@@ -261,21 +321,50 @@ export default function RoundManagerPage() {
                         <Anchor className="w-4 h-4" />
                       </button>
 
-                      <div className="flex gap-4 items-start mb-6 relative z-10 pr-20">
+                      <div className="flex gap-4 items-start mb-3 relative z-10 pr-20">
                         <span className="shrink-0 flex items-center justify-center w-8 h-8 rounded-sm bg-[#17100C] border border-[#C7A04A]/30 text-[#C7A04A] font-bold font-pirate text-lg mt-0.5">
                           {idx+1}
                         </span>
-                        <p className="text-[#F4E7C7] font-medium text-lg leading-relaxed">{q.text}</p>
+                        <div>
+                          <div className="flex items-center gap-3 mb-1">
+                            <h4 className="text-[#F4E7C7] font-bold text-lg leading-relaxed">{q.title || q.text}</h4>
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold tracking-widest bg-[#C7A04A]/20 border border-[#C7A04A]/40 text-[#C7A04A] uppercase">
+                              {q.points || q.marks || 100} PTS
+                            </span>
+                          </div>
+                          {q.description && (
+                            <p className="text-[#E7D19A]/80 text-xs line-clamp-3 leading-relaxed mb-3">
+                              {q.description}
+                            </p>
+                          )}
+                        </div>
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-12 relative z-10">
-                        {q.options.map((opt: any) => (
-                          <div key={opt.id} className={`p-3 rounded-sm text-sm border flex items-center justify-between ${opt.isCorrect ? 'bg-[#10B981]/10 border-[#10B981]/40 text-[#10B981] font-semibold' : 'bg-[#17100C]/50 border-[#8B5E34]/20 text-[#E7D19A]/70'}`}>
-                            <span>{opt.text}</span>
-                            {opt.isCorrect && <span className="font-pirate text-lg leading-none">✓</span>}
-                          </div>
-                        ))}
-                      </div>
+                      {q.testCases && q.testCases.length > 0 ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-12 relative z-10">
+                          {q.testCases.map((tc: any, tIdx: number) => (
+                            <div key={tc.id || tIdx} className="p-2.5 rounded-sm text-xs border border-[#8B5E34]/30 bg-[#17100C]/70 text-[#E7D19A]/90 font-mono">
+                              <div className="flex justify-between items-center text-[10px] text-[#8B5E34] uppercase font-bold tracking-wider mb-1">
+                                <span>Vector #{tIdx + 1}</span>
+                                <span className={tc.isHidden ? "text-[#E2C36A]" : "text-[#10B981]"}>
+                                  {tc.isHidden ? "Hidden Test" : "Public Test"}
+                                </span>
+                              </div>
+                              <div className="truncate"><span className="text-[#C7A04A]">In:</span> {tc.input || "(empty)"}</div>
+                              <div className="truncate"><span className="text-[#10B981]">Exp:</span> {tc.expected}</div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : q.options && q.options.length > 0 ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-12 relative z-10">
+                          {q.options.map((opt: any) => (
+                            <div key={opt.id} className={`p-3 rounded-sm text-sm border flex items-center justify-between ${opt.isCorrect ? 'bg-[#10B981]/10 border-[#10B981]/40 text-[#10B981] font-semibold' : 'bg-[#17100C]/50 border-[#8B5E34]/20 text-[#E7D19A]/70'}`}>
+                              <span>{opt.text}</span>
+                              {opt.isCorrect && <span className="font-pirate text-lg leading-none">✓</span>}
+                            </div>
+                          ))}
+                        </div>
+                      ) : null}
                     </div>
                   </div>
                 ))

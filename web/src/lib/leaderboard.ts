@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma"
+import { deduplicateByUserDetails } from "@/lib/deduplicate"
 
 export async function getCompetitionLeaderboard(competitionId: string) {
   const [competition, participants] = await Promise.all([
@@ -14,7 +15,7 @@ export async function getCompetitionLeaderboard(competitionId: string) {
     prisma.competitionParticipant.findMany({
       where: { competitionId },
       include: {
-        user: { select: { name: true, email: true } },
+        user: { select: { id: true, name: true, email: true, mobile: true } },
         scores: {
           select: {
             pointsEarned: true,
@@ -49,6 +50,8 @@ export async function getCompetitionLeaderboard(competitionId: string) {
       id: participant.id,
       userId: participant.userId,
       name: participant.user.name || participant.user.email.split("@")[0],
+      email: participant.user.email,
+      mobile: participant.user.mobile,
       roundScores,
       totalScore,
       lastUpdate,
@@ -59,5 +62,11 @@ export async function getCompetitionLeaderboard(competitionId: string) {
     right.totalScore - left.totalScore || left.lastUpdate.getTime() - right.lastUpdate.getTime(),
   )
 
-  return leaderboard.map((participant, index) => ({ ...participant, rank: index + 1 }))
+  // Deduplicate: if 2 or more users have the same name, check details.
+  // If details are also the same, discard one; if details differ, keep both.
+  const deduplicated = deduplicateByUserDetails(leaderboard, {
+    getScore: (p) => p.totalScore,
+  })
+
+  return deduplicated.map((participant, index) => ({ ...participant, rank: index + 1 }))
 }

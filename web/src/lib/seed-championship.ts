@@ -42,10 +42,35 @@ export async function seedPirateChampionship() {
   }
 
   // Ensure all registered real users are enrolled as participants
-  const realUsers = await prisma.user.findMany({
+  let realUsers = await prisma.user.findMany({
     where: { role: "USER" }
   })
-  for (const u of realUsers) {
+
+  if (realUsers.length === 0) {
+    const samplePirates = [
+      { email: "jack.sparrow@echona.com", name: "Captain Jack Sparrow", mobile: "+91 9876543210" },
+      { email: "will.turner@echona.com", name: "Will Turner", mobile: "+91 9876543211" },
+      { email: "elizabeth.swann@echona.com", name: "Elizabeth Swann", mobile: "+91 9876543212" },
+      { email: "hector.barbossa@echona.com", name: "Hector Barbossa", mobile: "+91 9876543213" },
+    ]
+    for (const p of samplePirates) {
+      await prisma.user.upsert({
+        where: { email: p.email },
+        update: {},
+        create: {
+          email: p.email,
+          name: p.name,
+          mobile: p.mobile,
+          role: "USER"
+        }
+      })
+    }
+    realUsers = await prisma.user.findMany({ where: { role: "USER" } })
+  }
+
+  for (let i = 0; i < realUsers.length; i++) {
+    const u = realUsers[i]
+    const initialStatus = i === 1 ? "QUALIFIED" : i === 3 ? "DISQUALIFIED" : "WAITING"
     await prisma.competitionParticipant.upsert({
       where: {
         competitionId_userId: {
@@ -57,7 +82,8 @@ export async function seedPirateChampionship() {
       create: {
         competitionId: competition.id,
         userId: u.id,
-        score: 0
+        score: 0,
+        status: initialStatus
       }
     })
   }

@@ -12,6 +12,7 @@ import { CompassRose } from '@/components/icons/CompassRose';
 import { CrewEmblem } from '@/components/icons/CrewEmblem';
 import { Anchor } from '@/components/icons/Anchor';
 import { Rivet } from '@/components/icons/Rivet';
+import { deduplicateByUserDetails } from '@/lib/deduplicate';
 
 export default function QuizManagerPage() {
   const { quizId } = useParams();
@@ -54,7 +55,7 @@ export default function QuizManagerPage() {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/quizzes/${quizId}/participants`, { credentials: 'include' });
       if (res.ok) {
         const data = await res.json();
-        setParticipants(data);
+        setParticipants(deduplicateByUserDetails(data));
       }
     } catch (err) {
       console.error(err);
@@ -169,6 +170,97 @@ export default function QuizManagerPage() {
     }
   };
 
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  const handleResetQuiz = async () => {
+    if (!confirm("Are you sure you want to RESET the entire debugging challenge? All scores, submissions, and progress across all rounds will be wiped clean!")) return;
+    setActionLoading("RESET_QUIZ");
+    try {
+      const res = await fetch(`/api/quizzes/${quizId}/reset`, { method: 'POST', credentials: 'include' });
+      if (res.ok) {
+        showToast('success', 'EXPEDITION RESET', 'The whole expedition has been reset.');
+        fetchQuizData();
+        fetchParticipants();
+      } else {
+        showToast('error', 'ERROR', 'Could not reset expedition.');
+      }
+    } catch {
+      showToast('error', 'ERROR', 'Network error occurred.');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleRestartQuiz = async () => {
+    if (!confirm("Are you sure you want to RESTART the entire debugging challenge? All previous answers will be wiped and Round 1 will be activated!")) return;
+    setActionLoading("RESTART_QUIZ");
+    try {
+      const res = await fetch(`/api/quizzes/${quizId}/restart`, { method: 'POST', credentials: 'include' });
+      if (res.ok) {
+        showToast('success', 'EXPEDITION RESTARTED', 'Expedition restarted. Round 1 is now active!');
+        fetchQuizData();
+        fetchParticipants();
+      } else {
+        showToast('error', 'ERROR', 'Could not restart expedition.');
+      }
+    } catch {
+      showToast('error', 'ERROR', 'Network error occurred.');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleRestoreSeed = async () => {
+    if (!confirm("Restore database seed? This will restore all standard pirate championship questions in all 3 rounds!")) return;
+    setActionLoading("RESTORE_SEED");
+    try {
+      const res = await fetch('/api/admin/restore-seed', { method: 'POST', credentials: 'include' });
+      if (res.ok) {
+        showToast('success', 'DATABASE RESTORED', 'All 3 rounds and questions seeded successfully!');
+        fetchQuizData();
+        fetchParticipants();
+      } else {
+        showToast('error', 'ERROR', 'Failed to restore seed.');
+      }
+    } catch {
+      showToast('error', 'ERROR', 'Network error occurred.');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleResetRound = async (roundId: string) => {
+    if (!confirm("Reset this specific round? Submissions for this round will be cleared!")) return;
+    setActionLoading(`RESET_${roundId}`);
+    try {
+      const res = await fetch(`/api/quizzes/rounds/${roundId}/reset`, { method: 'POST', credentials: 'include' });
+      if (res.ok) {
+        showToast('success', 'STAGE RESET', 'Stage has been reset.');
+        fetchQuizData();
+      }
+    } catch {
+      showToast('error', 'ERROR', 'Failed to reset stage.');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleRestartRound = async (roundId: string) => {
+    if (!confirm("Restart this specific round immediately?")) return;
+    setActionLoading(`RESTART_${roundId}`);
+    try {
+      const res = await fetch(`/api/quizzes/rounds/${roundId}/restart`, { method: 'POST', credentials: 'include' });
+      if (res.ok) {
+        showToast('success', 'STAGE RESTARTED', 'Stage is now active.');
+        fetchQuizData();
+      }
+    } catch {
+      showToast('error', 'ERROR', 'Failed to restart stage.');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   if (loading) return <div className="p-10"><EchonaLoader /></div>;
   if (!quiz) return <EchonaEmptyState title="EXPEDITION LOST" description="The requested log entry could not be found." />;
 
@@ -193,10 +285,40 @@ export default function QuizManagerPage() {
           </div>
         </div>
         
-        <div className="flex flex-col items-end">
-          <span className="text-[#8B5E34] text-[10px] uppercase font-bold tracking-[0.2em] mb-2">Status</span>
-          <div className="bg-[#17100C] border border-[#C7A04A]/30 px-4 py-2 rounded-sm shadow-inner">
-            <EchonaStatus status={quiz.status} />
+        <div className="flex flex-col md:items-end gap-3">
+          <div className="flex items-center gap-2">
+            <span className="text-[#8B5E34] text-[10px] uppercase font-bold tracking-[0.2em]">Status</span>
+            <div className="bg-[#17100C] border border-[#C7A04A]/30 px-3 py-1 rounded-sm shadow-inner">
+              <EchonaStatus status={quiz.status} />
+            </div>
+          </div>
+
+          {/* Reset / Restart Quiz Global Actions */}
+          <div className="flex flex-wrap items-center gap-2">
+            <EchonaButton 
+              variant="secondary" 
+              onClick={handleRestoreSeed}
+              disabled={actionLoading !== null}
+              className="text-[10px] px-3 py-2 border-[#C7A04A]/40 text-[#C7A04A]"
+            >
+              {actionLoading === "RESTORE_SEED" ? "RESTORING..." : "⚓ RESTORE QUESTIONS"}
+            </EchonaButton>
+            <EchonaButton 
+              variant="secondary" 
+              onClick={handleResetQuiz}
+              disabled={actionLoading !== null}
+              className="text-[10px] px-3 py-2"
+            >
+              {actionLoading === "RESET_QUIZ" ? "RESETTING..." : "⟳ RESET DEBUGGING"}
+            </EchonaButton>
+            <EchonaButton 
+              variant="primary" 
+              onClick={handleRestartQuiz}
+              disabled={actionLoading !== null}
+              className="text-[10px] px-3 py-2 bg-gradient-to-r from-[#10B981] to-[#059669] text-white"
+            >
+              {actionLoading === "RESTART_QUIZ" ? "RESTARTING..." : "▶ RESTART DEBUGGING"}
+            </EchonaButton>
           </div>
         </div>
       </header>
@@ -274,7 +396,25 @@ export default function QuizManagerPage() {
                           </div>
                         </div>
                         
-                        <div className="flex gap-3 relative z-10">
+                        <div className="flex flex-wrap items-center gap-2 relative z-10">
+                          <button
+                            type="button"
+                            onClick={() => handleResetRound(round.id)}
+                            disabled={actionLoading !== null}
+                            className="px-2.5 py-1.5 rounded-sm border border-[#C7A04A]/30 bg-[#17100C] text-[#C7A04A] hover:text-[#F4E7C7] hover:border-[#C7A04A] text-[9px] font-bold tracking-wider uppercase transition-colors"
+                            title="Reset this stage to pending"
+                          >
+                            ⟳ RESET
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleRestartRound(round.id)}
+                            disabled={actionLoading !== null}
+                            className="px-2.5 py-1.5 rounded-sm border border-emerald-500/40 bg-emerald-950/40 text-emerald-400 hover:text-emerald-200 text-[9px] font-bold tracking-wider uppercase transition-colors"
+                            title="Restart this stage immediately"
+                          >
+                            ▶ RESTART
+                          </button>
                           <Link href={`/admin/quizzes/${quizId}/rounds/${round.id}`} className="group/btn relative inline-flex items-center justify-center px-4 py-2 rounded-sm uppercase tracking-widest text-[10px] font-bold text-[#E7D19A]" style={{ background: 'linear-gradient(to bottom, #2B1710, #17100C)', border: '1px solid rgba(199, 160, 74, 0.4)' }}>
                             <span className="relative z-10 group-hover/btn:text-[#F4E7C7]">OPEN LOG</span>
                           </Link>
@@ -307,7 +447,7 @@ export default function QuizManagerPage() {
                     const url = window.URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = `${quiz?.name || 'quiz'}_crew_credentials.csv`;
+                    a.download = `${quiz?.name || 'debugging'}_crew_credentials.csv`;
                     a.click();
                   }}>
                     DOWNLOAD CREDENTIALS

@@ -1,6 +1,7 @@
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
 import { getCompetitionLeaderboard } from "@/lib/leaderboard"
+import { deduplicateByUserDetails } from "@/lib/deduplicate"
 import { NextRequest, NextResponse } from "next/server"
 
 function csvCell(value: string | number): string {
@@ -62,12 +63,18 @@ export async function GET(
       const participants = await prisma.competitionParticipant.findMany({
         where: { competitionId },
         orderBy: { createdAt: "asc" },
-        include: { user: { select: { name: true, email: true } } },
+        include: { user: { select: { id: true, name: true, email: true, mobile: true } } },
+      })
+
+      // Deduplicate: if 2 or more users share the same name, check details.
+      // If details are also identical, discard one; if details differ, keep both.
+      const deduplicated = deduplicateByUserDetails(participants, {
+        getScore: (p) => p.score,
       })
 
       return csvResponse([
         ["Name", "Email", "Status", "Joined At"],
-        ...participants.map((participant) => [
+        ...deduplicated.map((participant) => [
           participant.user.name || participant.user.email.split("@")[0],
           participant.user.email,
           participant.status,

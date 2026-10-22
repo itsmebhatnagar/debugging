@@ -6,7 +6,7 @@ const prisma = new PrismaClient()
 async function main() {
   console.log('Seeding database...')
 
-  // Create Admin User
+  // Create Default Admin User
   const hashedPassword = await bcrypt.hash('admin123', 10)
   const admin = await prisma.user.upsert({
     where: { email: 'admin@echona.com' },
@@ -19,6 +19,24 @@ async function main() {
     },
   })
   console.log(`Created admin user: ${admin.email}`)
+
+  // Create Debugging Admin User
+  const debugAdminPass = await bcrypt.hash('Admin@Debugging2026', 10)
+  const debugAdmin = await prisma.user.upsert({
+    where: { email: 'admin@debugging.com' },
+    update: {
+      password: debugAdminPass,
+      role: 'ADMIN',
+      name: 'Admin Debugging',
+    },
+    create: {
+      email: 'admin@debugging.com',
+      password: debugAdminPass,
+      name: 'Admin Debugging',
+      role: 'ADMIN',
+    },
+  })
+  console.log(`Created admin user: ${debugAdmin.email}`)
 
   // Create a Sample Competition
   const comp = await prisma.competition.upsert({

@@ -72,10 +72,10 @@ export default async function AdminDashboardPage() {
 
   // Use available stats or fallback to "—"
   const stats = [
-    { label: 'TOTAL QUIZZES', value: statsData.totalQuizzes ?? '—', icon: <TreasureMap className="w-10 h-10 text-[#C7A04A]" /> },
+    { label: 'TOTAL DEBUGGING', value: statsData.totalQuizzes ?? '—', icon: <TreasureMap className="w-10 h-10 text-[#C7A04A]" /> },
     { label: 'TOTAL CREW', value: statsData.totalParticipants ?? '—', icon: <CrewEmblem className="w-10 h-10 text-[#C7A04A]" /> },
     { label: 'TOTAL ROUNDS', value: statsData.totalRounds ?? '—', icon: <CompassRose className="w-10 h-10 text-[#C7A04A]" /> },
-    { label: 'ACTIVE QUIZ', value: statsData.activeQuiz ? '1' : '—', icon: <ShipWheel className="w-10 h-10 text-[#C7A04A]" /> }
+    { label: 'ACTIVE DEBUGGING', value: statsData.activeQuiz ? '1' : '—', icon: <ShipWheel className="w-10 h-10 text-[#C7A04A]" /> }
   ];
 
   return (
@@ -222,6 +222,26 @@ export default async function AdminDashboardPage() {
             Command Controls
           </h3>
           <div className="flex flex-col gap-4">
+            {/* Participants Control */}
+            <Link 
+              href="/admin/participants"
+              className="group relative block p-[1px] rounded-sm transition-all hover:scale-[1.02]"
+              style={{ background: 'linear-gradient(to bottom, #C7A04A, #10B981)', boxShadow: '0 6px 12px rgba(0,0,0,0.5)' }}
+            >
+              <div className="relative overflow-hidden bg-[#17100C] p-5 flex items-center justify-between">
+                <div className="absolute inset-0 opacity-20 pointer-events-none" style={{ background: 'repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(0,0,0,0.6) 2px, rgba(0,0,0,0.6) 4px)' }} />
+                <div className="absolute inset-0 bg-gradient-to-r from-[#10B981]/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                
+                <Rivet className="absolute top-1.5 left-1.5 w-1.5 h-1.5" />
+                <Rivet className="absolute bottom-1.5 left-1.5 w-1.5 h-1.5" />
+                <Rivet className="absolute top-1.5 right-1.5 w-1.5 h-1.5" />
+                <Rivet className="absolute bottom-1.5 right-1.5 w-1.5 h-1.5" />
+
+                <span className="text-[#F4E7C7] text-sm font-bold tracking-[0.2em] uppercase relative z-10 drop-shadow-md">Participants</span>
+                <CrewEmblem className="w-8 h-8 text-[#C7A04A] group-hover:text-[#10B981] transition-colors relative z-10 drop-shadow-[0_2px_4px_rgba(0,0,0,1)]" />
+              </div>
+            </Link>
+
             {/* Competitions Control */}
             <Link 
               href="/admin/competitions"
@@ -257,7 +277,7 @@ export default async function AdminDashboardPage() {
                 <Rivet className="absolute top-1.5 right-1.5 w-1.5 h-1.5" />
                 <Rivet className="absolute bottom-1.5 right-1.5 w-1.5 h-1.5" />
 
-                <span className="text-[#E7D19A] text-sm font-bold tracking-[0.2em] uppercase relative z-10 group-hover:text-[#F4E7C7] drop-shadow-md">Quiz Config</span>
+                <span className="text-[#E7D19A] text-sm font-bold tracking-[0.2em] uppercase relative z-10 group-hover:text-[#F4E7C7] drop-shadow-md">Debugging Config</span>
                 <TreasureMap className="w-8 h-8 text-[#C7A04A] group-hover:text-[#F4E7C7] transition-colors relative z-10 drop-shadow-[0_2px_4px_rgba(0,0,0,1)]" />
               </div>
             </Link>

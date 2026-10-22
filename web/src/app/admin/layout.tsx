@@ -20,19 +20,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     return <>{children}</>;
   }
 
-  const handleLogout = async () => {
-    try {
-      await fetch('/api/auth/signout', { method: 'POST' });
-    } catch (e) {
-      console.error(e);
-    }
-    router.push('/login');
+  const handleDisembark = () => {
+    router.push('/admin/dashboard');
   };
 
   const navItems = [
     { path: '/admin/dashboard', label: 'Dashboard', icon: <CompassRose className="w-5 h-5 shrink-0" /> },
+    { path: '/admin/participants', label: 'Participants', icon: <CrewEmblem className="w-5 h-5 shrink-0" /> },
     { path: '/admin/competitions', label: 'Competitions', icon: <TreasureMap className="w-5 h-5 shrink-0" /> },
-    { path: '/admin/quizzes', label: 'Quiz Config', icon: <TreasureMap className="w-5 h-5 shrink-0" /> },
+    { path: '/admin/quizzes', label: 'Debugging Config', icon: <TreasureMap className="w-5 h-5 shrink-0" /> },
     { path: '/admin/live', label: 'Live Control', icon: <ShipWheel className="w-5 h-5 shrink-0" /> },
   ];
 
@@ -139,7 +135,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
 
           <button
-            onClick={handleLogout}
+            onClick={handleDisembark}
             className="w-full group relative flex items-center justify-center gap-3 px-4 py-3 rounded-sm uppercase tracking-widest text-xs font-bold transition-all hover:-translate-y-[1px]"
             style={{
               background: 'linear-gradient(to bottom, #2B1710, #17100C)',

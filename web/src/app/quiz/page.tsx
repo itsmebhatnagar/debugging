@@ -308,8 +308,10 @@ export default function QuizParticipantPage() {
 
   // ── Logout handler (preserved) ──
   const handleLogout = async () => {
-    await fetch(`${(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001') || 'http://localhost:3001'}/api/participant/logout`, { method: 'POST', credentials: 'include' });
-    navigate('/login');
+    try {
+      await fetch(`${(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001') || 'http://localhost:3001'}/api/participant/logout`, { method: 'POST', credentials: 'include' });
+    } catch {}
+    navigate('/dashboard');
   };
 
   // ── Retry handler ──
@@ -556,8 +558,8 @@ export default function QuizParticipantPage() {
 
               <p className="voyage-parchment__message">
                 {profile.status === 'QUALIFIED'
-                  ? "You have successfully advanced to the next stage of the voyage! Brace yourself for the upcoming challenge. The quiz will appear here when the fleet gives the signal."
-                  : "The next round has not yet commenced. Keep your eyes on the horizon. The quiz will appear here when the fleet gives the signal."
+                  ? "You have successfully advanced to the next stage of the voyage! Brace yourself for the upcoming challenge. The debugging challenge will appear here when the fleet gives the signal."
+                  : "The next round has not yet commenced. Keep your eyes on the horizon. The debugging challenge will appear here when the fleet gives the signal."
                 }
               </p>
               

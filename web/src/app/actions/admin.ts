@@ -485,3 +485,251 @@ export async function updateParticipantStatus(
 
   return { success: true, status }
 }
+
+export async function resetCompetitionAdmin(competitionId: string) {
+  await checkAdmin()
+  const { broadcastEvent } = await import("@/lib/realtime")
+
+  // 1. Reset competition status
+  await prisma.competition.update({
+    where: { id: competitionId },
+    data: {
+      status: "WAITING",
+      startedAt: null,
+      endedAt: null,
+    }
+  })
+
+  // 2. Reset all rounds to PENDING
+  await prisma.round.updateMany({
+    where: { competitionId },
+    data: {
+      status: "PENDING",
+      startedAt: null,
+      endsAt: null,
+    }
+  })
+
+  // 3. Clear submissions, compile attempts, draft codes
+  const questions = await prisma.question.findMany({
+    where: { round: { competitionId } },
+    select: { id: true }
+  })
+  const questionIds = questions.map(q => q.id)
+
+  if (questionIds.length > 0) {
+    await prisma.aIAnalysis.deleteMany({
+      where: { submission: { questionId: { in: questionIds } } }
+    })
+    await prisma.score.deleteMany({
+      where: { submission: { questionId: { in: questionIds } } }
+    })
+    await prisma.compileAttempt.deleteMany({
+      where: { questionId: { in: questionIds } }
+    })
+    await prisma.submission.deleteMany({
+      where: { questionId: { in: questionIds } }
+    })
+    await prisma.draftCode.deleteMany({
+      where: { questionId: { in: questionIds } }
+    })
+  }
+
+  // 4. Reset participant scores and live status to WAITING
+  await prisma.competitionParticipant.updateMany({
+    where: { competitionId },
+    data: {
+      score: 0,
+      status: "WAITING"
+    }
+  })
+
+  // 5. Purge all competition events (including disqualifications)
+  await prisma.competitionEvent.deleteMany({
+    where: { competitionId }
+  })
+
+  // 6. Broadcast reset to all participants and admin screens
+  await broadcastEvent(competitionId, "competition_reset", {
+    competitionId,
+    message: "The Captain has reset the voyage. All scores, timers, and statuses have been restored."
+  })
+  await broadcastEvent(competitionId, "test_ended", {
+    competitionId,
+    status: "WAITING"
+  })
+
+  revalidatePath("/admin")
+  revalidatePath("/admin/dashboard")
+  revalidatePath("/admin/live")
+  revalidatePath("/admin/participants")
+  revalidatePath(`/admin/competitions/${competitionId}`)
+  revalidatePath(`/competition/${competitionId}`)
+  revalidatePath("/dashboard")
+
+  return { success: true }
+}
+
+export async function restartCompetitionAdmin(competitionId: string) {
+  await checkAdmin()
+  // Reset everything first
+  await resetCompetitionAdmin(competitionId)
+
+  // Then activate round 1
+  const firstRound = await prisma.round.findFirst({
+    where: { competitionId, order: 1 }
+  })
+  if (firstRound) {
+    await activateRoundAdmin(competitionId, 1)
+  }
+
+  revalidatePath("/admin")
+  revalidatePath("/admin/live")
+  revalidatePath("/admin/participants")
+  revalidatePath(`/admin/competitions/${competitionId}`)
+  revalidatePath(`/competition/${competitionId}`)
+
+  return { success: true }
+}
+
+export async function resetRoundAdmin(roundId: string) {
+  await checkAdmin()
+  const { broadcastEvent } = await import("@/lib/realtime")
+
+  const round = await prisma.round.findUnique({
+    where: { id: roundId },
+    include: { questions: { select: { id: true } } }
+  })
+
+  if (!round) throw new Error("Round not found")
+
+  // Reset round
+  await prisma.round.update({
+    where: { id: roundId },
+    data: {
+      status: "PENDING",
+      startedAt: null,
+      endsAt: null
+    }
+  })
+
+  // Delete submissions for this round's questions
+  const qIds = round.questions.map(q => q.id)
+  if (qIds.length > 0) {
+    await prisma.aIAnalysis.deleteMany({
+      where: { submission: { questionId: { in: qIds } } }
+    })
+    await prisma.score.deleteMany({
+      where: { submission: { questionId: { in: qIds } } }
+    })
+    await prisma.compileAttempt.deleteMany({
+      where: { questionId: { in: qIds } }
+    })
+    await prisma.submission.deleteMany({
+      where: { questionId: { in: qIds } }
+    })
+    await prisma.draftCode.deleteMany({
+      where: { questionId: { in: qIds } }
+    })
+  }
+
+  // Broadcast event
+  await broadcastEvent(round.competitionId, "round_reset", {
+    roundId,
+    roundName: round.name,
+    message: `Round ${round.order} has been reset by the Captain.`
+  })
+
+  revalidatePath("/admin")
+  revalidatePath("/admin/live")
+  revalidatePath(`/admin/competitions/${round.competitionId}`)
+  revalidatePath(`/admin/rounds/${roundId}`)
+
+  return { success: true }
+}
+
+export async function restartRoundAdmin(roundId: string) {
+  await checkAdmin()
+  const { broadcastEvent } = await import("@/lib/realtime")
+
+  // Reset round data first
+  await resetRoundAdmin(roundId)
+
+  const round = await prisma.round.findUnique({
+    where: { id: roundId },
+    include: {
+      questions: {
+        include: {
+          starterCodes: true,
+          testCases: { where: { isHidden: false } }
+        }
+      }
+    }
+  })
+
+  if (!round) throw new Error("Round not found")
+
+  // Activate round
+  const updatedRound = await prisma.round.update({
+    where: { id: roundId },
+    data: {
+      status: "ACTIVE",
+      startedAt: new Date(),
+    }
+  })
+
+  await prisma.competition.update({
+    where: { id: round.competitionId },
+    data: { status: "ACTIVE" }
+  })
+
+  await broadcastEvent(round.competitionId, "round_started", {
+    roundId: round.id,
+    roundName: round.name,
+    roundOrder: round.order,
+    startedAt: updatedRound.startedAt,
+    durationSeconds: round.durationSeconds,
+    maxCompileAttempts: round.maxCompileAttempts,
+    questions: round.questions.map(q => ({
+      id: q.id,
+      title: q.title,
+      description: q.description,
+      points: q.points,
+      starterCodes: q.starterCodes
+    }))
+  })
+
+  revalidatePath("/admin")
+  revalidatePath("/admin/live")
+  revalidatePath(`/admin/competitions/${round.competitionId}`)
+  revalidatePath(`/admin/rounds/${roundId}`)
+
+  return { success: true, round: updatedRound }
+}
+
+export async function enrollAllUsersAsParticipants(competitionId: string) {
+  await checkAdmin()
+  const users = await prisma.user.findMany()
+
+  for (const u of users) {
+    await prisma.competitionParticipant.upsert({
+      where: {
+        competitionId_userId: {
+          competitionId,
+          userId: u.id
+        }
+      },
+      update: {},
+      create: {
+        competitionId,
+        userId: u.id,
+        score: 0,
+        status: "WAITING"
+      }
+    })
+  }
+
+  revalidatePath("/admin/participants")
+  revalidatePath(`/admin/competitions/${competitionId}`)
+  return { success: true, count: users.length }
+}

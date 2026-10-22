@@ -125,20 +125,56 @@ export default function LiveControlPage() {
     };
   }, []);
 
-  const handleAction = () => {
+  const handleAction = async () => {
     if (!confirmAction) return;
     
     const { action, roundId } = confirmAction;
     socket?.emit(action, { roundId });
     addLog(`Command issued: ${action}`, 'warning');
     
-    // Optimistic UI updates
-    if (action === 'round:start') showToast('success', 'ROUND UNDERWAY', 'The stage has been initiated.');
-    if (action === 'round:pause') showToast('warning', 'ROUND PAUSED', 'The expedition is currently halted.');
-    if (action === 'round:end') showToast('success', 'ROUND COMPLETED', 'All responses have been recorded.');
+    try {
+      if (action === 'quiz:reset') {
+        const res = await fetch(`/api/quizzes/${activeQuizId}/reset`, { method: 'POST', credentials: 'include' });
+        if (res.ok) {
+          showToast('success', 'EXPEDITION RESET', 'All scores, timers, and stages have been restored.');
+          addLog('Expedition successfully reset to waiting state.', 'success');
+        }
+      } else if (action === 'quiz:restart') {
+        const res = await fetch(`/api/quizzes/${activeQuizId}/restart`, { method: 'POST', credentials: 'include' });
+        if (res.ok) {
+          showToast('success', 'EXPEDITION RESTARTED', 'Round 1 is now underway.');
+          addLog('Expedition restarted from Round 1.', 'success');
+        }
+      } else if (action === 'quiz:restore_seed') {
+        const res = await fetch('/api/admin/restore-seed', { method: 'POST', credentials: 'include' });
+        if (res.ok) {
+          showToast('success', 'DATABASE RESTORED', 'All rounds and questions restored.');
+          addLog('Pirate championship database restored.', 'success');
+        }
+      } else if (action === 'round:reset') {
+        const res = await fetch(`/api/quizzes/rounds/${roundId}/reset`, { method: 'POST', credentials: 'include' });
+        if (res.ok) {
+          showToast('success', 'STAGE RESET', 'The stage has been reset to pending.');
+          addLog(`Stage ${roundId} reset.`, 'success');
+        }
+      } else if (action === 'round:restart') {
+        const res = await fetch(`/api/quizzes/rounds/${roundId}/restart`, { method: 'POST', credentials: 'include' });
+        if (res.ok) {
+          showToast('success', 'STAGE RESTARTED', 'The stage has been restarted and is now live.');
+          addLog(`Stage ${roundId} restarted.`, 'success');
+        }
+      } else {
+        if (action === 'round:start') showToast('success', 'ROUND UNDERWAY', 'The stage has been initiated.');
+        if (action === 'round:pause') showToast('warning', 'ROUND PAUSED', 'The expedition is currently halted.');
+        if (action === 'round:end') showToast('success', 'ROUND COMPLETED', 'All responses have been recorded.');
+      }
+    } catch (err: any) {
+      showToast('error', 'ACTION FAILED', err.message || 'Error occurred');
+      addLog(`Failed to execute ${action}: ${err.message}`, 'error');
+    }
     
     setConfirmAction(null);
-    setTimeout(fetchQuizzes, 500);
+    setTimeout(fetchQuizzes, 600);
   };
 
   const requestStats = (roundId: string) => {
@@ -189,8 +225,8 @@ export default function LiveControlPage() {
           </div>
         </div>
         
-        <div className="flex flex-col items-end gap-2">
-          <div className="flex gap-4">
+        <div className="flex flex-col items-start md:items-end gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             {quizzes.length > 1 && (
               <select 
                 value={activeQuizId || ''} 
@@ -200,27 +236,73 @@ export default function LiveControlPage() {
                 {quizzes.map(q => <option key={q.id} value={q.id}>{q.name}</option>)}
               </select>
             )}
+            
+            <div className={`px-4 py-1.5 rounded-sm shadow-inner border flex items-center gap-2 text-[10px] font-bold tracking-[0.2em] uppercase ${
+              connectionStatus === 'CONNECTED' ? 'bg-[#17100C] border-[#10B981]/30 text-[#10B981]' : 
+              connectionStatus === 'RECONNECTING' ? 'bg-[#5A3E12]/20 border-[#E2C36A]/30 text-[#E2C36A]' :
+              'bg-[#5A1712]/20 border-[#741714]/30 text-[#741714]'
+            }`}>
+              <span className={`w-2 h-2 rounded-full ${
+                connectionStatus === 'CONNECTED' ? 'bg-[#10B981] shadow-[0_0_8px_#10B981]' : 
+                connectionStatus === 'RECONNECTING' ? 'bg-[#E2C36A] animate-pulse' :
+                'bg-[#741714]'
+              }`}></span>
+              LINK {connectionStatus}
+            </div>
           </div>
-          
-          <div className={`px-4 py-1.5 rounded-sm shadow-inner border flex items-center gap-2 text-[10px] font-bold tracking-[0.2em] uppercase ${
-            connectionStatus === 'CONNECTED' ? 'bg-[#17100C] border-[#10B981]/30 text-[#10B981]' : 
-            connectionStatus === 'RECONNECTING' ? 'bg-[#5A3E12]/20 border-[#E2C36A]/30 text-[#E2C36A]' :
-            'bg-[#5A1712]/20 border-[#741714]/30 text-[#741714]'
-          }`}>
-            <span className={`w-2 h-2 rounded-full ${
-              connectionStatus === 'CONNECTED' ? 'bg-[#10B981] shadow-[0_0_8px_#10B981]' : 
-              connectionStatus === 'RECONNECTING' ? 'bg-[#E2C36A] animate-pulse' :
-              'bg-[#741714]'
-            }`}></span>
-            LINK {connectionStatus}
-          </div>
+
+          {/* Quick Expedition Lifecycle Actions */}
+          {activeQuiz && (
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setConfirmAction({
+                  action: 'quiz:restore_seed',
+                  roundId: '',
+                  title: 'RESTORE DATABASE SEED?',
+                  message: 'This will restore all 3 standard competition rounds and seeded questions into the database.',
+                  confirmText: 'RESTORE SEED'
+                })}
+                className="px-3 py-1.5 rounded-sm border border-[#C7A04A]/40 bg-[#17100C] text-[#C7A04A] hover:text-[#F4E7C7] hover:border-[#C7A04A] text-[10px] font-bold tracking-wider uppercase transition-colors"
+              >
+                ⚓ RESTORE QUESTIONS
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmAction({
+                  action: 'quiz:reset',
+                  roundId: '',
+                  title: 'RESET ENTIRE EXPEDITION?',
+                  message: 'All participant attempts, submissions, and scores will be wiped and restored to waiting status.',
+                  confirmText: 'RESET EXPEDITION',
+                  isDanger: true
+                })}
+                className="px-3 py-1.5 rounded-sm border border-[#8B5E34] bg-[#17100C] text-[#E7D19A] hover:text-white text-[10px] font-bold tracking-wider uppercase transition-colors"
+              >
+                ⟳ RESET EXPEDITION
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmAction({
+                  action: 'quiz:restart',
+                  roundId: '',
+                  title: 'RESTART ENTIRE EXPEDITION?',
+                  message: 'All scores and answers will be cleared, and Round 1 will be activated immediately.',
+                  confirmText: 'RESTART EXPEDITION'
+                })}
+                className="px-3 py-1.5 rounded-sm border border-emerald-500/50 bg-emerald-950/40 text-emerald-300 hover:text-emerald-100 text-[10px] font-bold tracking-wider uppercase transition-colors"
+              >
+                ▶ RESTART EXPEDITION
+              </button>
+            </div>
+          )}
         </div>
       </header>
 
       {!activeQuiz ? (
         <EchonaEmptyState 
           title="NO ACTIVE EXPEDITION" 
-          description="Launch an expedition from Quiz Configuration to begin live control."
+          description="Launch an expedition from Debugging Configuration to begin live control."
         />
       ) : (
         <div className="grid grid-cols-1 xl:grid-cols-4 gap-6 flex-1">
@@ -400,6 +482,36 @@ export default function LiveControlPage() {
                                     <TreasureMap className="w-4 h-4" /> POST-VOYAGE ANALYSIS
                                   </EchonaButton>
                                 )}
+
+                                <div className="col-span-2 flex gap-2 mt-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => setConfirmAction({
+                                      action: 'round:reset',
+                                      roundId: round.id,
+                                      title: `RESET STAGE: ${round.name}?`,
+                                      message: 'All submissions for this stage will be erased and the stage will return to pending.',
+                                      confirmText: 'RESET STAGE',
+                                      isDanger: true
+                                    })}
+                                    className="flex-1 py-1.5 px-2 rounded-sm border border-[#C7A04A]/30 bg-[#17100C] text-[#C7A04A] hover:text-[#F4E7C7] hover:border-[#C7A04A] text-[9px] font-bold tracking-wider uppercase transition-colors"
+                                  >
+                                    ⟳ RESET STAGE
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setConfirmAction({
+                                      action: 'round:restart',
+                                      roundId: round.id,
+                                      title: `RESTART STAGE: ${round.name}?`,
+                                      message: 'All previous answers will be cleared and the stage will start immediately.',
+                                      confirmText: 'RESTART STAGE'
+                                    })}
+                                    className="flex-1 py-1.5 px-2 rounded-sm border border-emerald-500/40 bg-emerald-950/40 text-emerald-400 hover:text-emerald-200 text-[9px] font-bold tracking-wider uppercase transition-colors"
+                                  >
+                                    ▶ RESTART STAGE
+                                  </button>
+                                </div>
                               </div>
                             </div>
                             
