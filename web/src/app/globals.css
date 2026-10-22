@@ -967,6 +967,153 @@ body {
 .animation-delay-2000 { animation-delay: 2s; }
 .animation-delay-4000 { animation-delay: 4s; }
 
+/* Keep auth forms inside the usable viewport below the fixed navigation. */
+.auth-screen {
+  width: 100%;
+  height: 100svh;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+  padding: clamp(58px, 9vh, 86px) 14px 10px;
+}
+
+.auth-card {
+  max-height: calc(100dvh - 76px);
+}
+
+.auth-card-inner {
+  max-height: calc(100dvh - 80px);
+  justify-content: center;
+  overflow: hidden;
+  padding: clamp(12px, 2.2vh, 28px) clamp(14px, 3vw, 32px);
+}
+
+.auth-heading {
+  flex: 0 0 auto;
+  margin-bottom: clamp(8px, 1.8vh, 20px);
+}
+
+.auth-icon {
+  width: clamp(36px, 7vh, 56px);
+  height: clamp(36px, 7vh, 56px);
+}
+
+.auth-title {
+  font-size: clamp(1.15rem, 4vw, 1.75rem);
+  line-height: 1.15;
+}
+
+.auth-subtitle {
+  font-size: clamp(0.62rem, 1.6vh, 0.75rem);
+  line-height: 1.2;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(6px, 1.25vh, 14px);
+}
+
+.auth-form > div {
+  min-width: 0;
+}
+
+.auth-form .space-y-2 > :not(:first-child) {
+  margin-top: 3px;
+}
+
+.auth-form-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(8px, 1.6vw, 20px);
+}
+
+.auth-form label {
+  margin-bottom: 3px;
+  line-height: 1.1;
+}
+
+.auth-form input {
+  min-width: 0;
+  min-height: 38px;
+  padding: 8px 11px;
+}
+
+.auth-submit {
+  min-height: 40px;
+  padding: 9px 12px;
+  line-height: 1.2;
+}
+
+.auth-footer {
+  flex: 0 0 auto;
+  margin-top: clamp(8px, 1.8vh, 20px);
+}
+
+@media (max-width: 360px) {
+  .auth-form-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+  }
+}
+
+@media (max-height: 620px) {
+  .auth-screen {
+    padding-top: 56px;
+    padding-bottom: 6px;
+  }
+
+  .auth-card,
+  .auth-card-inner {
+    max-height: calc(100dvh - 62px);
+  }
+
+  .auth-card-inner {
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+
+  .auth-heading {
+    margin-bottom: 6px;
+  }
+
+  .auth-icon {
+    display: none;
+  }
+
+  .auth-title {
+    margin-top: 0;
+    font-size: clamp(1rem, 3.5vh, 1.4rem);
+  }
+
+  .auth-subtitle {
+    margin-top: 4px;
+  }
+
+  .auth-form {
+    gap: 5px;
+  }
+
+  .auth-form input {
+    min-height: 34px;
+    padding-block: 6px;
+  }
+
+  .auth-form .space-y-2 > :not(:first-child) {
+    margin-top: 2px;
+  }
+
+  .auth-footer {
+    margin-top: 6px;
+  }
+}
+
+@media (max-width: 900px) {
+  .cloud-overlay {
+    display: none;
+  }
+}
+
 /* Force Monaco Editor Transparency to blend with cinematic frosted glass */
 .monaco-editor,
 .monaco-editor-background,

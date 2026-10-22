@@ -3,6 +3,25 @@ import { prisma } from "@/lib/prisma"
 import { getExecutionService } from "./execution"
 import { broadcastEvent } from "./realtime"
 import { analyzeSubmission, runAICompetitionEvaluation } from "./ai-debugger"
+import { assertSupportedLanguage, C_STARTER_CODE, CODE_LANGUAGE } from "./code-language"
+import { ExecutionResult } from "./execution/types"
+
+function executionOutputLines(result: ExecutionResult): string[] {
+  const output: string[] = [`Compiler: GCC ${result.compilerVersion || "version unavailable"}`]
+
+  if (result.compileOutput) output.push(`Compiler output:\n${result.compileOutput.trimEnd()}`)
+  if (result.stdout) output.push(`Program output:\n${result.stdout.trimEnd()}`)
+  if (result.stderr) output.push(`Error output:\n${result.stderr.trimEnd()}`)
+  output.push(`Execution time: ${result.time}s`)
+  return output
+}
+
+function formatExecutionResult(result: ExecutionResult): string {
+  return [
+    `${result.passed ? "PASSED" : "FAILED"}: ${result.passed ? "Program ran successfully." : "Compilation or execution failed."}`,
+    ...executionOutputLines(result),
+  ].join("\n")
+}
 
 /**
  * Returns the currently active round for a competition, calculating endsAt
@@ -164,6 +183,9 @@ export async function requestCompile(
   language: string,
   code: string
 ) {
+  assertSupportedLanguage(language)
+  language = CODE_LANGUAGE
+
   // 1. Fetch question and round
   const question = await prisma.question.findUnique({
     where: { id: questionId },
@@ -246,29 +268,38 @@ export async function requestCompile(
   })
 
   let executionResult = ""
-  if (publicTestCases.length === 0) {
-    const res = await execService.execute({
-      language,
-      code,
-      input: "",
-      expectedOutput: ""
-    })
-    executionResult = res.passed
-      ? `PASSED: Syntax clean. Output:\n${res.stdout || "(no output)"}`
-      : `FAILED:\n${res.stderr || res.stdout || "Execution failed"}`
-  } else {
-    // Run against first public test case for fast compile feedback
-    const tc = publicTestCases[0]
-    const res = await execService.execute({
-      language,
-      code,
-      input: tc.input,
-      expectedOutput: tc.expected
-    })
+  try {
+    if (publicTestCases.length === 0) {
+      const res = await execService.execute({
+        language,
+        code,
+        input: "",
+        expectedOutput: ""
+      })
+      executionResult = formatExecutionResult(res)
+    } else {
+      const tc = publicTestCases[0]
+      const res = await execService.execute({
+        language,
+        code,
+        input: tc.input,
+        expectedOutput: tc.expected
+      })
 
-    executionResult = res.passed
-      ? `PASSED: Passed public test case 1! Input: ${tc.input} => Output: ${res.stdout}`
-      : `FAILED: Test Case 1 failed.\nInput: ${tc.input}\nExpected: ${tc.expected}\nGot: ${res.stdout || res.stderr}`
+      executionResult = [
+        `${res.passed ? "PASSED" : "FAILED"}: Public test case 1`,
+        `Input:\n${tc.input || "(empty)"}`,
+        `Expected:\n${tc.expected || "(empty)"}`,
+        ...executionOutputLines(res),
+      ].join("\n")
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown execution error"
+    await prisma.compileAttempt.update({
+      where: { id: attempt.id },
+      data: { result: `Execution failed: ${message}` }
+    })
+    throw error
   }
 
   await prisma.compileAttempt.update({
@@ -304,6 +335,9 @@ export async function submitSolution(
   code: string,
   isAutoSubmit: boolean = false
 ) {
+  assertSupportedLanguage(language)
+  language = CODE_LANGUAGE
+
   const question = await prisma.question.findUnique({
     where: { id: questionId },
     include: { round: true },
@@ -469,6 +503,9 @@ export async function saveDraftCode(
   language: string,
   code: string
 ) {
+  assertSupportedLanguage(language)
+  language = CODE_LANGUAGE
+
   return await prisma.draftCode.upsert({
     where: {
       userId_questionId: {
@@ -546,10 +583,9 @@ export async function endCompetition(competitionId: string) {
       const key = `${p.userId}_${q.id}`
       if (!submittedKeySet.has(key)) {
         const draft = draftMap.get(key)
-        const codeToSubmit = draft?.code || "// No solution provided prior to admiral end test order\n"
-        const lang = draft?.language || "javascript"
+        const codeToSubmit = draft?.language === CODE_LANGUAGE ? draft.code : C_STARTER_CODE
         missingTasks.push(() =>
-          submitSolution(p.userId, q.id, lang, codeToSubmit, true).catch(e =>
+          submitSolution(p.userId, q.id, CODE_LANGUAGE, codeToSubmit, true).catch(e =>
             console.error(`Error auto-submitting for user ${p.userId} question ${q.id}:`, e)
           )
         )

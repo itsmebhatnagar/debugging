@@ -13,6 +13,7 @@ import {
 } from "@/lib/competition-engine"
 import { seedPirateChampionship } from "@/lib/seed-championship"
 import { runAICompetitionEvaluation } from "@/lib/ai-debugger"
+import { C_STARTER_CODE, CODE_LANGUAGE } from "@/lib/code-language"
 
 async function checkAdmin() {
   const session = await auth()
@@ -127,11 +128,15 @@ export async function createQuestionWithStarterCodes(roundId: string, formData: 
   const title = (formData.get("title") as string)?.trim()
   const description = (formData.get("description") as string)?.trim()
   const points = parseInt(formData.get("points") as string, 10)
+<<<<<<< HEAD
   const jsStarter = (formData.get("jsStarter") as string) || ""
   const pyStarter = (formData.get("pyStarter") as string) || ""
   const cppStarter = (formData.get("cppStarter") as string) || ""
   const cStarter = (formData.get("cStarter") as string) || ""
   const javaStarter = (formData.get("javaStarter") as string) || ""
+=======
+  const cStarter = (formData.get("cStarter") as string) || C_STARTER_CODE
+>>>>>>> b6de5438a00f9994b8cade4efe75ab809e762c39
 
   const testInput1 = (formData.get("testInput1") as string) || ""
   const testExpected1 = (formData.get("testExpected1") as string) || ""
@@ -151,6 +156,7 @@ export async function createQuestionWithStarterCodes(roundId: string, formData: 
     },
   })
 
+<<<<<<< HEAD
   // Starter codes
   if (cStarter.trim()) {
     await prisma.starterCode.create({
@@ -177,6 +183,11 @@ export async function createQuestionWithStarterCodes(roundId: string, formData: 
       data: { questionId: question.id, language: "javascript", code: jsStarter }
     })
   }
+=======
+  await prisma.starterCode.create({
+    data: { questionId: question.id, language: CODE_LANGUAGE, code: cStarter }
+  })
+>>>>>>> b6de5438a00f9994b8cade4efe75ab809e762c39
 
   // Test cases
   if (testExpected1.trim()) {
@@ -210,11 +221,15 @@ export async function updateQuestionWithStarterCodes(questionId: string, formDat
   const title = (formData.get("title") as string)?.trim()
   const description = (formData.get("description") as string)?.trim()
   const points = parseInt(formData.get("points") as string, 10)
+<<<<<<< HEAD
   const jsStarter = (formData.get("jsStarter") as string) || ""
   const pyStarter = (formData.get("pyStarter") as string) || ""
   const cppStarter = (formData.get("cppStarter") as string) || ""
   const cStarter = (formData.get("cStarter") as string) || ""
   const javaStarter = (formData.get("javaStarter") as string) || ""
+=======
+  const cStarter = (formData.get("cStarter") as string) || C_STARTER_CODE
+>>>>>>> b6de5438a00f9994b8cade4efe75ab809e762c39
 
   const testInput1 = (formData.get("testInput1") as string) || ""
   const testExpected1 = (formData.get("testExpected1") as string) || ""
@@ -236,10 +251,11 @@ export async function updateQuestionWithStarterCodes(questionId: string, formDat
     },
   })
 
-  // Clear existing starter codes and test cases
+  // Remove legacy language templates so each question has a single C starter.
   await prisma.starterCode.deleteMany({ where: { questionId } })
   await prisma.testCase.deleteMany({ where: { questionId } })
 
+<<<<<<< HEAD
   // Re-create Starter codes
   if (cStarter.trim()) {
     await prisma.starterCode.create({
@@ -266,6 +282,11 @@ export async function updateQuestionWithStarterCodes(questionId: string, formDat
       data: { questionId: question.id, language: "javascript", code: jsStarter }
     })
   }
+=======
+  await prisma.starterCode.create({
+    data: { questionId: question.id, language: CODE_LANGUAGE, code: cStarter }
+  })
+>>>>>>> b6de5438a00f9994b8cade4efe75ab809e762c39
 
   // Re-create Test cases
   if (testExpected1.trim()) {
@@ -484,4 +505,3 @@ export async function updateParticipantStatus(
 
   return { success: true, status }
 }
-

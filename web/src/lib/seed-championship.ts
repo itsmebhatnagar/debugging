@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma"
+import { C_STARTER_CODE, CODE_LANGUAGE } from "@/lib/code-language"
 
 export async function seedPirateChampionship() {
   console.log(" Seeding Pirate Code Championship...")
@@ -94,7 +95,7 @@ export async function seedPirateChampionship() {
   await createOrUpdateQuestion(round1.id, {
     title: "The Lost Island Coordinates",
     description: `###  Mission Briefing
-The navigator found an ancient maritime chart with coded bearing numbers. Write a function \`findCoordinates(bearings)\` that finds the single maximum peak coordinates representing the hidden treasure island.
+The navigator found an ancient maritime chart with coded bearing numbers. Write a C program that reads space-separated integers from standard input and prints the largest value (or \`0\` if there are no values).
 
 ### Input Format:
 A single string of space-separated integers representing oceanic depths, e.g. \`"12 45 89 23 67"\`.
@@ -102,10 +103,6 @@ A single string of space-separated integers representing oceanic depths, e.g. \`
 ### Output Format:
 The highest integer value found, or return \`0\` if empty.
 
-### Example:
-\`\`\`javascript
-findCoordinates("12 45 89 23 67") // Output: 89
-\`\`\`
 `,
     points: 100,
     starterCodes: {
@@ -178,7 +175,7 @@ public class Main {
     title: "Deciphering Blackbeard's Cipher",
     description: `###  Mission Briefing
 Blackbeard encrypted his orders by shifting every alphabetical character backward by 1 position (e.g., 'B' -> 'A', 'a' -> 'z', 'A' -> 'Z').
-Write \`decipher(cipherText)\` to decode the pirate text!
+Write a C program that reads the encoded text from standard input and prints the decoded text.
 
 ### Input:
 A string with encoded text.
@@ -284,7 +281,7 @@ public class Main {
     title: "Distribute the Cursed Doubloons",
     description: `###  Mission Briefing
 Captain Jack must split a chest containing $N$ golden doubloons equally among $K$ crew members. Any leftover doubloons are thrown into the ocean to appease Poseidon.
-Write \`distributeDoubloons(input)\` where input is \`"N K"\` separated by a space.
+Write a C program that reads \`N K\` from standard input and prints \`"Each: X, Sacrificed: Y"\`.
 
 ### Output:
 Return \`"Each: X, Sacrificed: Y"\`.
@@ -394,8 +391,7 @@ public class Main {
     title: "Escape the Kraken's Whirlpool",
     description: `###  The Trial of the Abyss
 The Kraken has formed a whirlpool of radius $R$ nautical leagues. For every nautical league your vessel travels, it burns $F$ barrels of rum fuel. If fuel remaining drops below 0 before escaping, the ship sinks!
-Write \`escapeWhirlpool(input)\` taking \`"Distance Fuel BurnRate"\`.
-Return \`"ESCAPED with X fuel left"\` or \`"SUNKEN"\`.
+Write a C program that reads \`Distance Fuel BurnRate\` from standard input and prints \`"ESCAPED with X fuel left"\` or \`"SUNKEN"\`.
 `,
     points: 250,
     starterCodes: {
@@ -479,7 +475,7 @@ public class Main {
     title: "Targeting the Monster's Core",
     description: `###  Weak Points Calculation
 Given an array of tentacle resistance values, calculate the sum of all prime values to strike the monster's vital core.
-Write \`solve(input)\` where input is space-separated numbers.
+Write a C program that reads space-separated integers from standard input and prints the sum of all prime values.
 `,
     points: 300,
     starterCodes: {
@@ -613,7 +609,7 @@ public class Main {
     description: `###  The Ultimate Showdown
 Two colossal pirate flagships exchange broadside cannon fire.
 Given an array of incoming cannonball trajectories with their velocities, find the maximum continuous subarray sum of impact forces using Kadane's algorithm.
-Write \`solve(input)\` taking a space-separated sequence of integers (can include negative values).
+Write a C program that reads a space-separated sequence of integers (which can include negative values) and prints the maximum continuous subarray sum.
 `,
     points: 500,
     starterCodes: {
@@ -743,23 +739,14 @@ async function createOrUpdateQuestion(
     })
   }
 
-  // Starter codes
-  for (const [lang, code] of Object.entries(data.starterCodes)) {
-    await prisma.starterCode.upsert({
-      where: {
-        questionId_language: {
-          questionId: q.id,
-          language: lang
-        }
-      },
-      update: { code },
-      create: {
-        questionId: q.id,
-        language: lang,
-        code
-      }
-    })
-  }
+  await prisma.starterCode.deleteMany({ where: { questionId: q.id } })
+  await prisma.starterCode.create({
+    data: {
+      questionId: q.id,
+      language: CODE_LANGUAGE,
+      code: data.starterCodes[CODE_LANGUAGE] || C_STARTER_CODE
+    }
+  })
 
   // Test cases
   // Clear old and insert new

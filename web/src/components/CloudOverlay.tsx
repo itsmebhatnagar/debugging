@@ -1,15 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 
 export function CloudOverlay() {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-
-  if (!mounted) return null;
+  const pathname = usePathname();
+  if (pathname === "/" || pathname.startsWith("/login") || pathname.startsWith("/register") || pathname.startsWith("/competition/")) return null;
 
   return (
-    <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden mix-blend-screen opacity-40">
+    <div className="cloud-overlay fixed inset-0 pointer-events-none z-0 overflow-hidden mix-blend-screen opacity-25">
       {/* 
         We use ultra-large radial gradients stretching across the screen, animated with CSS keyframes, 
         to simulate slow-moving volumetric fog/clouds like the White Desert reference.

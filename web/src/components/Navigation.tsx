@@ -5,8 +5,9 @@ import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
 import { signOut } from "next-auth/react";
+import type { Session } from "next-auth";
 
-export function Navigation({ session }: { session: any }) {
+export function Navigation({ session }: { session: Session | null }) {
   const pathname = usePathname();
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
@@ -16,9 +17,9 @@ export function Navigation({ session }: { session: any }) {
 
   return (
     <motion.nav 
-      initial={{ y: -50, opacity: 0 }}
+      initial={false}
       animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 1.5, ease: [0.16, 1, 0.3, 1] as any, delay: 0.2 }}
+      transition={{ duration: 0.25 }}
       className="fixed top-0 w-full z-[100] px-6 py-4 lg:px-10 lg:py-3.5 grid grid-cols-3 items-center pointer-events-none mix-blend-difference"
     >
       {/* LEFT: Home Button */}
@@ -80,7 +81,7 @@ export function Navigation({ session }: { session: any }) {
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] as any }}
+                  transition={{ duration: 0.2, ease: "easeOut" }}
                   className="absolute right-0 top-[100%] w-56 bg-[#1a1714]/95 backdrop-blur-md border border-[#d4af37]/50 shadow-2xl overflow-hidden flex flex-col z-[200]"
                 >
                   <Link href="/profile" className="px-6 py-4 font-cinzel font-bold tracking-[0.1em] text-[#f4ede0] text-xs hover:bg-[#d4af37]/20 hover:text-white transition-colors border-b border-[#d4af37]/20">

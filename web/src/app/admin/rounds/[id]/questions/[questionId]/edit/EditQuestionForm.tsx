@@ -2,6 +2,8 @@
 
 import { useActionState } from "react"
 import { updateQuestionWithStarterCodes } from "@/app/actions/admin"
+import CStarterCodeEditor from "@/components/CStarterCodeEditor"
+import { C_STARTER_CODE } from "@/lib/code-language"
 import Link from "next/link"
 import { ScrollText, Swords, Target, AlertTriangle } from "lucide-react"
 
@@ -18,11 +20,17 @@ export default function EditQuestionForm({ roundId, question }: { roundId: strin
     undefined
   )
 
+<<<<<<< HEAD
   const jsStarter = question.starterCodes.find((s: any) => s.language === "javascript")?.code || ""
   const pyStarter = question.starterCodes.find((s: any) => s.language === "python")?.code || ""
   const cppStarter = question.starterCodes.find((s: any) => s.language === "cpp")?.code || ""
   const cStarter = question.starterCodes.find((s: any) => s.language === "c")?.code || ""
   const javaStarter = question.starterCodes.find((s: any) => s.language === "java")?.code || ""
+=======
+  const cStarter =
+    question.starterCodes.find((starter: any) => starter.language === "c")?.code ||
+    C_STARTER_CODE
+>>>>>>> b6de5438a00f9994b8cade4efe75ab809e762c39
 
   const tc1 = question.testCases[0] || { input: "", expected: "" }
   const tc2 = question.testCases[1] || { input: "", expected: "" }
@@ -89,11 +97,12 @@ export default function EditQuestionForm({ roundId, question }: { roundId: strin
           <div className="border-t border-[#8b7355]/30 pt-6">
             <h3 className="text-sm font-bold uppercase tracking-wider text-[#ffd700] mb-4 flex items-center gap-2">
               <Swords className="w-4 h-4 text-[#ffd700]" />
-              <span>Edit Starter Codes</span>
+              <span>Edit C Starter Code</span>
             </h3>
             <div className="space-y-4">
               <div>
                 <label className="block text-xs font-garamond text-[#cbd5e1] mb-1">C (GCC):</label>
+<<<<<<< HEAD
                 <textarea className="w-full rounded-lg border border-[#8b7355]/40 bg-[#070b14] p-3 text-xs font-garamond text-[#cbd5e1] focus:border-[#ffd700] focus:outline-none" name="cStarter" rows={4} defaultValue={cStarter} />
               </div>
               <div>
@@ -111,6 +120,9 @@ export default function EditQuestionForm({ roundId, question }: { roundId: strin
               <div>
                 <label className="block text-xs font-garamond text-[#cbd5e1] mb-1">JavaScript (Node.js):</label>
                 <textarea className="w-full rounded-lg border border-[#8b7355]/40 bg-[#070b14] p-3 text-xs font-garamond text-[#cbd5e1] focus:border-[#ffd700] focus:outline-none" name="jsStarter" rows={4} defaultValue={jsStarter} />
+=======
+                <CStarterCodeEditor initialCode={cStarter} />
+>>>>>>> b6de5438a00f9994b8cade4efe75ab809e762c39
               </div>
             </div>
           </div>

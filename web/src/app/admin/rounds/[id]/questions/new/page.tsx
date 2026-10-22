@@ -2,6 +2,7 @@
 
 import { useActionState, use } from "react"
 import { createQuestionWithStarterCodes } from "@/app/actions/admin"
+import CStarterCodeEditor from "@/components/CStarterCodeEditor"
 import Link from "next/link"
 import { ScrollText, Swords, Target, AlertTriangle } from "lucide-react"
 
@@ -85,7 +86,7 @@ export default function NewQuestionPage({ params }: { params: Promise<{ id: stri
           <div className="border-t border-[#8b7355]/30 pt-6">
             <h3 className="text-sm font-bold uppercase tracking-wider text-[#ffd700] mb-4 flex items-center gap-2">
               <Swords className="w-4 h-4 text-[#ffd700]" />
-              <span>Upload Starter Codes (Distributed to All Sailors)</span>
+              <span>C Starter Code (Distributed to All Sailors)</span>
             </h3>
 
             <div className="space-y-4">
@@ -93,6 +94,7 @@ export default function NewQuestionPage({ params }: { params: Promise<{ id: stri
                 <label className="block text-xs font-garamond text-[#cbd5e1] mb-1">
                   C (GCC) Starter Code:
                 </label>
+<<<<<<< HEAD
                 <textarea
                   className="w-full rounded-lg border border-[#8b7355]/40 bg-[#070b14] p-3 text-xs font-garamond text-[#cbd5e1] focus:border-[#ffd700] focus:outline-none"
                   name="cStarter"
@@ -147,6 +149,9 @@ export default function NewQuestionPage({ params }: { params: Promise<{ id: stri
                   rows={4}
                   defaultValue={`const fs = require('fs');\n\nfunction solve(input) {\n  // Write your code here\n  return input;\n}\n\nconst input = fs.readFileSync(0, 'utf-8').trim();\nconsole.log(solve(input));`}
                 />
+=======
+                <CStarterCodeEditor />
+>>>>>>> b6de5438a00f9994b8cade4efe75ab809e762c39
               </div>
             </div>
           </div>
