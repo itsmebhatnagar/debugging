@@ -49,19 +49,19 @@
   --background: #05080f;
   --foreground: #f0e8d0;
 
-  /* ── Thematic Pirate Cursors ── */
-  --cursor-default: url('/cursors/default-32.png') 5 8, url('/cursors/default.png') 5 8, url('/default.png') 5 8, auto;
-  --cursor-hover: url('/cursors/hover-32.png') 5 8, url('/cursors/hover.png') 5 8, url('/hover.png') 5 8, pointer;
-  --cursor-link-hover: url('/cursors/link-hover-32.png') 5 8, url('/cursors/link-hover.png') 5 8, url('/link-hover.png') 5 8, pointer;
-  --cursor-button-hover: url('/cursors/button-hover-32.png') 5 8, url('/cursors/button-hover.png') 5 8, url('/button-hover.png') 5 8, pointer;
-  --cursor-click: url('/cursors/click-32.png') 5 8, url('/cursors/click.png') 5 8, url('/click.png') 5 8, pointer;
-  --cursor-button-click: url('/cursors/button-click-32.png') 5 8, url('/cursors/button-click.png') 5 8, url('/button-click.png') 5 8, pointer;
-  --cursor-disabled: url('/cursors/disabled-32.png') 5 8, url('/cursors/disabled.png') 5 8, url('/disabled.png') 5 8, not-allowed;
-  --cursor-drag: url('/cursors/drag-32.png') 16 16, url('/cursors/drag.png') 16 16, url('/drag.png') 16 16, grab;
-  --cursor-dragging: url('/cursors/drag-32.png') 16 16, url('/cursors/drag.png') 16 16, url('/drag.png') 16 16, grabbing;
-  --cursor-loading: url('/cursors/loading-32.png') 16 16, url('/cursors/loading.png') 16 16, url('/loading.png') 16 16, wait;
-  --cursor-precision: url('/cursors/precision-32.png') 16 16, url('/cursors/precision.png') 16 16, url('/precision.png') 16 16, crosshair;
-  --cursor-text: url('/cursors/text-select-32.png') 16 16, url('/cursors/text-select.png') 16 16, url('/text-select.png') 16 16, text;
+  /* ── Thematic Pirate Cursors (Large & Background-less) ── */
+  --cursor-default: url('/cursors/default.png') 10 17, url('/default.png') 10 17, auto;
+  --cursor-hover: url('/cursors/hover.png') 18 16, url('/hover.png') 18 16, pointer;
+  --cursor-link-hover: url('/cursors/link-hover.png') 18 15, url('/link-hover.png') 18 15, pointer;
+  --cursor-button-hover: url('/cursors/button-hover.png') 23 21, url('/button-hover.png') 23 21, pointer;
+  --cursor-click: url('/cursors/click.png') 19 20, url('/click.png') 19 20, pointer;
+  --cursor-button-click: url('/cursors/button-click.png') 28 15, url('/button-click.png') 28 15, pointer;
+  --cursor-disabled: url('/cursors/disabled.png') 11 17, url('/disabled.png') 11 17, not-allowed;
+  --cursor-drag: url('/cursors/drag.png') 31 36, url('/drag.png') 31 36, grab;
+  --cursor-dragging: url('/cursors/drag.png') 31 36, url('/drag.png') 31 36, grabbing;
+  --cursor-loading: url('/cursors/loading.png') 32 34, url('/loading.png') 32 34, wait;
+  --cursor-precision: url('/cursors/precision.png') 40 34, url('/precision.png') 40 34, crosshair;
+  --cursor-text: url('/cursors/text-select.png') 25 34, url('/text-select.png') 25 34, text;
 }
 
 /* ── ECHONA Thematic Pirate Custom Cursors ────────────────── */
