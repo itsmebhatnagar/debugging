@@ -660,14 +660,14 @@ export function AdminControlDeck({ initialData }: AdminDeckProps) {
                               : `DISQUALIFIED (${dqReason || "ADMIN OVERRIDE"})`}
                           </span>
                         ) : effectiveStatus === "QUALIFIED" ? (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-950/60 border border-emerald-500/60 text-emerald-400 w-fit">
-                            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
-                            QUALIFIED (IN BATTLE)
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-950/60 border border-emerald-500/60 text-emerald-400 w-fit whitespace-nowrap">
+                            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 animate-pulse shrink-0" />
+                            <span>QUALIFIED (IN BATTLE)</span>
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-amber-950/60 border border-amber-500/60 text-amber-400 w-fit">
-                            <Clock className="w-3.5 h-3.5 text-amber-400" />
-                            WAITING (NOT STARTED)
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-amber-950/60 border border-amber-500/60 text-amber-400 w-fit whitespace-nowrap">
+                            <Clock className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                            <span>WAITING (NOT STARTED)</span>
                           </span>
                         )}
 
