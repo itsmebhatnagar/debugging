@@ -733,3 +733,48 @@ export async function enrollAllUsersAsParticipants(competitionId: string) {
   revalidatePath(`/admin/competitions/${competitionId}`)
   return { success: true, count: users.length }
 }
+
+export async function deleteUserFromDatabase(userId: string) {
+  const session = await checkAdmin()
+
+  if (session.user?.id === userId) {
+    throw new Error("Cannot delete your own active admin account!")
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, name: true, email: true, role: true }
+  })
+
+  if (!user) {
+    throw new Error("User entry not found in database.")
+  }
+
+  // Delete user from database (cascades to participants, scores, submissions, etc.)
+  await prisma.user.delete({
+    where: { id: userId }
+  })
+
+  revalidatePath("/admin")
+  revalidatePath("/admin/participants")
+  revalidatePath("/admin/competitions")
+
+  return { success: true, deletedUser: user }
+}
+
+export async function deleteParticipantEntry(competitionId: string, userId: string) {
+  await checkAdmin()
+
+  await prisma.competitionParticipant.deleteMany({
+    where: {
+      competitionId,
+      userId
+    }
+  })
+
+  revalidatePath("/admin")
+  revalidatePath("/admin/participants")
+  revalidatePath(`/admin/competitions/${competitionId}`)
+
+  return { success: true }
+}

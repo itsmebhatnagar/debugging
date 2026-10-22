@@ -91,3 +91,42 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const session = await auth();
+    if (session?.user?.role !== "ADMIN") {
+      return NextResponse.json({ error: "Admin access required" }, { status: 403 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const userId = searchParams.get("userId");
+    const competitionId = searchParams.get("competitionId");
+    const mode = searchParams.get("mode") || "user"; // "user" or "participant"
+
+    if (!userId) {
+      return NextResponse.json({ error: "userId parameter is required" }, { status: 400 });
+    }
+
+    if (mode === "participant" && competitionId) {
+      await prisma.competitionParticipant.deleteMany({
+        where: { competitionId, userId }
+      });
+      return NextResponse.json({ success: true, message: "Participant entry removed from fleet" });
+    } else {
+      // Prevent deleting own logged-in admin account
+      if (session.user?.id === userId) {
+        return NextResponse.json({ error: "Cannot delete your own active admin account!" }, { status: 400 });
+      }
+
+      // Delete user entirely from database (cascades to all participants, scores, submissions, etc.)
+      await prisma.user.delete({
+        where: { id: userId }
+      });
+      return NextResponse.json({ success: true, message: "User permanently deleted from database" });
+    }
+  } catch (error: any) {
+    console.error("DELETE /api/admin/participants error:", error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
