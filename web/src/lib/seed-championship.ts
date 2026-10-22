@@ -109,6 +109,50 @@ findCoordinates("12 45 89 23 67") // Output: 89
 `,
     points: 100,
     starterCodes: {
+      c: `#include <stdio.h>
+#include <stdlib.h>
+
+int main() {
+    int num, maxVal = 0;
+    while (scanf("%d", &num) == 1) {
+        if (num > maxVal) {
+            maxVal = num;
+        }
+    }
+    printf("%d", maxVal);
+    return 0;
+}
+`,
+      cpp: `#include <iostream>
+#include <algorithm>
+
+using namespace std;
+
+int main() {
+    int num, maxVal = 0;
+    while (cin >> num) {
+        maxVal = max(maxVal, num);
+    }
+    cout << maxVal;
+    return 0;
+}
+`,
+      java: `import java.util.Scanner;
+
+public class Main {
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+        int maxVal = 0;
+        while (scanner.hasNextInt()) {
+            int num = scanner.nextInt();
+            if (num > maxVal) {
+                maxVal = num;
+            }
+        }
+        System.out.print(maxVal);
+    }
+}
+`,
       javascript: `function findCoordinates(bearings) {
   if (!bearings || bearings.trim().length === 0) return 0;
   const numbers = bearings.trim().split(/\\s+/).map(Number);
@@ -120,20 +164,6 @@ findCoordinates("12 45 89 23 67") // Output: 89
         return 0
     nums = [int(x) for x in bearings.split()]
     return max(nums)
-`,
-      cpp: `#include <iostream>
-#include <sstream>
-#include <algorithm>
-#include <vector>
-
-int findCoordinates(const std::string& bearings) {
-    std::stringstream ss(bearings);
-    int num, maxVal = 0;
-    while (ss >> num) {
-        maxVal = std::max(maxVal, num);
-    }
-    return maxVal;
-}
 `
     },
     testCases: [
@@ -158,6 +188,66 @@ The decoded plaintext string.
 `,
     points: 150,
     starterCodes: {
+      c: `#include <stdio.h>
+#include <string.h>
+
+int main() {
+    char s[1024];
+    if (scanf("%s", s) == 1) {
+        for (int i = 0; s[i] != '\\0'; i++) {
+            if (s[i] >= 'a' && s[i] <= 'z') {
+                s[i] = (s[i] == 'a') ? 'z' : s[i] - 1;
+            } else if (s[i] >= 'A' && s[i] <= 'Z') {
+                s[i] = (s[i] == 'A') ? 'Z' : s[i] - 1;
+            }
+        }
+        printf("%s", s);
+    }
+    return 0;
+}
+`,
+      cpp: `#include <iostream>
+#include <string>
+
+using namespace std;
+
+int main() {
+    string s;
+    if (cin >> s) {
+        for (char &c : s) {
+            if (c >= 'a' && c <= 'z') {
+                c = (c == 'a') ? 'z' : c - 1;
+            } else if (c >= 'A' && c <= 'Z') {
+                c = (c == 'A') ? 'Z' : c - 1;
+            }
+        }
+        cout << s;
+    }
+    return 0;
+}
+`,
+      java: `import java.util.Scanner;
+
+public class Main {
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+        if (scanner.hasNext()) {
+            String s = scanner.next();
+            StringBuilder sb = new StringBuilder();
+            for (char c : s.toCharArray()) {
+                if (c >= 'a' && c <= 'z') {
+                    sb.append(c == 'a' ? 'z' : (char)(c - 1));
+                } else if (c >= 'A' && c <= 'Z') {
+                    sb.append(c == 'A' ? 'Z' : (char)(c - 1));
+                } else {
+                    sb.append(c);
+                }
+            }
+            System.out.print(sb.toString());
+        }
+    }
+}
+`,
       javascript: `function decipher(cipherText) {
   return cipherText.split('').map(char => {
     if (/[a-z]/.test(char)) {
@@ -201,6 +291,53 @@ Return \`"Each: X, Sacrificed: Y"\`.
 `,
     points: 200,
     starterCodes: {
+      c: `#include <stdio.h>
+
+int main() {
+    int n, k;
+    if (scanf("%d %d", &n, &k) == 2) {
+        if (k <= 0) {
+            printf("Each: 0, Sacrificed: 0");
+        } else {
+            printf("Each: %d, Sacrificed: %d", n / k, n % k);
+        }
+    }
+    return 0;
+}
+`,
+      cpp: `#include <iostream>
+
+using namespace std;
+
+int main() {
+    int n, k;
+    if (cin >> n >> k) {
+        if (k <= 0) {
+            cout << "Each: 0, Sacrificed: 0";
+        } else {
+            cout << "Each: " << (n / k) << ", Sacrificed: " << (n % k);
+        }
+    }
+    return 0;
+}
+`,
+      java: `import java.util.Scanner;
+
+public class Main {
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+        if (scanner.hasNextInt()) {
+            int n = scanner.nextInt();
+            int k = scanner.nextInt();
+            if (k <= 0) {
+                System.out.print("Each: 0, Sacrificed: 0");
+            } else {
+                System.out.print("Each: " + (n / k) + ", Sacrificed: " + (n % k));
+            }
+        }
+    }
+}
+`,
       javascript: `function distributeDoubloons(input) {
   const [n, k] = input.split(' ').map(Number);
   if (k <= 0) return "Each: 0, Sacrificed: 0";
@@ -262,6 +399,57 @@ Return \`"ESCAPED with X fuel left"\` or \`"SUNKEN"\`.
 `,
     points: 250,
     starterCodes: {
+      c: `#include <stdio.h>
+
+int main() {
+    int dist, fuel, burn;
+    if (scanf("%d %d %d", &dist, &fuel, &burn) == 3) {
+        int needed = dist * burn;
+        if (fuel >= needed) {
+            printf("ESCAPED with %d fuel left", fuel - needed);
+        } else {
+            printf("SUNKEN");
+        }
+    }
+    return 0;
+}
+`,
+      cpp: `#include <iostream>
+
+using namespace std;
+
+int main() {
+    int dist, fuel, burn;
+    if (cin >> dist >> fuel >> burn) {
+        int needed = dist * burn;
+        if (fuel >= needed) {
+            cout << "ESCAPED with " << (fuel - needed) << " fuel left";
+        } else {
+            cout << "SUNKEN";
+        }
+    }
+    return 0;
+}
+`,
+      java: `import java.util.Scanner;
+
+public class Main {
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+        if (scanner.hasNextInt()) {
+            int dist = scanner.nextInt();
+            int fuel = scanner.nextInt();
+            int burn = scanner.nextInt();
+            int needed = dist * burn;
+            if (fuel >= needed) {
+                System.out.print("ESCAPED with " + (fuel - needed) + " fuel left");
+            } else {
+                System.out.print("SUNKEN");
+            }
+        }
+    }
+}
+`,
       javascript: `function escapeWhirlpool(input) {
   const [dist, fuel, burn] = input.split(' ').map(Number);
   const needed = dist * burn;
@@ -270,6 +458,13 @@ Return \`"ESCAPED with X fuel left"\` or \`"SUNKEN"\`.
   }
   return "SUNKEN";
 }
+`,
+      python: `def escape_whirlpool(input_str: str) -> str:
+    dist, fuel, burn = map(int, input_str.split())
+    needed = dist * burn
+    if fuel >= needed:
+        return f"ESCAPED with {fuel - needed} fuel left"
+    return "SUNKEN"
 `
     },
     testCases: [
@@ -288,6 +483,71 @@ Write \`solve(input)\` where input is space-separated numbers.
 `,
     points: 300,
     starterCodes: {
+      c: `#include <stdio.h>
+#include <stdbool.h>
+
+bool isPrime(int n) {
+    if (n <= 1) return false;
+    for (int i = 2; i * i <= n; i++) {
+        if (n % i == 0) return false;
+    }
+    return true;
+}
+
+int main() {
+    int num, sum = 0;
+    while (scanf("%d", &num) == 1) {
+        if (isPrime(num)) {
+            sum += num;
+        }
+    }
+    printf("%d", sum);
+    return 0;
+}
+`,
+      cpp: `#include <iostream>
+
+using namespace std;
+
+bool isPrime(int n) {
+    if (n <= 1) return false;
+    for (int i = 2; i * i <= n; i++) {
+        if (n % i == 0) return false;
+    }
+    return true;
+}
+
+int main() {
+    int num, sum = 0;
+    while (cin >> num) {
+        if (isPrime(num)) sum += num;
+    }
+    cout << sum;
+    return 0;
+}
+`,
+      java: `import java.util.Scanner;
+
+public class Main {
+    private static boolean isPrime(int n) {
+        if (n <= 1) return false;
+        for (int i = 2; i * i <= n; i++) {
+            if (n % i == 0) return false;
+        }
+        return true;
+    }
+
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+        int sum = 0;
+        while (scanner.hasNextInt()) {
+            int num = scanner.nextInt();
+            if (isPrime(num)) sum += num;
+        }
+        System.out.print(sum);
+    }
+}
+`,
       javascript: `function solve(input) {
   function isPrime(num) {
     if (num <= 1) return false;
@@ -300,6 +560,15 @@ Write \`solve(input)\` where input is space-separated numbers.
   const sum = nums.filter(isPrime).reduce((a, b) => a + b, 0);
   return String(sum);
 }
+`,
+      python: `def solve(input_str: str) -> str:
+    def is_prime(n):
+        if n <= 1: return False
+        for i in range(2, int(n**0.5) + 1):
+            if n % i == 0: return False
+        return True
+    nums = [int(x) for x in input_str.split()]
+    return str(sum(x for x in nums if is_prime(x)))
 `
     },
     testCases: [
@@ -348,6 +617,66 @@ Write \`solve(input)\` taking a space-separated sequence of integers (can includ
 `,
     points: 500,
     starterCodes: {
+      c: `#include <stdio.h>
+
+int main() {
+    int num;
+    if (scanf("%d", &num) == 1) {
+        int maxSoFar = num;
+        int currMax = num;
+        while (scanf("%d", &num) == 1) {
+            currMax = (num > currMax + num) ? num : currMax + num;
+            if (currMax > maxSoFar) maxSoFar = currMax;
+        }
+        printf("%d", maxSoFar);
+    } else {
+        printf("0");
+    }
+    return 0;
+}
+`,
+      cpp: `#include <iostream>
+#include <algorithm>
+
+using namespace std;
+
+int main() {
+    int num;
+    if (cin >> num) {
+        int maxSoFar = num;
+        int currMax = num;
+        while (cin >> num) {
+            currMax = max(num, currMax + num);
+            maxSoFar = max(maxSoFar, currMax);
+        }
+        cout << maxSoFar;
+    } else {
+        cout << 0;
+    }
+    return 0;
+}
+`,
+      java: `import java.util.Scanner;
+
+public class Main {
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+        if (scanner.hasNextInt()) {
+            int num = scanner.nextInt();
+            int maxSoFar = num;
+            int currMax = num;
+            while (scanner.hasNextInt()) {
+                num = scanner.nextInt();
+                currMax = Math.max(num, currMax + num);
+                maxSoFar = Math.max(maxSoFar, currMax);
+            }
+            System.out.print(maxSoFar);
+        } else {
+            System.out.print(0);
+        }
+    }
+}
+`,
       javascript: `function solve(input) {
   const nums = input.trim().split(/\\s+/).map(Number);
   if (nums.length === 0) return "0";
@@ -359,6 +688,15 @@ Write \`solve(input)\` taking a space-separated sequence of integers (can includ
   }
   return String(maxSoFar);
 }
+`,
+      python: `def solve(input_str: str) -> str:
+    nums = [int(x) for x in input_str.split()]
+    if not nums: return "0"
+    max_so_far = curr_max = nums[0]
+    for x in nums[1:]:
+        curr_max = max(x, curr_max + x)
+        max_so_far = max(max_so_far, curr_max)
+    return str(max_so_far)
 `
     },
     testCases: [

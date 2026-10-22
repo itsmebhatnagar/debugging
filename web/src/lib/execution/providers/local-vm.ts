@@ -8,121 +8,345 @@ import { ExecutionRequest, ExecutionResult, ExecutionService } from "../types"
 
 export class LocalVMExecutionService implements ExecutionService {
   async execute(request: ExecutionRequest): Promise<ExecutionResult> {
-    const lang = request.language.toLowerCase();
+    const rawLang = (request.language || "").toLowerCase().trim();
+    let lang = rawLang;
+    if (lang === 'c++') lang = 'cpp';
+    if (lang === 'nodejs' || lang === 'js') lang = 'javascript';
+    if (lang === 'py') lang = 'python';
+
+    let result: { stdout: string, stderr: string, compileOutput?: string | null, time: number } = {
+      stdout: "",
+      stderr: "",
+      compileOutput: null,
+      time: 0
+    };
     
-    let result: { stdout: string, stderr: string, time: number } = { stdout: "", stderr: "", time: 0 };
-    
-    if (lang === 'javascript' || lang === 'nodejs') {
-      result = await this.executeJS(request.code, request.input || "");
-    } else if (lang === 'python') {
-      result = await this.executePython(request.code, request.input || "");
-    } else if (lang === 'cpp' || lang === 'c' || lang === 'c++') {
-      result = await this.executeCpp(request.code, request.input || "");
-    } else {
-      return { stdout: null, stderr: `Local execution does not support ${request.language} yet.`, compileOutput: null, time: 0, memory: 0, statusId: 11, passed: false };
+    try {
+      if (lang === 'c') {
+        result = await this.executeC(request.code, request.input || "");
+      } else if (lang === 'cpp') {
+        result = await this.executeCpp(request.code, request.input || "");
+      } else if (lang === 'java') {
+        result = await this.executeJava(request.code, request.input || "");
+      } else if (lang === 'python') {
+        result = await this.executePython(request.code, request.input || "");
+      } else if (lang === 'javascript') {
+        result = await this.executeJS(request.code, request.input || "");
+      } else {
+        // Fallback to Piston for any other requested language
+        result = await this.executePiston(request.language, request.code, request.input || "");
+      }
+    } catch (err: any) {
+      result = {
+        stdout: "",
+        stderr: err?.message || "Execution exception occurred",
+        compileOutput: null,
+        time: 0
+      };
     }
 
     const cleanExpected = (request.expectedOutput || "").trim().replace(/\r\n/g, "\n");
     const cleanActual = (result.stdout || "").trim().replace(/\r\n/g, "\n");
     
-    // Check if the stderr has critical failure, but sometimes stderr is just warnings.
-    // If output matches perfectly, we consider it passed even if there's minor stderr, unless it crashed.
-    const passed = cleanExpected === "" ? (result.stderr === "") : (cleanActual === cleanExpected);
+    const isCompileError = !!(result.compileOutput || (result.stderr && result.stderr.includes("(Compilation Error)")));
+    const passed = !isCompileError && (cleanExpected === "" ? (!result.stderr || result.stderr.trim() === "") : (cleanActual === cleanExpected));
 
     return {
-      stdout: result.stdout,
+      stdout: result.stdout || null,
       stderr: result.stderr || null,
-      compileOutput: null,
+      compileOutput: result.compileOutput || null,
       time: result.time,
       memory: 0,
-      statusId: passed ? 3 : 4,
+      statusId: isCompileError ? 6 : (passed ? 3 : 4), // 6 = Compilation Error, 3 = Accepted, 4 = Wrong Answer
       passed
+    };
+  }
+
+  // ── C (GCC) ────────────────────────────────────────────────────────
+  private async executeC(code: string, input: string): Promise<{ stdout: string, stderr: string, compileOutput?: string | null, time: number }> {
+    const start = performance.now();
+    const id = crypto.randomUUID();
+    const tmpDir = os.tmpdir();
+    const srcFile = path.join(tmpDir, `${id}.c`);
+    const exeFile = path.join(tmpDir, process.platform === 'win32' ? `${id}.exe` : `${id}.out`);
+
+    try {
+      fs.writeFileSync(srcFile, code, 'utf8');
+
+      // Compile with gcc
+      try {
+        execSync(`gcc -O2 "${srcFile}" -o "${exeFile}"`, { stdio: 'pipe', timeout: 8000 });
+      } catch (compileErr: any) {
+        const errorText = (compileErr.stderr?.toString() || compileErr.stdout?.toString() || compileErr.message || "").trim();
+        return {
+          stdout: "",
+          stderr: errorText + "\n[Compilation Error: GCC]",
+          compileOutput: errorText,
+          time: performance.now() - start
+        };
+      }
+
+      // Execute compiled binary
+      return await new Promise((resolve) => {
+        const child = exec(`"${exeFile}"`, { timeout: 4000, maxBuffer: 1024 * 1024 * 5 }, (err, stdout, stderr) => {
+          resolve({
+            stdout: stdout?.toString() || "",
+            stderr: stderr?.toString() || (err && !err.killed ? err.message : ""),
+            compileOutput: null,
+            time: performance.now() - start
+          });
+        });
+
+        if (input && child.stdin) {
+          child.stdin.write(input + "\n");
+          child.stdin.end();
+        } else if (child.stdin) {
+          child.stdin.end();
+        }
+      });
+    } catch (e: any) {
+      // If gcc command not found locally, route to Piston compiler
+      if (e.code === 'ENOENT' || e.message?.includes('not recognized') || e.message?.includes('not found')) {
+        return this.executePiston('c', code, input);
+      }
+      return { stdout: "", stderr: e.message, time: performance.now() - start };
+    } finally {
+      try { if (fs.existsSync(srcFile)) fs.unlinkSync(srcFile); } catch {}
+      try { if (fs.existsSync(exeFile)) fs.unlinkSync(exeFile); } catch {}
     }
   }
 
+  // ── C++ (G++) ──────────────────────────────────────────────────────
+  private async executeCpp(code: string, input: string): Promise<{ stdout: string, stderr: string, compileOutput?: string | null, time: number }> {
+    const start = performance.now();
+    const id = crypto.randomUUID();
+    const tmpDir = os.tmpdir();
+    const srcFile = path.join(tmpDir, `${id}.cpp`);
+    const exeFile = path.join(tmpDir, process.platform === 'win32' ? `${id}.exe` : `${id}.out`);
+
+    try {
+      fs.writeFileSync(srcFile, code, 'utf8');
+
+      // Compile with g++ (supports C++20 / C++17)
+      try {
+        execSync(`g++ -O2 "${srcFile}" -o "${exeFile}"`, { stdio: 'pipe', timeout: 8000 });
+      } catch (compileErr: any) {
+        const errorText = (compileErr.stderr?.toString() || compileErr.stdout?.toString() || compileErr.message || "").trim();
+        return {
+          stdout: "",
+          stderr: errorText + "\n[Compilation Error: G++]",
+          compileOutput: errorText,
+          time: performance.now() - start
+        };
+      }
+
+      // Execute binary
+      return await new Promise((resolve) => {
+        const child = exec(`"${exeFile}"`, { timeout: 4000, maxBuffer: 1024 * 1024 * 5 }, (err, stdout, stderr) => {
+          resolve({
+            stdout: stdout?.toString() || "",
+            stderr: stderr?.toString() || (err && !err.killed ? err.message : ""),
+            compileOutput: null,
+            time: performance.now() - start
+          });
+        });
+
+        if (input && child.stdin) {
+          child.stdin.write(input + "\n");
+          child.stdin.end();
+        } else if (child.stdin) {
+          child.stdin.end();
+        }
+      });
+    } catch (e: any) {
+      if (e.code === 'ENOENT' || e.message?.includes('not recognized') || e.message?.includes('not found')) {
+        return this.executePiston('c++', code, input);
+      }
+      return { stdout: "", stderr: e.message, time: performance.now() - start };
+    } finally {
+      try { if (fs.existsSync(srcFile)) fs.unlinkSync(srcFile); } catch {}
+      try { if (fs.existsSync(exeFile)) fs.unlinkSync(exeFile); } catch {}
+    }
+  }
+
+  // ── JAVA (OpenJDK) ─────────────────────────────────────────────────
+  private async executeJava(code: string, input: string): Promise<{ stdout: string, stderr: string, compileOutput?: string | null, time: number }> {
+    const start = performance.now();
+    const id = crypto.randomUUID().replace(/-/g, '').slice(0, 8);
+    const runDir = path.join(os.tmpdir(), `java_runner_${id}`);
+
+    try {
+      if (!fs.existsSync(runDir)) fs.mkdirSync(runDir, { recursive: true });
+
+      // Determine the main / public class name
+      let className = "Main";
+      const publicClassMatch = code.match(/public\s+class\s+([A-Za-z0-9_]+)/);
+      const anyClassMatch = code.match(/class\s+([A-Za-z0-9_]+)/);
+      if (publicClassMatch) {
+        className = publicClassMatch[1];
+      } else if (anyClassMatch) {
+        className = anyClassMatch[1];
+      }
+
+      const srcFile = path.join(runDir, `${className}.java`);
+      fs.writeFileSync(srcFile, code, 'utf8');
+
+      // Compile with javac
+      try {
+        execSync(`javac -encoding UTF-8 "${srcFile}"`, { stdio: 'pipe', timeout: 8000 });
+      } catch (compileErr: any) {
+        const errorText = (compileErr.stderr?.toString() || compileErr.stdout?.toString() || compileErr.message || "").trim();
+        return {
+          stdout: "",
+          stderr: errorText + "\n[Compilation Error: OpenJDK javac]",
+          compileOutput: errorText,
+          time: performance.now() - start
+        };
+      }
+
+      // Execute with java
+      return await new Promise((resolve) => {
+        const child = exec(`java -Xmx256m -cp "${runDir}" ${className}`, { timeout: 4000, maxBuffer: 1024 * 1024 * 5 }, (err, stdout, stderr) => {
+          resolve({
+            stdout: stdout?.toString() || "",
+            stderr: stderr?.toString() || (err && !err.killed ? err.message : ""),
+            compileOutput: null,
+            time: performance.now() - start
+          });
+        });
+
+        if (input && child.stdin) {
+          child.stdin.write(input + "\n");
+          child.stdin.end();
+        } else if (child.stdin) {
+          child.stdin.end();
+        }
+      });
+    } catch (e: any) {
+      if (e.code === 'ENOENT' || e.message?.includes('not recognized') || e.message?.includes('not found')) {
+        return this.executePiston('java', code, input);
+      }
+      return { stdout: "", stderr: e.message, time: performance.now() - start };
+    } finally {
+      try {
+        if (fs.existsSync(runDir)) {
+          fs.rmSync(runDir, { recursive: true, force: true });
+        }
+      } catch {}
+    }
+  }
+
+  // ── JAVASCRIPT (V8 VM / Node.js) ───────────────────────────────────
   private async executeJS(code: string, input: string): Promise<{ stdout: string, stderr: string, time: number }> {
     let output = "";
     const start = performance.now();
     try {
       const sandbox = {
         console: {
-          log: (...args: any[]) => { output += args.join(" ") + "\n"; },
+          log: (...args: any[]) => { output += args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(" ") + "\n"; },
           error: (...args: any[]) => { output += args.join(" ") + "\n"; },
           warn: (...args: any[]) => { output += args.join(" ") + "\n"; },
         },
-        Math, Object, Array, String, Number, Boolean, Date, RegExp, JSON
+        Math, Object, Array, String, Number, Boolean, Date, RegExp, JSON, parseInt, parseFloat
       };
       
       vm.createContext(sandbox);
       let codeToRun = code;
       
-      if (codeToRun.includes("function solve") && !codeToRun.includes("solve(")) {
-          const escapedInput = input ? JSON.stringify(input) : '""';
-          codeToRun += `\nconsole.log(solve(${escapedInput}));`;
+      // Auto-invoke solve / function if user didn't write manual calls
+      const funcMatch = code.match(/function\s+([A-Za-z0-9_]+)\s*\(/);
+      if (funcMatch && !code.includes(`${funcMatch[1]}(`)) {
+        const escapedInput = input ? JSON.stringify(input) : '""';
+        codeToRun += `\nconsole.log(${funcMatch[1]}(${escapedInput}));`;
       }
 
-      vm.runInContext(codeToRun, sandbox, { timeout: 2000 });
-      
+      vm.runInContext(codeToRun, sandbox, { timeout: 3000 });
       return { stdout: output, stderr: "", time: performance.now() - start };
     } catch (e: any) {
       return { stdout: output, stderr: e.message, time: performance.now() - start };
     }
   }
 
+  // ── PYTHON ─────────────────────────────────────────────────────────
   private async executePython(code: string, input: string): Promise<{ stdout: string, stderr: string, time: number }> {
-    return new Promise((resolve) => {
-      const start = performance.now();
-      const id = crypto.randomUUID();
-      const tmpDir = os.tmpdir();
-      const file = path.join(tmpDir, `${id}.py`);
-      fs.writeFileSync(file, code);
+    const start = performance.now();
+    const id = crypto.randomUUID();
+    const tmpDir = os.tmpdir();
+    const file = path.join(tmpDir, `${id}.py`);
 
-      const child = exec(`python3 ${file}`, { timeout: 3000 }, (err, stdout, stderr) => {
-        try { fs.unlinkSync(file); } catch (e) {}
-        resolve({
-          stdout: stdout?.toString() || "",
-          stderr: stderr?.toString() || (err ? err.message : ""),
-          time: performance.now() - start
+    try {
+      fs.writeFileSync(file, code, 'utf8');
+
+      return await new Promise((resolve) => {
+        const pyCmd = process.platform === 'win32' ? 'python' : 'python3';
+        const child = exec(`${pyCmd} "${file}"`, { timeout: 4000 }, (err, stdout, stderr) => {
+          resolve({
+            stdout: stdout?.toString() || "",
+            stderr: stderr?.toString() || (err && !err.killed ? err.message : ""),
+            time: performance.now() - start
+          });
         });
-      });
 
-      if (input) child.stdin?.write(input + "\n");
-      child.stdin?.end();
-    });
+        if (input && child.stdin) {
+          child.stdin.write(input + "\n");
+          child.stdin.end();
+        } else if (child.stdin) {
+          child.stdin.end();
+        }
+      });
+    } catch (e: any) {
+      if (e.code === 'ENOENT' || e.message?.includes('not recognized') || e.message?.includes('not found')) {
+        return this.executePiston('python', code, input);
+      }
+      return { stdout: "", stderr: e.message, time: performance.now() - start };
+    } finally {
+      try { if (fs.existsSync(file)) fs.unlinkSync(file); } catch {}
+    }
   }
 
-  private async executeCpp(code: string, input: string): Promise<{ stdout: string, stderr: string, time: number }> {
-    return new Promise((resolve) => {
-      const start = performance.now();
-      const id = crypto.randomUUID();
-      const tmpDir = os.tmpdir();
-      const srcFile = path.join(tmpDir, `${id}.cpp`);
-      const exeFile = path.join(tmpDir, `${id}.out`);
-      
-      fs.writeFileSync(srcFile, code);
+  // ── PISTON API (Cloud Well-Known Compilers Fallback) ────────────────
+  private async executePiston(language: string, code: string, input: string): Promise<{ stdout: string, stderr: string, compileOutput?: string | null, time: number }> {
+    const start = performance.now();
+    let lang = language.toLowerCase();
+    if (lang === 'cpp') lang = 'c++';
 
-      try {
-        execSync(`g++ ${srcFile} -o ${exeFile}`, { stdio: 'pipe' });
-      } catch (compileErr: any) {
-        try { fs.unlinkSync(srcFile); } catch (e) {}
-        return resolve({
-          stdout: "",
-          stderr: (compileErr.stderr?.toString() || compileErr.message) + "\n(Compilation Error)",
-          time: performance.now() - start
-        });
-      }
-
-      const child = exec(exeFile, { timeout: 3000 }, (err, stdout, stderr) => {
-        try { fs.unlinkSync(srcFile); fs.unlinkSync(exeFile); } catch (e) {}
-        resolve({
-          stdout: stdout?.toString() || "",
-          stderr: stderr?.toString() || (err ? err.message : ""),
-          time: performance.now() - start
-        });
+    try {
+      const res = await fetch('https://emkc.org/api/v2/piston/execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          language: lang,
+          version: '*',
+          files: [{ content: code }],
+          stdin: input || ""
+        })
       });
 
-      if (input) child.stdin?.write(input + "\n");
-      child.stdin?.end();
-    });
+      if (!res.ok) {
+        throw new Error(`Piston compiler error: ${res.statusText}`);
+      }
+
+      const data = await res.json();
+      const run = data.run || {};
+      const compile = data.compile || {};
+
+      const compileOutput = compile.output || compile.stderr || null;
+      const stdout = run.stdout || (compileOutput ? "" : run.output || "");
+      const stderr = compileOutput ? `${compileOutput}\n(Compilation Error)` : (run.stderr || "");
+
+      return {
+        stdout,
+        stderr,
+        compileOutput,
+        time: performance.now() - start
+      };
+    } catch (e: any) {
+      return {
+        stdout: "",
+        stderr: `Compiler execution error: ${e.message}`,
+        compileOutput: e.message,
+        time: performance.now() - start
+      };
+    }
   }
 }

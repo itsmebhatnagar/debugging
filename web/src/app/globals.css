@@ -1,8 +1,21 @@
 @import "tailwindcss";
+@import "./quiz/styles/participant-quiz.css";
+@import "./quiz/styles/participant-voyage.css";
+@import "./quiz/styles/quiz-chart.css";
 
 @theme {
   --font-cinzel: var(--font-cinzel);
   --font-garamond: var(--font-garamond);
+  --font-pirate: "Cinzel Decorative", serif;
+  --font-sans: "Inter", sans-serif;
+
+  --color-pirate-ocean: #07111F;
+  --color-pirate-navy: #0D1B2A;
+  --color-pirate-parchment: #D8B982;
+  --color-pirate-burnt: #8B5E34;
+  --color-pirate-gold: #D4AF37;
+  --color-pirate-blood: #7A1F1F;
+  --color-pirate-bone: #E8DFC8;
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -35,6 +48,44 @@
 
   --background: #05080f;
   --foreground: #f0e8d0;
+}
+
+/* ── Pirate Quill Needle Cursor (alternate.png) ────────────── */
+html, body {
+  cursor: url('/cursor.png') 0 0, url('/cursor-32.png') 0 0, auto;
+}
+
+a,
+button,
+[role="button"],
+input[type="submit"],
+input[type="button"],
+input[type="reset"],
+select,
+summary,
+.cursor-pointer,
+[style*="cursor: pointer"],
+[style*="cursor:pointer"],
+.pq-btn,
+.pq-option,
+.voyage-btn {
+  cursor: url('/cursor-pointer.png') 0 0, url('/cursor-pointer-32.png') 0 0, pointer;
+}
+
+button:disabled,
+[disabled],
+.cursor-not-allowed {
+  cursor: not-allowed;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="tel"],
+input[type="search"],
+textarea {
+  cursor: text;
 }
 
 /* ── Base Reset ───────────────────────────────────────────── */

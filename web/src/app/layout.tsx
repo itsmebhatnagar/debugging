@@ -3,10 +3,11 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { Navigation } from "@/components/Navigation";
 
-import { Cinzel, Cormorant_Garamond } from "next/font/google";
+import { Cinzel, Cormorant_Garamond, Cinzel_Decorative } from "next/font/google";
 
 const cinzel = Cinzel({ subsets: ["latin"], variable: "--font-cinzel" });
 const garamond = Cormorant_Garamond({ subsets: ["latin"], weight: ["300", "400", "500", "600", "700"], variable: "--font-garamond" });
+const cinzelDecorative = Cinzel_Decorative({ subsets: ["latin"], weight: ["400", "700", "900"], variable: "--font-pirate" });
 
 import { CloudOverlay } from "@/components/CloudOverlay";
 import { PageBackground } from "@/components/PageBackground";
@@ -29,7 +30,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const session = await auth();
 
   return (
-    <html lang="en" className={`${cinzel.variable} ${garamond.variable} antialiased`} data-scroll-behavior="smooth">
+    <html lang="en" className={`${cinzel.variable} ${garamond.variable} ${cinzelDecorative.variable} antialiased`} data-scroll-behavior="smooth">
       <body className="min-h-screen flex flex-col font-garamond bg-[#1a1714] text-[#d6c7b0]">
         <ThemeProvider>
           <PageBackground />

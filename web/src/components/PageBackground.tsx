@@ -5,8 +5,8 @@ import { usePathname } from "next/navigation";
 export function PageBackground() {
   const pathname = usePathname();
 
-  // The landing page uses the video scroll sequence, so no static background needed there.
-  if (pathname === "/") return null;
+  // The landing, login, quiz, and admin pages have their own immersive backgrounds
+  if (pathname === "/" || pathname === "/login" || pathname === "/quiz" || pathname?.startsWith("/admin")) return null;
 
   // The battle section gets a distinct, dramatic sea battle background (as requested)
   if (pathname.includes("/competition/")) {

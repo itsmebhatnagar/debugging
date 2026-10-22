@@ -10,6 +10,10 @@ export function Navigation({ session }: { session: any }) {
   const pathname = usePathname();
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
+  if (pathname === "/" || pathname === "/login" || pathname === "/quiz" || pathname?.startsWith("/admin")) {
+    return null;
+  }
+
   return (
     <motion.nav 
       initial={{ y: -50, opacity: 0 }}

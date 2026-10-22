@@ -108,3 +108,52 @@ dist
 # OS metadata
 .DS_Store
 Thumbs.db
+
+# Frame sequences & large animation frames
+web/public/frames/
+frames/
+
+# Reference images and screenshots
+alternate.png
+web/public/alternate.png
+web/public/cursor-*.png
+!web/public/cursor.png
+!web/public/cursor-pointer.png
+
+# One-off patch, fix, rewrite, and test utility scripts
+web/fix*.py
+web/rewrite*.py
+web/test*.js
+web/test*.ts
+web/test*.html
+web/patch*.js
+web/analyze.js
+web/download-threeui.js
+web/fix-iframe.js
+web/scrape_desert.js
+web/check_*.js
+web/parse-check.js
+
+# Binary compilation outputs & scratch files
+*.exe
+*.o
+*.obj
+*.class
+*.out
+scratch/
+scratch*.ts
+scratch*.js
+
+# Local environment variables
+.env
+.env.*
+!.env.example
+*.env
+
+# AI Assistant & IDE metadata
+.agents/
+.claude/
+.cursor/
+.devin/
+.idea/
+.vscode/

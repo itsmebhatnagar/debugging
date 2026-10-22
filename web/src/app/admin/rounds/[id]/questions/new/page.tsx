@@ -91,13 +91,37 @@ export default function NewQuestionPage({ params }: { params: Promise<{ id: stri
             <div className="space-y-4">
               <div>
                 <label className="block text-xs font-garamond text-[#cbd5e1] mb-1">
-                  JavaScript Starter Code:
+                  C (GCC) Starter Code:
                 </label>
                 <textarea
                   className="w-full rounded-lg border border-[#8b7355]/40 bg-[#070b14] p-3 text-xs font-garamond text-[#cbd5e1] focus:border-[#ffd700] focus:outline-none"
-                  name="jsStarter"
+                  name="cStarter"
                   rows={4}
-                  defaultValue={`function solve(input) {\n  // Write your code here\n  return "";\n}`}
+                  defaultValue={`#include <stdio.h>\n#include <string.h>\n\nint main() {\n    char input[4096];\n    if (fgets(input, sizeof(input), stdin)) {\n        input[strcspn(input, "\\r\\n")] = 0;\n        // Write your solution here\n        printf("%s\\n", input);\n    }\n    return 0;\n}`}
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-garamond text-[#cbd5e1] mb-1">
+                  C++ (G++ 20) Starter Code:
+                </label>
+                <textarea
+                  className="w-full rounded-lg border border-[#8b7355]/40 bg-[#070b14] p-3 text-xs font-garamond text-[#cbd5e1] focus:border-[#ffd700] focus:outline-none"
+                  name="cppStarter"
+                  rows={4}
+                  defaultValue={`#include <iostream>\n#include <string>\n\nusing namespace std;\n\nint main() {\n    string line;\n    if (getline(cin, line)) {\n        // Write your solution here\n        cout << line << "\\n";\n    }\n    return 0;\n}`}
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-garamond text-[#cbd5e1] mb-1">
+                  Java (OpenJDK 22) Starter Code:
+                </label>
+                <textarea
+                  className="w-full rounded-lg border border-[#8b7355]/40 bg-[#070b14] p-3 text-xs font-garamond text-[#cbd5e1] focus:border-[#ffd700] focus:outline-none"
+                  name="javaStarter"
+                  rows={4}
+                  defaultValue={`import java.util.*;\nimport java.io.*;\n\npublic class Main {\n    public static void main(String[] args) throws Exception {\n        BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));\n        String line = reader.readLine();\n        if (line != null) {\n            // Write your solution here\n            System.out.println(line);\n        }\n    }\n}`}
                 />
               </div>
 
@@ -109,19 +133,19 @@ export default function NewQuestionPage({ params }: { params: Promise<{ id: stri
                   className="w-full rounded-lg border border-[#8b7355]/40 bg-[#070b14] p-3 text-xs font-garamond text-[#cbd5e1] focus:border-[#ffd700] focus:outline-none"
                   name="pyStarter"
                   rows={4}
-                  defaultValue={`def solve(input_str: str) -> str:\n    # Write your code here\n    return ""`}
+                  defaultValue={`import sys\n\ndef solve():\n    raw_input = sys.stdin.read().strip()\n    # Write your solution here\n    print(raw_input)\n\nif __name__ == "__main__":\n    solve()`}
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-garamond text-[#cbd5e1] mb-1">
-                  C++ Starter Code:
+                  JavaScript Starter Code:
                 </label>
                 <textarea
                   className="w-full rounded-lg border border-[#8b7355]/40 bg-[#070b14] p-3 text-xs font-garamond text-[#cbd5e1] focus:border-[#ffd700] focus:outline-none"
-                  name="cppStarter"
+                  name="jsStarter"
                   rows={4}
-                  defaultValue={`#include <iostream>\n#include <string>\n\nstd::string solve(const std::string& input) {\n    return "";\n}`}
+                  defaultValue={`const fs = require('fs');\n\nfunction solve(input) {\n  // Write your code here\n  return input;\n}\n\nconst input = fs.readFileSync(0, 'utf-8').trim();\nconsole.log(solve(input));`}
                 />
               </div>
             </div>

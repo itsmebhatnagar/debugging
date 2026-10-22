@@ -21,6 +21,8 @@ export default function EditQuestionForm({ roundId, question }: { roundId: strin
   const jsStarter = question.starterCodes.find((s: any) => s.language === "javascript")?.code || ""
   const pyStarter = question.starterCodes.find((s: any) => s.language === "python")?.code || ""
   const cppStarter = question.starterCodes.find((s: any) => s.language === "cpp")?.code || ""
+  const cStarter = question.starterCodes.find((s: any) => s.language === "c")?.code || ""
+  const javaStarter = question.starterCodes.find((s: any) => s.language === "java")?.code || ""
 
   const tc1 = question.testCases[0] || { input: "", expected: "" }
   const tc2 = question.testCases[1] || { input: "", expected: "" }
@@ -91,16 +93,24 @@ export default function EditQuestionForm({ roundId, question }: { roundId: strin
             </h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-garamond text-[#cbd5e1] mb-1">JavaScript:</label>
-                <textarea className="w-full rounded-lg border border-[#8b7355]/40 bg-[#070b14] p-3 text-xs font-garamond text-[#cbd5e1] focus:border-[#ffd700] focus:outline-none" name="jsStarter" rows={4} defaultValue={jsStarter} />
+                <label className="block text-xs font-garamond text-[#cbd5e1] mb-1">C (GCC):</label>
+                <textarea className="w-full rounded-lg border border-[#8b7355]/40 bg-[#070b14] p-3 text-xs font-garamond text-[#cbd5e1] focus:border-[#ffd700] focus:outline-none" name="cStarter" rows={4} defaultValue={cStarter} />
               </div>
               <div>
-                <label className="block text-xs font-garamond text-[#cbd5e1] mb-1">Python:</label>
+                <label className="block text-xs font-garamond text-[#cbd5e1] mb-1">C++ (G++ 20):</label>
+                <textarea className="w-full rounded-lg border border-[#8b7355]/40 bg-[#070b14] p-3 text-xs font-garamond text-[#cbd5e1] focus:border-[#ffd700] focus:outline-none" name="cppStarter" rows={4} defaultValue={cppStarter} />
+              </div>
+              <div>
+                <label className="block text-xs font-garamond text-[#cbd5e1] mb-1">Java (OpenJDK 22):</label>
+                <textarea className="w-full rounded-lg border border-[#8b7355]/40 bg-[#070b14] p-3 text-xs font-garamond text-[#cbd5e1] focus:border-[#ffd700] focus:outline-none" name="javaStarter" rows={4} defaultValue={javaStarter} />
+              </div>
+              <div>
+                <label className="block text-xs font-garamond text-[#cbd5e1] mb-1">Python 3:</label>
                 <textarea className="w-full rounded-lg border border-[#8b7355]/40 bg-[#070b14] p-3 text-xs font-garamond text-[#cbd5e1] focus:border-[#ffd700] focus:outline-none" name="pyStarter" rows={4} defaultValue={pyStarter} />
               </div>
               <div>
-                <label className="block text-xs font-garamond text-[#cbd5e1] mb-1">C++:</label>
-                <textarea className="w-full rounded-lg border border-[#8b7355]/40 bg-[#070b14] p-3 text-xs font-garamond text-[#cbd5e1] focus:border-[#ffd700] focus:outline-none" name="cppStarter" rows={4} defaultValue={cppStarter} />
+                <label className="block text-xs font-garamond text-[#cbd5e1] mb-1">JavaScript (Node.js):</label>
+                <textarea className="w-full rounded-lg border border-[#8b7355]/40 bg-[#070b14] p-3 text-xs font-garamond text-[#cbd5e1] focus:border-[#ffd700] focus:outline-none" name="jsStarter" rows={4} defaultValue={jsStarter} />
               </div>
             </div>
           </div>

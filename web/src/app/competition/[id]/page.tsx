@@ -24,7 +24,8 @@ import {
   Skull,
   Ship,
   Maximize2,
-  CheckCircle2
+  CheckCircle2,
+  RotateCcw
 } from "lucide-react"
 
 interface QuestionData {
@@ -44,6 +45,114 @@ interface RoundData {
   questions: QuestionData[]
 }
 
+function getDefaultStarterCode(lang: string, title?: string): string {
+  const norm = (lang || "").toLowerCase()
+  if (norm === "c") {
+    return `// Echona 2K26 — Pirate Code Championship
+// Challenge: ${title || "Pirate Trial"}
+// Compiler: GCC 14+ (C17 / C23)
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+int main() {
+    char input[4096];
+    if (fgets(input, sizeof(input), stdin)) {
+        input[strcspn(input, "\\r\\n")] = 0;
+        // Write your solution here
+        printf("%s\\n", input);
+    }
+    return 0;
+}
+`
+  }
+  if (norm === "cpp") {
+    return `// Echona 2K26 — Pirate Code Championship
+// Challenge: ${title || "Pirate Trial"}
+// Compiler: G++ 14+ (C++20 / C++23)
+
+#include <iostream>
+#include <string>
+#include <vector>
+#include <algorithm>
+
+using namespace std;
+
+int main() {
+    ios_base::sync_with_stdio(false);
+    cin.tie(NULL);
+    string line;
+    if (getline(cin, line)) {
+        // Write your solution here
+        cout << line << "\\n";
+    }
+    return 0;
+}
+`
+  }
+  if (norm === "java") {
+    return `// Echona 2K26 — Pirate Code Championship
+// Challenge: ${title || "Pirate Trial"}
+// Compiler: OpenJDK 22+ (Java 22)
+
+import java.util.*;
+import java.io.*;
+
+public class Main {
+    public static void main(String[] args) throws Exception {
+        BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+        String line = reader.readLine();
+        if (line != null) {
+            // Write your solution here
+            System.out.println(line);
+        }
+    }
+}
+`
+  }
+  if (norm === "python") {
+    return `# Echona 2K26 — Pirate Code Championship
+# Challenge: ${title || "Pirate Trial"}
+# Python 3.12+
+import sys
+
+def solve():
+    raw_input = sys.stdin.read().strip()
+    # Write your solution here
+    print(raw_input)
+
+if __name__ == "__main__":
+    solve()
+`
+  }
+  return `// Echona 2K26 — Pirate Code Championship
+// Challenge: ${title || "Pirate Trial"}
+// JavaScript (Node.js)
+const fs = require('fs');
+
+function solve(input) {
+  // Write your code here
+  return input;
+}
+
+const input = fs.readFileSync(0, 'utf-8').trim();
+console.log(solve(input));
+`
+}
+
+function getQuestionStarterCode(q: QuestionData | undefined, lang: string): string {
+  if (!q) return getDefaultStarterCode(lang)
+  const norm = (lang || "").toLowerCase()
+  const found = q.starterCodes?.find(
+    (s) => s.language.toLowerCase() === norm
+  )
+  if (found?.code && found.code.trim().length > 0) {
+    return found.code
+  }
+  return getDefaultStarterCode(lang, q.title)
+}
+
 export default function CompetitionArenaPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: competitionId } = use(params)
   const { socket, connected } = useRealtime(competitionId)
@@ -54,7 +163,7 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
   const [splashRoundName, setSplashRoundName] = useState("Quest for the Lost Treasure")
   const [round, setRound] = useState<RoundData | null>(null)
   const [selectedQuestionIndex, setSelectedQuestionIndex] = useState(0)
-  const [language, setLanguage] = useState("javascript")
+  const [language, setLanguage] = useState("c")
   const [codes, setCodes] = useState<Record<string, string>>({})
   const [attempts, setAttempts] = useState<Record<string, number>>({})
   const [submissions, setSubmissions] = useState<Record<string, string>>({})
@@ -129,12 +238,19 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
           setSubmissions(data.userState.submissions || {})
           const newCodes: Record<string, string> = {}
           data.round.questions.forEach((q: QuestionData) => {
+            q.starterCodes?.forEach((sc) => {
+              newCodes[`${q.id}_${sc.language.toLowerCase()}`] = sc.code
+            })
             const draft = data.userState.drafts?.[q.id]
             if (draft?.code) {
               newCodes[q.id] = draft.code
+              if (draft.language) {
+                newCodes[`${q.id}_${draft.language.toLowerCase()}`] = draft.code
+              }
             } else {
-              const starter = q.starterCodes.find((s) => s.language === "javascript") || q.starterCodes[0]
-              newCodes[q.id] = starter?.code || `// Solution for ${q.title}\nfunction solve(input) {\n  return "";\n}\n`
+              const starter = getQuestionStarterCode(q, language)
+              newCodes[q.id] = starter
+              newCodes[`${q.id}_${language.toLowerCase()}`] = starter
             }
           })
           setCodes(newCodes)
@@ -534,8 +650,12 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
         setRound({ id: data.roundId, name: data.roundName, order: data.roundOrder, maxCompileAttempts: data.maxCompileAttempts, questions: data.questions })
         const initialCodes: Record<string, string> = {}
         data.questions.forEach((q: QuestionData) => {
-          const starter = q.starterCodes?.find((s) => s.language === "javascript") || q.starterCodes?.[0]
-          initialCodes[q.id] = starter?.code || `// Solution for ${q.title}\nfunction solve(input) {\n  return "";\n}\n`
+          q.starterCodes?.forEach((sc: any) => {
+            initialCodes[`${q.id}_${sc.language.toLowerCase()}`] = sc.code
+          })
+          const starter = getQuestionStarterCode(q, language)
+          initialCodes[q.id] = starter
+          initialCodes[`${q.id}_${language.toLowerCase()}`] = starter
         })
         setCodes(initialCodes)
         setSelectedQuestionIndex(0)
@@ -612,16 +732,58 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
   }
 
   const currentQuestion = round?.questions[selectedQuestionIndex]
-  const currentCode = currentQuestion ? (codes[currentQuestion.id] || "") : ""
+  const currentCodeKey = currentQuestion ? `${currentQuestion.id}_${language.toLowerCase()}` : ""
+  const currentCode = currentQuestion
+    ? (codes[currentCodeKey] ?? codes[currentQuestion.id] ?? getQuestionStarterCode(currentQuestion, language))
+    : ""
   const currentAttempts = currentQuestion ? (attempts[currentQuestion.id] || 0) : 0
   const maxAttempts = round?.maxCompileAttempts || 5
   const isQuestionSubmitted = currentQuestion && submissions[currentQuestion.id]
   const attemptsLeft = maxAttempts - currentAttempts
 
+  const handleLanguageChange = (newLang: string) => {
+    setLanguage(newLang)
+    if (!currentQuestion) return
+
+    const langKey = `${currentQuestion.id}_${newLang.toLowerCase()}`
+    const starter = getQuestionStarterCode(currentQuestion, newLang)
+    
+    // Live update editor to show the selected language's startup code feeded in the question
+    const existingCode = codes[langKey]
+    const codeToDisplay = (existingCode !== undefined && existingCode.trim().length > 0) ? existingCode : starter
+
+    setCodes((prev) => ({
+      ...prev,
+      [langKey]: codeToDisplay,
+      [currentQuestion.id]: codeToDisplay
+    }))
+
+    saveDraft(currentQuestion.id, newLang, codeToDisplay).catch(() => {})
+    setOutput("")
+  }
+
+  const handleResetToStarterCode = () => {
+    if (!currentQuestion) return
+    const starter = getQuestionStarterCode(currentQuestion, language)
+    const langKey = `${currentQuestion.id}_${language.toLowerCase()}`
+    setCodes((prev) => ({
+      ...prev,
+      [langKey]: starter,
+      [currentQuestion.id]: starter
+    }))
+    saveDraft(currentQuestion.id, language, starter).catch(() => {})
+    setOutput(`[STARTER CODE RESTORED] Editor code reset to official ${language.toUpperCase()} starter template.\n`)
+  }
+
   const handleCodeChange = (newVal: string | undefined) => {
     if (!currentQuestion) return
     const updated = newVal || ""
-    setCodes((prev) => ({ ...prev, [currentQuestion.id]: updated }))
+    const langKey = `${currentQuestion.id}_${language.toLowerCase()}`
+    setCodes((prev) => ({
+      ...prev,
+      [langKey]: updated,
+      [currentQuestion.id]: updated
+    }))
     saveDraft(currentQuestion.id, language, updated).catch(() => {})
   }
 
@@ -1524,13 +1686,24 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
                   </svg>
                   <select
                     value={language}
-                    onChange={(e) => setLanguage(e.target.value)}
-                    className="bg-transparent text-[#d4af37] text-xs font-cinzel font-bold uppercase tracking-wider outline-none cursor-pointer"
+                    onChange={(e) => handleLanguageChange(e.target.value)}
+                    className="bg-[#1a1714] text-[#d4af37] text-xs font-cinzel font-bold uppercase tracking-wider outline-none cursor-pointer border border-[#d4af37]/30 rounded px-2 py-0.5 hover:border-[#d4af37]/60 transition-colors"
                   >
-                    <option value="javascript" className="bg-[#1a1714]">JavaScript</option>
-                    <option value="python" className="bg-[#1a1714]">Python 3</option>
-                    <option value="cpp" className="bg-[#1a1714]">C++ 20</option>
+                    <option value="c" className="bg-[#1a1714] text-[#f4ede0]">C (GCC)</option>
+                    <option value="cpp" className="bg-[#1a1714] text-[#f4ede0]">C++ (G++ 20)</option>
+                    <option value="java" className="bg-[#1a1714] text-[#f4ede0]">Java (OpenJDK 22)</option>
+                    <option value="python" className="bg-[#1a1714] text-[#f4ede0]">Python 3</option>
+                    <option value="javascript" className="bg-[#1a1714] text-[#f4ede0]">JavaScript (Node.js)</option>
                   </select>
+
+                  <button
+                    onClick={handleResetToStarterCode}
+                    title="Reset editor code to official startup code for this challenge"
+                    className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-cinzel font-bold text-[#d4af37]/75 hover:text-[#ffd700] border border-[#d4af37]/20 hover:border-[#d4af37]/50 bg-[#d4af37]/5 hover:bg-[#d4af37]/15 transition-all"
+                  >
+                    <RotateCcw className="w-2.5 h-2.5" />
+                    <span className="hidden sm:inline">RESET STARTER</span>
+                  </button>
                 </div>
                 
                 <div className="flex items-center gap-2">
@@ -1546,7 +1719,7 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
                 <Editor
                   height="100%"
                   theme="vs-dark"
-                  language={language === "cpp" ? "cpp" : language}
+                  language={language === "cpp" ? "cpp" : language === "c" ? "c" : language === "java" ? "java" : language === "python" ? "python" : "javascript"}
                   value={currentCode}
                   onChange={handleCodeChange}
                   onMount={handleEditorMount}
@@ -1626,8 +1799,19 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
                   key={q.id}
                   onClick={() => {
                     setSelectedQuestionIndex(idx)
-                    setLanguage("javascript")
                     setOutput("")
+                    const targetQ = round?.questions[idx]
+                    if (targetQ) {
+                      const langKey = `${targetQ.id}_${language.toLowerCase()}`
+                      if (!codes[langKey] && !codes[targetQ.id]) {
+                        const starter = getQuestionStarterCode(targetQ, language)
+                        setCodes((prev) => ({
+                          ...prev,
+                          [langKey]: starter,
+                          [targetQ.id]: starter
+                        }))
+                      }
+                    }
                   }}
                   className={`flex items-center justify-center w-8 h-8 rounded-full text-xs font-cinzel font-bold transition-all ${
                     isSelected

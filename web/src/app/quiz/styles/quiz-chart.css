@@ -1,0 +1,1001 @@
+/* ═══════════════════════════════════════════════════════
+   ECHONA VOYAGE — Quiz Chart Cinematic Experience
+   ═══════════════════════════════════════════════════════ */
+
+/* ── ROOT CONTAINER ── */
+
+.chart-stage {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--voyage-ocean, #050d1a);
+}
+
+/* ── BACKGROUND ── */
+
+.chart-bg {
+  position: absolute;
+  inset: -10px;
+  background-image: url('/harbor-night.jpg');
+  background-size: cover;
+  background-position: center 40%;
+  filter: brightness(0.35) saturate(0.7) sepia(0.15);
+  z-index: 0;
+}
+
+.chart-bg-vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, transparent 30%, rgba(5, 13, 26, 0.7) 100%);
+  z-index: 1;
+}
+
+.chart-bg-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(5, 13, 26, 0.4);
+  z-index: 2;
+  transition: background 0.6s ease;
+}
+
+.chart-bg-overlay--dim {
+  background: rgba(5, 13, 26, 0.55);
+}
+
+/* ── FOG ── */
+
+.chart-fog {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.chart-fog__layer {
+  position: absolute;
+  width: 200%;
+  height: 100%;
+  opacity: 0.04;
+}
+
+.chart-fog__layer--1 {
+  background: radial-gradient(ellipse at 30% 60%, rgba(180, 200, 220, 0.15) 0%, transparent 50%);
+  animation: chart-fogDrift1 40s linear infinite;
+}
+
+.chart-fog__layer--2 {
+  background: radial-gradient(ellipse at 70% 40%, rgba(180, 200, 220, 0.1) 0%, transparent 45%);
+  animation: chart-fogDrift2 55s linear infinite;
+}
+
+/* ── HEADER ── */
+
+.chart-header {
+  position: relative;
+  z-index: 50;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 28px;
+  pointer-events: auto;
+  opacity: 0;
+  animation: chart-headerEnter 0.7s ease-out 0.3s forwards;
+}
+
+.chart-header__left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.chart-header__brand {
+  font-family: 'Cinzel Decorative', serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: rgba(199, 160, 74, 0.75);
+  letter-spacing: 0.12em;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+}
+
+.chart-header__round {
+  font-family: 'Cinzel', serif;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--voyage-bone);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+}
+
+.chart-header__question-count {
+  font-family: 'IM Fell English', serif;
+  font-size: 12px;
+  color: rgba(199, 160, 74, 0.5);
+  margin-top: 1px;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+
+.chart-header__right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* ── CHRONOMETER (Timer) ── */
+
+.chart-chronometer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 18px;
+  background: linear-gradient(to bottom, rgba(43, 23, 16, 0.95), rgba(21, 13, 8, 0.98));
+  border: 1px solid rgba(139, 94, 52, 0.5);
+  border-radius: 3px;
+  box-shadow:
+    inset 0 1px 0 rgba(199, 160, 74, 0.15),
+    0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.chart-chronometer__icon {
+  width: 14px;
+  height: 14px;
+  color: rgba(199, 160, 74, 0.6);
+}
+
+.chart-chronometer__time {
+  font-family: 'Cinzel', serif;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--voyage-brass);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+  min-width: 56px;
+  text-align: center;
+}
+
+.chart-chronometer--urgent {
+  border-color: rgba(122, 31, 31, 0.8);
+  box-shadow:
+    inset 0 1px 0 rgba(180, 50, 50, 0.15),
+    0 4px 12px rgba(122, 31, 31, 0.3);
+}
+
+.chart-chronometer--urgent .chart-chronometer__time {
+  color: #C75050;
+  animation: chart-urgentPulse 1.5s ease-in-out infinite;
+}
+
+/* ── SUBMIT BUTTON ── */
+
+.chart-submit-btn {
+  font-family: 'Cinzel', serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(199, 160, 74, 0.7);
+  background: linear-gradient(to bottom, rgba(43, 23, 16, 0.95), rgba(21, 13, 8, 0.98));
+  border: 1px solid rgba(139, 94, 52, 0.5);
+  padding: 10px 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border-radius: 2px;
+  box-shadow:
+    inset 0 1px 0 rgba(199, 160, 74, 0.12),
+    0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.chart-submit-btn:hover {
+  color: var(--voyage-brass);
+  border-color: rgba(199, 160, 74, 0.6);
+  box-shadow:
+    inset 0 1px 0 rgba(199, 160, 74, 0.25),
+    0 4px 16px rgba(199, 160, 74, 0.1);
+}
+
+.chart-saving-indicator {
+  font-family: 'IM Fell English', serif;
+  font-size: 11px;
+  color: rgba(199, 160, 74, 0.5);
+  font-style: italic;
+  animation: chart-savingPulse 1.2s ease-in-out infinite;
+}
+
+/* ═══════════════════════════════════════════════════════
+   CHART WRAPPER — The scroll unroll container
+   ═══════════════════════════════════════════════════════ */
+
+.chart-area {
+  position: relative;
+  z-index: 10;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 24px;
+}
+
+.chart-scroll {
+  position: relative;
+  width: 72vw;
+  max-width: 780px;
+  will-change: transform, opacity;
+}
+
+/* ── ANIMATION STATES ── */
+
+.chart-scroll--entering {
+  opacity: 0;
+  transform: translateX(-80vw) scale(0.85);
+  animation: chart-slideIn 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.chart-scroll--opening {
+  animation: chart-unroll 0.9s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.chart-scroll--ready {
+  opacity: 1;
+  transform: translateX(0) scale(1);
+}
+
+.chart-scroll--closing {
+  animation: chart-rollUp 0.6s cubic-bezier(0.55, 0, 1, 0.45) forwards;
+}
+
+.chart-scroll--exiting {
+  animation: chart-slideOut 0.5s cubic-bezier(0.55, 0, 1, 0.45) forwards;
+}
+
+/* ── SCROLL FRAME (the PNG) ── */
+
+.chart-scroll__frame {
+  position: relative;
+  background-image: url('/scrool.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  padding: 13% 10% 14% 10%;
+  filter: drop-shadow(0 15px 40px rgba(0, 0, 0, 0.7)) drop-shadow(0 6px 16px rgba(0, 0, 0, 0.5));
+  transition: filter 0.4s ease;
+}
+
+/* Lantern glow on the scroll */
+.chart-scroll__frame::before {
+  content: '';
+  position: absolute;
+  top: 40%;
+  left: -30px;
+  width: 140px;
+  height: 200px;
+  background: radial-gradient(ellipse at center, rgba(212, 160, 65, 0.12) 0%, transparent 60%);
+  border-radius: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  z-index: 10;
+  animation: chart-lanternFlicker 3.5s ease-in-out infinite;
+}
+
+/* ── CONTENT AREA ── */
+
+.chart-scroll__content {
+  position: relative;
+  z-index: 5;
+  text-align: center;
+  overflow: hidden;
+}
+
+/* ═══════════════════════════════════════════════════════
+   QUESTION CONTENT
+   ═══════════════════════════════════════════════════════ */
+
+.chart-question-number {
+  font-family: 'Cinzel', serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.4em;
+  color: rgba(90, 23, 18, 0.55);
+  text-transform: uppercase;
+  margin-bottom: 16px;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.4s ease, transform 0.4s ease, filter 0.4s ease;
+  filter: blur(2px);
+}
+
+.chart-question-number--visible {
+  opacity: 1;
+  transform: translateY(0);
+  filter: blur(0);
+}
+
+.chart-question-text {
+  font-family: 'IM Fell English', serif;
+  font-size: 19px;
+  line-height: 1.55;
+  color: #2B1710;
+  margin-bottom: 24px;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.5s ease 0.1s, transform 0.5s ease 0.1s, filter 0.5s ease 0.1s;
+  filter: blur(2px);
+}
+
+.chart-question-text--visible {
+  opacity: 1;
+  transform: translateY(0);
+  filter: blur(0);
+}
+
+/* ── DIVIDER ── */
+
+.chart-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin: 0 auto 20px;
+  max-width: 200px;
+  opacity: 0;
+  transition: opacity 0.4s ease 0.15s;
+}
+
+.chart-divider--visible {
+  opacity: 1;
+}
+
+.chart-divider__line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(139, 94, 52, 0.5), transparent);
+}
+
+.chart-divider__diamond {
+  width: 5px;
+  height: 5px;
+  background: rgba(139, 94, 52, 0.4);
+  transform: rotate(45deg);
+  flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════════════════════
+   ANSWER OPTIONS
+   ═══════════════════════════════════════════════════════ */
+
+.chart-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.chart-option {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 18px;
+  background: rgba(43, 23, 16, 0.08);
+  border: 1px solid rgba(139, 94, 52, 0.25);
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  text-align: left;
+  opacity: 0;
+  transform: translateY(8px);
+
+  /* staggered reveal handled by inline style */
+}
+
+.chart-option--visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.chart-option:hover {
+  background: rgba(199, 160, 74, 0.08);
+  border-color: rgba(199, 160, 74, 0.4);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.chart-option--selected {
+  background: rgba(199, 160, 74, 0.12);
+  border-color: rgba(199, 160, 74, 0.6);
+  box-shadow: 0 2px 12px rgba(199, 160, 74, 0.1);
+}
+
+.chart-option--selected:hover {
+  background: rgba(199, 160, 74, 0.15);
+}
+
+/* Option letter */
+.chart-option__letter {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Cinzel', serif;
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(139, 94, 52, 0.6);
+  border: 1px solid rgba(139, 94, 52, 0.3);
+  border-radius: 50%;
+  transition: all 0.25s ease;
+}
+
+.chart-option--selected .chart-option__letter {
+  color: var(--voyage-brass);
+  border-color: var(--voyage-brass);
+  background: rgba(199, 160, 74, 0.15);
+  box-shadow: 0 0 8px rgba(199, 160, 74, 0.2);
+}
+
+/* Brass compass marker for selected */
+.chart-option__marker {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 8px;
+  height: 8px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.chart-option--selected .chart-option__marker {
+  opacity: 1;
+}
+
+.chart-option__marker-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--voyage-brass);
+  box-shadow: 0 0 6px rgba(199, 160, 74, 0.4);
+}
+
+/* Option text */
+.chart-option__text {
+  font-family: 'IM Fell English', serif;
+  font-size: 15px;
+  color: #3D2317;
+  flex: 1;
+}
+
+.chart-option--selected .chart-option__text {
+  color: #1A0D08;
+}
+
+/* Option wrapper for position: relative */
+.chart-option {
+  position: relative;
+}
+
+/* ═══════════════════════════════════════════════════════
+   NAVIGATION BAR (inside chart bottom)
+   ═══════════════════════════════════════════════════════ */
+
+.chart-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(139, 94, 52, 0.2);
+  opacity: 0;
+  transition: opacity 0.4s ease 0.3s;
+}
+
+.chart-nav--visible {
+  opacity: 1;
+}
+
+.chart-nav__btn {
+  font-family: 'Cinzel', serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: rgba(90, 23, 18, 0.6);
+  background: rgba(43, 23, 16, 0.08);
+  border: 1px solid rgba(139, 94, 52, 0.3);
+  padding: 8px 20px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  border-radius: 2px;
+}
+
+.chart-nav__btn:hover:not(:disabled) {
+  color: #2B1710;
+  border-color: rgba(139, 94, 52, 0.5);
+  background: rgba(199, 160, 74, 0.08);
+}
+
+.chart-nav__btn:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+
+.chart-nav__btn--primary {
+  color: rgba(43, 23, 16, 0.85);
+  background: rgba(199, 160, 74, 0.1);
+  border-color: rgba(199, 160, 74, 0.4);
+}
+
+.chart-nav__btn--primary:hover {
+  background: rgba(199, 160, 74, 0.18);
+  border-color: rgba(199, 160, 74, 0.6);
+}
+
+.chart-nav__btn--finish {
+  color: rgba(43, 23, 16, 0.85);
+  background: rgba(199, 160, 74, 0.12);
+  border-color: rgba(199, 160, 74, 0.5);
+}
+
+/* ═══════════════════════════════════════════════════════
+   QUESTION NAVIGATOR (bottom bar)
+   ═══════════════════════════════════════════════════════ */
+
+.chart-navigator {
+  position: relative;
+  z-index: 50;
+  padding: 12px 28px;
+  display: flex;
+  justify-content: center;
+  opacity: 0;
+  animation: chart-headerEnter 0.6s ease-out 0.5s forwards;
+}
+
+.chart-navigator__inner {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 4px 0;
+  scrollbar-width: none;
+}
+
+.chart-navigator__inner::-webkit-scrollbar {
+  display: none;
+}
+
+.chart-navigator__dot {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Cinzel', serif;
+  font-size: 10px;
+  font-weight: 700;
+  color: rgba(199, 160, 74, 0.35);
+  background: rgba(43, 23, 16, 0.6);
+  border: 1px solid rgba(139, 94, 52, 0.2);
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.chart-navigator__dot:hover {
+  color: rgba(199, 160, 74, 0.6);
+  border-color: rgba(139, 94, 52, 0.4);
+}
+
+.chart-navigator__dot--active {
+  color: var(--voyage-brass);
+  background: rgba(43, 23, 16, 0.9);
+  border-color: rgba(199, 160, 74, 0.6);
+  box-shadow: 0 0 10px rgba(199, 160, 74, 0.15);
+}
+
+.chart-navigator__dot--answered {
+  color: rgba(199, 160, 74, 0.6);
+  border-color: rgba(199, 160, 74, 0.35);
+  background: rgba(199, 160, 74, 0.08);
+}
+
+/* ═══════════════════════════════════════════════════════
+   LOADING STATE
+   ═══════════════════════════════════════════════════════ */
+
+.chart-loading {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--voyage-ocean);
+}
+
+.chart-loading__compass {
+  width: 48px;
+  height: 48px;
+  border: 1px solid rgba(199, 160, 74, 0.3);
+  border-radius: 50%;
+  position: relative;
+  margin-bottom: 24px;
+}
+
+.chart-loading__needle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 2px;
+  height: 20px;
+  background: linear-gradient(to top, transparent, var(--voyage-brass));
+  transform-origin: bottom center;
+  transform: translate(-50%, -100%);
+  animation: chart-compassSpin 2.5s ease-in-out infinite;
+}
+
+.chart-loading__text {
+  font-family: 'Cinzel', serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.35em;
+  color: rgba(199, 160, 74, 0.6);
+  text-transform: uppercase;
+}
+
+.chart-loading__bar {
+  margin-top: 16px;
+  width: 120px;
+  height: 1px;
+  background: rgba(199, 160, 74, 0.15);
+  overflow: hidden;
+}
+
+.chart-loading__bar-fill {
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, var(--voyage-brass), transparent);
+  animation: chart-barSweep 1.5s ease-in-out infinite;
+}
+
+/* ═══════════════════════════════════════════════════════
+   CONFIRM MODAL
+   ═══════════════════════════════════════════════════════ */
+
+.chart-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  background: rgba(5, 13, 26, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: chart-fadeIn 0.3s ease-out;
+}
+
+.chart-modal {
+  background: linear-gradient(to bottom, #2B1D12, #150D08);
+  border: 1px solid rgba(139, 94, 52, 0.6);
+  padding: 32px 40px;
+  max-width: 400px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+  border-radius: 3px;
+}
+
+.chart-modal__title {
+  font-family: 'Cinzel', serif;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: var(--voyage-brass);
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
+.chart-modal__message {
+  font-family: 'IM Fell English', serif;
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--voyage-bone);
+  margin-bottom: 28px;
+}
+
+.chart-modal__actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.chart-modal__btn {
+  font-family: 'Cinzel', serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  padding: 10px 24px;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.chart-modal__btn--cancel {
+  color: rgba(199, 160, 74, 0.5);
+  background: transparent;
+  border: 1px solid rgba(139, 94, 52, 0.3);
+}
+
+.chart-modal__btn--cancel:hover {
+  color: rgba(199, 160, 74, 0.7);
+  border-color: rgba(139, 94, 52, 0.5);
+}
+
+.chart-modal__btn--confirm {
+  color: var(--voyage-brass);
+  background: rgba(199, 160, 74, 0.1);
+  border: 1px solid rgba(199, 160, 74, 0.5);
+}
+
+.chart-modal__btn--confirm:hover {
+  background: rgba(199, 160, 74, 0.2);
+  border-color: rgba(199, 160, 74, 0.7);
+}
+
+/* ═══════════════════════════════════════════════════════
+   KEYFRAME ANIMATIONS
+   ═══════════════════════════════════════════════════════ */
+
+@keyframes chart-slideIn {
+  0% {
+    opacity: 0;
+    transform: translateX(-60vw) scale(0.7);
+  }
+  60% {
+    opacity: 1;
+    transform: translateX(2vw) scale(0.98);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes chart-unroll {
+  0% {
+    clip-path: inset(0 85% 0 0);
+    opacity: 0.6;
+  }
+  30% {
+    clip-path: inset(0 60% 0 0);
+    opacity: 0.8;
+  }
+  70% {
+    clip-path: inset(0 15% 0 0);
+    opacity: 0.95;
+  }
+  100% {
+    clip-path: inset(0 0 0 0);
+    opacity: 1;
+  }
+}
+
+@keyframes chart-rollUp {
+  0% {
+    clip-path: inset(0 0 0 0);
+    opacity: 1;
+  }
+  50% {
+    clip-path: inset(0 65% 0 0);
+    opacity: 0.7;
+  }
+  100% {
+    clip-path: inset(0 95% 0 0);
+    opacity: 0.3;
+  }
+}
+
+@keyframes chart-slideOut {
+  0% {
+    opacity: 0.3;
+    transform: translateX(0) scale(0.95);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-70vw) scale(0.7);
+  }
+}
+
+@keyframes chart-headerEnter {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes chart-fogDrift1 {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+@keyframes chart-fogDrift2 {
+  from { transform: translateX(-50%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes chart-lanternFlicker {
+  0%, 100% { opacity: 0.6; }
+  20% { opacity: 0.72; }
+  40% { opacity: 0.58; }
+  60% { opacity: 0.78; }
+  80% { opacity: 0.55; }
+}
+
+@keyframes chart-urgentPulse {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+
+@keyframes chart-savingPulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.7; }
+}
+
+@keyframes chart-compassSpin {
+  0% { transform: translate(-50%, -100%) rotate(-20deg); }
+  25% { transform: translate(-50%, -100%) rotate(15deg); }
+  50% { transform: translate(-50%, -100%) rotate(-10deg); }
+  75% { transform: translate(-50%, -100%) rotate(5deg); }
+  100% { transform: translate(-50%, -100%) rotate(-20deg); }
+}
+
+@keyframes chart-barSweep {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(350%); }
+}
+
+@keyframes chart-fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ═══════════════════════════════════════════════════════
+   REDUCED MOTION
+   ═══════════════════════════════════════════════════════ */
+
+@media (prefers-reduced-motion: reduce) {
+  .chart-scroll--entering,
+  .chart-scroll--opening,
+  .chart-scroll--closing,
+  .chart-scroll--exiting {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+    clip-path: none !important;
+  }
+
+  .chart-question-number,
+  .chart-question-text,
+  .chart-option,
+  .chart-divider,
+  .chart-nav {
+    opacity: 1 !important;
+    transform: none !important;
+    filter: none !important;
+    transition: none !important;
+  }
+
+  .chart-fog__layer,
+  .chart-loading__needle,
+  .chart-loading__bar-fill {
+    animation: none !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   RESPONSIVE
+   ═══════════════════════════════════════════════════════ */
+
+@media (max-width: 1024px) {
+  .chart-scroll {
+    width: 82vw;
+    max-width: 650px;
+  }
+
+  .chart-question-text {
+    font-size: 17px;
+  }
+}
+
+@media (max-width: 768px) {
+  .chart-scroll {
+    width: 92vw;
+    max-width: 520px;
+  }
+
+  .chart-scroll__frame {
+    padding: 14% 10% 16% 10%;
+  }
+
+  .chart-header {
+    padding: 12px 16px;
+  }
+
+  .chart-header__brand {
+    font-size: 12px;
+  }
+
+  .chart-question-text {
+    font-size: 15px;
+  }
+
+  .chart-option {
+    padding: 10px 14px;
+    gap: 10px;
+  }
+
+  .chart-option__text {
+    font-size: 13px;
+  }
+
+  .chart-option__letter {
+    width: 24px;
+    height: 24px;
+    font-size: 10px;
+  }
+
+  .chart-chronometer__time {
+    font-size: 14px;
+  }
+
+  .chart-submit-btn {
+    font-size: 9px;
+    padding: 8px 14px;
+  }
+
+  .chart-nav__btn {
+    padding: 7px 14px;
+    font-size: 9px;
+  }
+}
+
+@media (max-width: 480px) {
+  .chart-scroll {
+    width: 96vw;
+    max-width: none;
+  }
+
+  .chart-scroll__frame {
+    padding: 16% 8% 18% 8%;
+  }
+
+  .chart-header {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .chart-header__right {
+    gap: 8px;
+  }
+
+  .chart-question-text {
+    font-size: 14px;
+    margin-bottom: 16px;
+  }
+
+  .chart-option__letter {
+    width: 22px;
+    height: 22px;
+  }
+
+  .chart-option__text {
+    font-size: 12px;
+  }
+
+  .chart-navigator__dot {
+    width: 28px;
+    height: 28px;
+    font-size: 9px;
+  }
+}

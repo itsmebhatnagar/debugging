@@ -130,6 +130,8 @@ export async function createQuestionWithStarterCodes(roundId: string, formData: 
   const jsStarter = (formData.get("jsStarter") as string) || ""
   const pyStarter = (formData.get("pyStarter") as string) || ""
   const cppStarter = (formData.get("cppStarter") as string) || ""
+  const cStarter = (formData.get("cStarter") as string) || ""
+  const javaStarter = (formData.get("javaStarter") as string) || ""
 
   const testInput1 = (formData.get("testInput1") as string) || ""
   const testExpected1 = (formData.get("testExpected1") as string) || ""
@@ -150,9 +152,19 @@ export async function createQuestionWithStarterCodes(roundId: string, formData: 
   })
 
   // Starter codes
-  if (jsStarter.trim()) {
+  if (cStarter.trim()) {
     await prisma.starterCode.create({
-      data: { questionId: question.id, language: "javascript", code: jsStarter }
+      data: { questionId: question.id, language: "c", code: cStarter }
+    })
+  }
+  if (cppStarter.trim()) {
+    await prisma.starterCode.create({
+      data: { questionId: question.id, language: "cpp", code: cppStarter }
+    })
+  }
+  if (javaStarter.trim()) {
+    await prisma.starterCode.create({
+      data: { questionId: question.id, language: "java", code: javaStarter }
     })
   }
   if (pyStarter.trim()) {
@@ -160,9 +172,9 @@ export async function createQuestionWithStarterCodes(roundId: string, formData: 
       data: { questionId: question.id, language: "python", code: pyStarter }
     })
   }
-  if (cppStarter.trim()) {
+  if (jsStarter.trim()) {
     await prisma.starterCode.create({
-      data: { questionId: question.id, language: "cpp", code: cppStarter }
+      data: { questionId: question.id, language: "javascript", code: jsStarter }
     })
   }
 
@@ -201,6 +213,8 @@ export async function updateQuestionWithStarterCodes(questionId: string, formDat
   const jsStarter = (formData.get("jsStarter") as string) || ""
   const pyStarter = (formData.get("pyStarter") as string) || ""
   const cppStarter = (formData.get("cppStarter") as string) || ""
+  const cStarter = (formData.get("cStarter") as string) || ""
+  const javaStarter = (formData.get("javaStarter") as string) || ""
 
   const testInput1 = (formData.get("testInput1") as string) || ""
   const testExpected1 = (formData.get("testExpected1") as string) || ""
@@ -227,9 +241,19 @@ export async function updateQuestionWithStarterCodes(questionId: string, formDat
   await prisma.testCase.deleteMany({ where: { questionId } })
 
   // Re-create Starter codes
-  if (jsStarter.trim()) {
+  if (cStarter.trim()) {
     await prisma.starterCode.create({
-      data: { questionId: question.id, language: "javascript", code: jsStarter }
+      data: { questionId: question.id, language: "c", code: cStarter }
+    })
+  }
+  if (cppStarter.trim()) {
+    await prisma.starterCode.create({
+      data: { questionId: question.id, language: "cpp", code: cppStarter }
+    })
+  }
+  if (javaStarter.trim()) {
+    await prisma.starterCode.create({
+      data: { questionId: question.id, language: "java", code: javaStarter }
     })
   }
   if (pyStarter.trim()) {
@@ -237,9 +261,9 @@ export async function updateQuestionWithStarterCodes(questionId: string, formDat
       data: { questionId: question.id, language: "python", code: pyStarter }
     })
   }
-  if (cppStarter.trim()) {
+  if (jsStarter.trim()) {
     await prisma.starterCode.create({
-      data: { questionId: question.id, language: "cpp", code: cppStarter }
+      data: { questionId: question.id, language: "javascript", code: jsStarter }
     })
   }
 
