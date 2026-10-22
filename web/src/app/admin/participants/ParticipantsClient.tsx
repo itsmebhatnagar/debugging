@@ -276,7 +276,7 @@ export function ParticipantsClient({ initialParticipants, competitions }: Partic
             disabled={isBulkLoading}
             className="text-[9px] sm:text-[10px] px-2.5 py-1.5 border-[#C7A04A]/40 text-[#C7A04A]"
           >
-            ⚓ RESTORE SAMPLE CREW
+            RESTORE SAMPLE CREW
           </EchonaButton>
           <EchonaButton 
             variant="secondary" 
@@ -284,7 +284,7 @@ export function ParticipantsClient({ initialParticipants, competitions }: Partic
             disabled={isBulkLoading}
             className="text-[9px] sm:text-[10px] px-2.5 py-1.5"
           >
-            + ENROLL ALL USERS
+            ENROLL ALL USERS
           </EchonaButton>
           <EchonaButton 
             variant="secondary" 
@@ -292,7 +292,7 @@ export function ParticipantsClient({ initialParticipants, competitions }: Partic
             disabled={isBulkLoading}
             className="text-[9px] sm:text-[10px] px-2.5 py-1.5 border-amber-500/50 text-amber-300"
           >
-            ⟳ SET ALL WAITING
+            SET ALL WAITING
           </EchonaButton>
         </div>
       </header>
@@ -599,7 +599,7 @@ export function ParticipantsClient({ initialParticipants, competitions }: Partic
             </div>
             {deleteTarget?.role === "ADMIN" && (
               <div className="mt-2.5 text-[10px] bg-amber-500/20 border border-amber-500/50 text-amber-300 px-2 py-1 rounded-sm inline-block font-bold tracking-wider">
-                ⚠️ NOTICE: This user account has an ADMIN role.
+                NOTICE: This user account has an ADMIN role.
               </div>
             )}
           </div>
@@ -617,7 +617,7 @@ export function ParticipantsClient({ initialParticipants, competitions }: Partic
               className="flex flex-col items-start p-3 bg-[#17100C] border border-[#8B5E34] hover:border-[#C7A04A] text-left rounded-sm transition-all group disabled:opacity-50 shadow-md"
             >
               <span className="text-xs font-bold text-[#F4E7C7] group-hover:text-[#E2C36A] uppercase tracking-wider flex items-center gap-1.5">
-                ⚓ Remove From Fleet Only
+                Remove From Fleet Only
               </span>
               <span className="text-[10px] text-[#E7D19A]/70 mt-1.5 leading-snug">
                 Removes entry from this competition fleet. The user account and login remain active.
@@ -632,7 +632,7 @@ export function ParticipantsClient({ initialParticipants, competitions }: Partic
               className="flex flex-col items-start p-3 bg-red-950/80 border border-red-600 hover:border-red-400 text-left rounded-sm transition-all group disabled:opacity-50 shadow-md"
             >
               <span className="text-xs font-bold text-red-300 group-hover:text-red-100 uppercase tracking-wider flex items-center gap-1.5">
-                ☠️ Delete From Database
+                Delete From Database
               </span>
               <span className="text-[10px] text-red-200/80 mt-1.5 leading-snug">
                 Permanent cascade purge. Deletes user account, submissions, scores, draft code, and login credentials.
