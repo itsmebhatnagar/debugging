@@ -154,71 +154,13 @@ export async function activateRound(competitionId: string, roundOrder: number = 
  * Force ends a round
  */
 export async function endRound(roundId: string) {
-  const roundToEnd = await prisma.round.findUnique({
+  const existingRound = await prisma.round.findUnique({
     where: { id: roundId },
-    include: { questions: { select: { id: true } } }
+    select: { status: true }
   })
 
-  if (!roundToEnd) throw new Error("Round not found")
-  if (roundToEnd.status !== "ACTIVE") throw new Error("Only an active stage can be ended")
-
-  const participants = await prisma.competitionParticipant.findMany({
-    where: { competitionId: roundToEnd.competitionId },
-    select: { userId: true }
-  })
-  const questionIds = roundToEnd.questions.map(question => question.id)
-  const userIds = participants.map(participant => participant.userId)
-
-  if (questionIds.length > 0 && userIds.length > 0) {
-    const [submitted, drafts] = await Promise.all([
-      prisma.submission.findMany({
-        where: {
-          userId: { in: userIds },
-          questionId: { in: questionIds },
-          status: { not: "PENDING" }
-        },
-        select: { userId: true, questionId: true }
-      }),
-      prisma.draftCode.findMany({
-        where: {
-          userId: { in: userIds },
-          questionId: { in: questionIds }
-        }
-      })
-    ])
-
-    const submittedKeys = new Set(submitted.map(item => `${item.userId}_${item.questionId}`))
-    const draftsByKey = new Map(drafts.map(draft => [`${draft.userId}_${draft.questionId}`, draft]))
-    const missingSubmissions = participants.flatMap(participant =>
-      roundToEnd.questions
-        .filter(question => !submittedKeys.has(`${participant.userId}_${question.id}`))
-        .map(question => {
-          const draft = draftsByKey.get(`${participant.userId}_${question.id}`)
-          const code = draft?.language === CODE_LANGUAGE ? draft.code : C_STARTER_CODE
-          return { userId: participant.userId, questionId: question.id, code }
-        })
-    )
-    const failures: string[] = []
-
-    for (let i = 0; i < missingSubmissions.length; i += 8) {
-      const results = await Promise.allSettled(
-        missingSubmissions.slice(i, i + 8).map(({ userId, questionId, code }) =>
-          submitSolution(userId, questionId, CODE_LANGUAGE, code, true)
-        )
-      )
-      results.forEach((result, index) => {
-        if (result.status === "rejected") {
-          const submission = missingSubmissions[i + index]
-          console.error(`Failed to auto-submit stage ${roundId} for user ${submission.userId}, question ${submission.questionId}:`, result.reason)
-          failures.push(submission.questionId)
-        }
-      })
-    }
-
-    if (failures.length > 0) {
-      throw new Error(`Could not auto-submit ${failures.length} response(s); the stage remains active. Please retry ending the stage.`)
-    }
-  }
+  if (!existingRound) throw new Error("Round not found")
+  if (existingRound.status !== "ACTIVE") throw new Error("Only an active stage can be ended")
 
   const round = await prisma.round.update({
     where: { id: roundId },

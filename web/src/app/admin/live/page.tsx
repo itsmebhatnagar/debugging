@@ -170,7 +170,7 @@ export default function LiveControlPage() {
         const res = await fetch(`/api/quizzes/rounds/${roundId}/end`, { method: 'POST', credentials: 'include' });
         const result = await res.json();
         if (!res.ok) throw new Error(result.error || 'Could not end stage.');
-        showToast('success', 'STAGE COMPLETED', 'Unsubmitted work was recorded and the stage has ended.');
+        showToast('success', 'STAGE ENDED', 'The active stage has been closed.');
         addLog(`Stage ${roundId} ended.`, 'success');
       } else {
         if (action === 'round:pause') showToast('warning', 'ROUND PAUSED', 'The expedition is currently halted.');
@@ -475,7 +475,7 @@ export default function LiveControlPage() {
                                     onClick={() => setConfirmAction({
                                       action: 'round:end', roundId: round.id, 
                                       title: 'END VOYAGE STAGE?', 
-                                      message: 'Force ending this stage will auto-submit all unsubmitted crew answers immediately.',
+                                      message: 'This will end the stage immediately. Unsubmitted work will not be auto-submitted.',
                                       confirmText: 'END STAGE',
                                       isDanger: true
                                     })}
