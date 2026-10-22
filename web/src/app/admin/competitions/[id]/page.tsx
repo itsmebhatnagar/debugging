@@ -28,15 +28,15 @@ export default async function AdminCompetitionDetailPage({
   if (!comp) return notFound()
 
   return (
-    <div className="min-h-screen bg-[#1a1a1a] p-8 text-[#d4cbb3] font-sans">
+    <div className="p-4 sm:p-6 lg:p-7 max-w-[1500px] w-full mx-auto text-[#d4cbb3] font-sans space-y-4">
       <div className="mx-auto max-w-5xl">
-        <div className="mb-8 border-b-2 border-[#8b7355] pb-4">
-          <Link href="/admin/competitions" className="text-sm text-[#8b7355] hover:text-[#d4af37]">
+        <div className="mb-4 border-b-2 border-[#8b7355] pb-3">
+          <Link href="/admin/competitions" className="text-xs text-[#8b7355] hover:text-[#d4af37]">
             &larr; Back to Competitions
           </Link>
-          <h1 className="mt-2 text-4xl font-bold tracking-widest text-[#d4af37]">{comp.name}</h1>
-          <p className="mt-2 text-[#8b7355]">{comp.description}</p>
-          <div className="flex items-center gap-4 mt-4">
+          <h1 className="mt-1 text-2xl sm:text-3xl font-bold tracking-widest text-[#d4af37]">{comp.name}</h1>
+          <p className="mt-1 text-xs text-[#8b7355]">{comp.description}</p>
+          <div className="flex items-center gap-3 mt-3">
             <div className="inline-block rounded bg-[#2a2a2a] px-3 py-1 font-bold text-[#d4cbb3] border border-[#8b7355]">
               Status: {comp.status}
             </div>

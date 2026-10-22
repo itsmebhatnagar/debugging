@@ -265,20 +265,20 @@ export default function QuizManagerPage() {
   if (!quiz) return <EchonaEmptyState title="EXPEDITION LOST" description="The requested log entry could not be found." />;
 
   return (
-    <div className="p-6 md:p-10 max-w-7xl mx-auto">
+    <div className="p-4 sm:p-6 lg:p-7 max-w-[1500px] w-full mx-auto space-y-4">
       <ToastComponent />
       
       {/* ── Header ── */}
-      <header className="mb-10 border-b border-[#8B5E34]/30 pb-6 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+      <header className="mb-4 border-b border-[#8B5E34]/30 pb-3 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
-          <Link href="/admin/quizzes" className="text-[#C7A04A] hover:text-[#F4E7C7] text-[10px] font-bold tracking-[0.2em] uppercase flex items-center gap-2 mb-4 transition-colors">
-            <span className="text-lg">←</span> RETURN TO CAPTAIN'S LOG
+          <Link href="/admin/quizzes" className="text-[#C7A04A] hover:text-[#F4E7C7] text-[10px] font-bold tracking-[0.2em] uppercase flex items-center gap-2 mb-2 transition-colors">
+            <span className="text-base">←</span> RETURN TO CAPTAIN'S LOG
           </Link>
-          <div className="flex items-center gap-4">
-            <TreasureMap className="w-12 h-12 text-[#C7A04A]" />
+          <div className="flex items-center gap-3">
+            <TreasureMap className="w-8 h-8 sm:w-10 sm:h-10 text-[#C7A04A]" />
             <div>
-              <p className="text-[#8B5E34] text-[10px] font-bold tracking-[0.2em] uppercase mb-1">Expedition Log</p>
-              <h2 className="text-3xl text-[#F4E7C7] font-bold tracking-wider" style={{ fontFamily: '"Cinzel Decorative", serif' }}>
+              <p className="text-[#8B5E34] text-[9px] sm:text-[10px] font-bold tracking-[0.2em] uppercase mb-0.5">Expedition Log</p>
+              <h2 className="text-2xl sm:text-3xl text-[#F4E7C7] font-bold tracking-wider" style={{ fontFamily: '"Cinzel Decorative", serif' }}>
                 {quiz.name}
               </h2>
             </div>
@@ -480,46 +480,48 @@ export default function QuizManagerPage() {
 
               {/* Participants Table */}
               <div className="border border-[#8B5E34]/40 bg-[#080706] rounded-sm overflow-hidden shadow-xl">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-[#17100C] border-b border-[#C7A04A]/30">
-                      <th className="p-4 text-[10px] font-bold text-[#C7A04A] uppercase tracking-[0.2em]">Crew Member</th>
-                      <th className="p-4 text-[10px] font-bold text-[#C7A04A] uppercase tracking-[0.2em]">Institution</th>
-                      <th className="p-4 text-[10px] font-bold text-[#C7A04A] uppercase tracking-[0.2em]">Status</th>
-                      <th className="p-4 text-[10px] font-bold text-[#C7A04A] uppercase tracking-[0.2em] text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {participants.length === 0 ? (
-                      <tr>
-                        <td colSpan={4} className="p-12">
-                          <EchonaEmptyState title="NO CREW ABOARD" description="Add participants manually or import a crew manifest." />
-                        </td>
+                <div className="overflow-x-auto w-full max-w-full">
+                  <table className="w-full text-left border-collapse min-w-[600px]">
+                    <thead>
+                      <tr className="bg-[#17100C] border-b border-[#C7A04A]/30">
+                        <th className="px-4 py-3 text-[10px] font-bold text-[#C7A04A] uppercase tracking-[0.2em]">Crew Member</th>
+                        <th className="px-4 py-3 text-[10px] font-bold text-[#C7A04A] uppercase tracking-[0.2em]">Institution</th>
+                        <th className="px-4 py-3 text-[10px] font-bold text-[#C7A04A] uppercase tracking-[0.2em]">Status</th>
+                        <th className="px-4 py-3 text-[10px] font-bold text-[#C7A04A] uppercase tracking-[0.2em] text-right">Actions</th>
                       </tr>
-                    ) : (
-                      participants.map((p, idx) => (
-                        <tr key={p.id} className={`border-b border-[#8B5E34]/20 hover:bg-[#17100C]/50 transition-colors ${idx % 2 === 0 ? 'bg-[#0a0504]' : 'bg-[#080706]'}`}>
-                          <td className="p-4 flex items-center gap-3">
-                            <CrewEmblem className="w-6 h-6 text-[#8B5E34]" />
-                            <div>
-                              <div className="text-sm font-bold text-[#F4E7C7] tracking-wider uppercase">{p.name || '-'}</div>
-                              <div className="text-[10px] text-[#8B5E34] font-bold tracking-[0.2em] uppercase">@{p.username}</div>
-                            </div>
-                          </td>
-                          <td className="p-4 text-xs font-semibold text-[#E7D19A] tracking-wider uppercase">{p.college || '-'}</td>
-                          <td className="p-4">
-                            <EchonaStatus status={p.status} />
-                          </td>
-                          <td className="p-4 text-right">
-                            <button onClick={() => setDeleteConfirm({type: 'participant', id: p.id})} className="text-[#741714] hover:text-[#E2C36A] font-bold text-[10px] uppercase tracking-widest px-2 transition-colors">
-                              DISMISS
-                            </button>
+                    </thead>
+                    <tbody>
+                      {participants.length === 0 ? (
+                        <tr>
+                          <td colSpan={4} className="p-12">
+                            <EchonaEmptyState title="NO CREW ABOARD" description="Add participants manually or import a crew manifest." />
                           </td>
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+                      ) : (
+                        participants.map((p, idx) => (
+                          <tr key={p.id} className={`border-b border-[#8B5E34]/20 hover:bg-[#17100C]/50 transition-colors ${idx % 2 === 0 ? 'bg-[#0a0504]' : 'bg-[#080706]'}`}>
+                            <td className="px-4 py-3 flex items-center gap-3">
+                              <CrewEmblem className="w-6 h-6 text-[#8B5E34]" />
+                              <div>
+                                <div className="text-sm font-bold text-[#F4E7C7] tracking-wider uppercase">{p.name || '-'}</div>
+                                <div className="text-[10px] text-[#8B5E34] font-bold tracking-[0.2em] uppercase">@{p.username}</div>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-xs font-semibold text-[#E7D19A] tracking-wider uppercase">{p.college || '-'}</td>
+                            <td className="px-4 py-3">
+                              <EchonaStatus status={p.status} />
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              <button onClick={() => setDeleteConfirm({type: 'participant', id: p.id})} className="text-[#741714] hover:text-[#E2C36A] font-bold text-[10px] uppercase tracking-widest px-2 transition-colors">
+                                DISMISS
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           )}

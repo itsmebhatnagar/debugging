@@ -192,35 +192,35 @@ export function ParticipantsClient({ initialParticipants, competitions }: Partic
   };
 
   return (
-    <div className="p-6 md:p-10 max-w-7xl mx-auto space-y-8">
+    <div className="p-4 sm:p-6 lg:p-7 max-w-[1600px] w-full mx-auto space-y-4">
       <ToastComponent />
 
       {/* ── Page Header ── */}
-      <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-[#C7A04A]/30 pb-6 relative">
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-full border border-[#C7A04A]/50 bg-[#17100C] flex items-center justify-center shadow-lg">
-            <CrewEmblem className="w-8 h-8 text-[#E2C36A]" />
+      <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-[#C7A04A]/30 pb-3 relative">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border border-[#C7A04A]/50 bg-[#17100C] flex items-center justify-center shadow-lg shrink-0">
+            <CrewEmblem className="w-6 h-6 sm:w-7 sm:h-7 text-[#E2C36A]" />
           </div>
           <div>
             <h1 
-              className="text-3xl md:text-4xl text-[#F4E7C7] mb-1 tracking-wider uppercase font-bold"
+              className="text-2xl sm:text-3xl text-[#F4E7C7] tracking-wider uppercase font-bold"
               style={{ fontFamily: '"Cinzel Decorative", "Cinzel", serif', textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}
             >
               Participant Fleet
             </h1>
-            <p className="text-[#E7D19A]/80 text-xs tracking-[0.2em] uppercase font-bold">
+            <p className="text-[#E7D19A]/80 text-[10px] sm:text-xs tracking-[0.2em] uppercase font-bold">
               Live Sailor Statuses, Qualification Overrides & Manifest
             </p>
           </div>
         </div>
 
         {/* Global Quick Action Buttons */}
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2">
           <EchonaButton 
             variant="secondary" 
             onClick={handleRestoreSampleCrew}
             disabled={isBulkLoading}
-            className="text-[10px] px-3 py-2 border-[#C7A04A]/40 text-[#C7A04A]"
+            className="text-[9px] sm:text-[10px] px-2.5 py-1.5 border-[#C7A04A]/40 text-[#C7A04A]"
           >
             ⚓ RESTORE SAMPLE CREW
           </EchonaButton>
@@ -228,7 +228,7 @@ export function ParticipantsClient({ initialParticipants, competitions }: Partic
             variant="secondary" 
             onClick={handleEnrollAll}
             disabled={isBulkLoading}
-            className="text-[10px] px-3 py-2"
+            className="text-[9px] sm:text-[10px] px-2.5 py-1.5"
           >
             + ENROLL ALL USERS
           </EchonaButton>
@@ -236,7 +236,7 @@ export function ParticipantsClient({ initialParticipants, competitions }: Partic
             variant="secondary" 
             onClick={handleResetAllToWaiting}
             disabled={isBulkLoading}
-            className="text-[10px] px-3 py-2 border-amber-500/50 text-amber-300"
+            className="text-[9px] sm:text-[10px] px-2.5 py-1.5 border-amber-500/50 text-amber-300"
           >
             ⟳ SET ALL WAITING
           </EchonaButton>
@@ -244,59 +244,59 @@ export function ParticipantsClient({ initialParticipants, competitions }: Partic
       </header>
 
       {/* ── Metric Cards ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {/* Total */}
-        <div className="p-1 rounded-sm bg-gradient-to-b from-[#C7A04A] to-[#8B5E34] shadow-xl">
-          <div className="bg-[#17100C] p-5 rounded-sm relative overflow-hidden flex flex-col items-center text-center">
-            <Rivet className="absolute top-1.5 left-1.5 w-1.5 h-1.5" />
-            <Rivet className="absolute top-1.5 right-1.5 w-1.5 h-1.5" />
-            <p className="text-[#C7A04A] text-[10px] font-black uppercase tracking-[0.25em] mb-2">Total Crew</p>
-            <p className="text-3xl font-pirate text-[#F4E7C7]">{stats.total}</p>
+        <div className="p-[1px] rounded-sm bg-gradient-to-b from-[#C7A04A] to-[#8B5E34] shadow-md">
+          <div className="bg-[#17100C] p-3 sm:p-3.5 rounded-sm relative overflow-hidden flex flex-col items-center text-center">
+            <Rivet className="absolute top-1 left-1 w-1.5 h-1.5" />
+            <Rivet className="absolute top-1 right-1 w-1.5 h-1.5" />
+            <p className="text-[#C7A04A] text-[9px] font-black uppercase tracking-[0.2em] mb-1">Total Crew</p>
+            <p className="text-2xl sm:text-3xl font-pirate text-[#F4E7C7]">{stats.total}</p>
           </div>
         </div>
 
         {/* Waiting */}
-        <div className="p-1 rounded-sm bg-gradient-to-b from-amber-500/60 to-amber-900/60 shadow-xl">
-          <div className="bg-[#17100C] p-5 rounded-sm relative overflow-hidden flex flex-col items-center text-center">
-            <Rivet className="absolute top-1.5 left-1.5 w-1.5 h-1.5" />
-            <Rivet className="absolute top-1.5 right-1.5 w-1.5 h-1.5" />
-            <div className="flex items-center gap-1.5 mb-2">
+        <div className="p-[1px] rounded-sm bg-gradient-to-b from-amber-500/60 to-amber-900/60 shadow-md">
+          <div className="bg-[#17100C] p-3 sm:p-3.5 rounded-sm relative overflow-hidden flex flex-col items-center text-center">
+            <Rivet className="absolute top-1 left-1 w-1.5 h-1.5" />
+            <Rivet className="absolute top-1 right-1 w-1.5 h-1.5" />
+            <div className="flex items-center gap-1.5 mb-1">
               <span className="w-2 h-2 rounded-full bg-amber-400" />
-              <p className="text-amber-400 text-[10px] font-black uppercase tracking-[0.25em]">Waiting</p>
+              <p className="text-amber-400 text-[9px] font-black uppercase tracking-[0.2em]">Waiting</p>
             </div>
-            <p className="text-3xl font-pirate text-amber-300">{stats.waiting}</p>
+            <p className="text-2xl sm:text-3xl font-pirate text-amber-300">{stats.waiting}</p>
           </div>
         </div>
 
         {/* Qualified */}
-        <div className="p-1 rounded-sm bg-gradient-to-b from-emerald-500/60 to-emerald-900/60 shadow-xl">
-          <div className="bg-[#17100C] p-5 rounded-sm relative overflow-hidden flex flex-col items-center text-center">
-            <Rivet className="absolute top-1.5 left-1.5 w-1.5 h-1.5" />
-            <Rivet className="absolute top-1.5 right-1.5 w-1.5 h-1.5" />
-            <div className="flex items-center gap-1.5 mb-2">
+        <div className="p-[1px] rounded-sm bg-gradient-to-b from-emerald-500/60 to-emerald-900/60 shadow-md">
+          <div className="bg-[#17100C] p-3 sm:p-3.5 rounded-sm relative overflow-hidden flex flex-col items-center text-center">
+            <Rivet className="absolute top-1 left-1 w-1.5 h-1.5" />
+            <Rivet className="absolute top-1 right-1 w-1.5 h-1.5" />
+            <div className="flex items-center gap-1.5 mb-1">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <p className="text-emerald-400 text-[10px] font-black uppercase tracking-[0.25em]">Qualified</p>
+              <p className="text-emerald-400 text-[9px] font-black uppercase tracking-[0.2em]">Qualified</p>
             </div>
-            <p className="text-3xl font-pirate text-emerald-300">{stats.qualified}</p>
+            <p className="text-2xl sm:text-3xl font-pirate text-emerald-300">{stats.qualified}</p>
           </div>
         </div>
 
         {/* Disqualified */}
-        <div className="p-1 rounded-sm bg-gradient-to-b from-red-500/60 to-red-900/60 shadow-xl">
-          <div className="bg-[#17100C] p-5 rounded-sm relative overflow-hidden flex flex-col items-center text-center">
-            <Rivet className="absolute top-1.5 left-1.5 w-1.5 h-1.5" />
-            <Rivet className="absolute top-1.5 right-1.5 w-1.5 h-1.5" />
-            <div className="flex items-center gap-1.5 mb-2">
+        <div className="p-[1px] rounded-sm bg-gradient-to-b from-red-500/60 to-red-900/60 shadow-md">
+          <div className="bg-[#17100C] p-3 sm:p-3.5 rounded-sm relative overflow-hidden flex flex-col items-center text-center">
+            <Rivet className="absolute top-1 left-1 w-1.5 h-1.5" />
+            <Rivet className="absolute top-1 right-1 w-1.5 h-1.5" />
+            <div className="flex items-center gap-1.5 mb-1">
               <span className="w-2 h-2 rounded-full bg-red-400 animate-pulse" />
-              <p className="text-red-400 text-[10px] font-black uppercase tracking-[0.25em]">Disqualified</p>
+              <p className="text-red-400 text-[9px] font-black uppercase tracking-[0.2em]">Disqualified</p>
             </div>
-            <p className="text-3xl font-pirate text-red-300">{stats.disqualified}</p>
+            <p className="text-2xl sm:text-3xl font-pirate text-red-300">{stats.disqualified}</p>
           </div>
         </div>
       </div>
 
       {/* ── Filters & Search Toolbar ── */}
-      <div className="bg-[#17100C] border border-[#8B5E34]/30 p-4 rounded-sm flex flex-col md:flex-row justify-between items-center gap-4 shadow-md">
+      <div className="bg-[#17100C] border border-[#8B5E34]/30 p-3 rounded-sm flex flex-col md:flex-row justify-between items-center gap-3 shadow-md">
         {/* Search */}
         <div className="w-full md:w-80">
           <input
@@ -304,18 +304,18 @@ export function ParticipantsClient({ initialParticipants, competitions }: Partic
             placeholder="Search sailors by name, email or mobile..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-[#080706] border border-[#8B5E34]/40 rounded-sm px-4 py-2 text-xs text-[#F4E7C7] focus:outline-none focus:border-[#C7A04A] placeholder:text-[#8B5E34]/60 tracking-wider"
+            className="w-full bg-[#080706] border border-[#8B5E34]/40 rounded-sm px-3 py-1.5 text-xs text-[#F4E7C7] focus:outline-none focus:border-[#C7A04A] placeholder:text-[#8B5E34]/60 tracking-wider"
           />
         </div>
 
         {/* Status Filter Buttons */}
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-1.5">
           {["ALL", "WAITING", "QUALIFIED", "DISQUALIFIED"].map((status) => (
             <button
               key={status}
               type="button"
               onClick={() => setSelectedStatus(status)}
-              className={`px-3 py-1.5 rounded-sm text-[10px] font-bold tracking-wider uppercase transition-all ${
+              className={`px-2.5 py-1 rounded-sm text-[9px] font-bold tracking-wider uppercase transition-all ${
                 selectedStatus === status
                   ? status === "QUALIFIED"
                     ? "bg-emerald-500/30 border border-emerald-400 text-emerald-300 shadow-md"
@@ -338,7 +338,7 @@ export function ParticipantsClient({ initialParticipants, competitions }: Partic
             <select
               value={selectedCompId}
               onChange={(e) => setSelectedCompId(e.target.value)}
-              className="w-full bg-[#080706] border border-[#8B5E34]/40 text-[#E7D19A] text-xs font-bold tracking-widest px-3 py-2 outline-none uppercase"
+              className="w-full bg-[#080706] border border-[#8B5E34]/40 text-[#E7D19A] text-xs font-bold tracking-widest px-3 py-1.5 outline-none uppercase"
             >
               <option value="ALL">ALL EXPEDITIONS</option>
               {competitions.map(c => (
@@ -351,23 +351,24 @@ export function ParticipantsClient({ initialParticipants, competitions }: Partic
 
       {/* ── Participants Table ── */}
       <div className="border border-[#8B5E34]/40 bg-[#080706] rounded-sm overflow-hidden shadow-2xl">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-[#17100C] border-b border-[#C7A04A]/30">
-              <th className="p-4 text-[10px] font-bold text-[#C7A04A] uppercase tracking-[0.2em]">Pirate Sailor</th>
-              <th className="p-4 text-[10px] font-bold text-[#C7A04A] uppercase tracking-[0.2em]">Contact</th>
-              <th className="p-4 text-[10px] font-bold text-[#C7A04A] uppercase tracking-[0.2em]">Expedition</th>
-              <th className="p-4 text-[10px] font-bold text-[#C7A04A] uppercase tracking-[0.2em]">Bounty Score</th>
-              <th className="p-4 text-[10px] font-bold text-[#C7A04A] uppercase tracking-[0.2em] text-center">Live Status</th>
-              <th className="p-4 text-[10px] font-bold text-[#C7A04A] uppercase tracking-[0.2em] text-right">Change Live Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredParticipants.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="p-16">
-                  <EchonaEmptyState 
-                    title="NO SAILORS FOUND" 
+        <div className="overflow-x-auto w-full max-w-full">
+          <table className="w-full text-left border-collapse min-w-[760px]">
+            <thead>
+              <tr className="bg-[#17100C] border-b border-[#C7A04A]/30">
+                <th className="px-4 py-3 text-[10px] font-bold text-[#C7A04A] uppercase tracking-[0.2em]">Pirate Sailor</th>
+                <th className="px-4 py-3 text-[10px] font-bold text-[#C7A04A] uppercase tracking-[0.2em]">Contact</th>
+                <th className="px-4 py-3 text-[10px] font-bold text-[#C7A04A] uppercase tracking-[0.2em]">Expedition</th>
+                <th className="px-4 py-3 text-[10px] font-bold text-[#C7A04A] uppercase tracking-[0.2em]">Bounty Score</th>
+                <th className="px-4 py-3 text-[10px] font-bold text-[#C7A04A] uppercase tracking-[0.2em] text-center">Live Status</th>
+                <th className="px-4 py-3 text-[10px] font-bold text-[#C7A04A] uppercase tracking-[0.2em] text-right">Change Live Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredParticipants.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="p-16">
+                    <EchonaEmptyState 
+                      title="NO SAILORS FOUND" 
                     description="No participants match your search criteria. Enroll registered users or restore the sample fleet."
                   />
                 </td>
@@ -497,6 +498,7 @@ export function ParticipantsClient({ initialParticipants, competitions }: Partic
             )}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

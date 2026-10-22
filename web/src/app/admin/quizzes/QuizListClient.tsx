@@ -99,37 +99,37 @@ export function QuizListClient({ initialQuizzes }: QuizListClientProps) {
   if (loading) return <div className="p-10"><EchonaLoader /></div>;
 
   return (
-    <div className="p-6 md:p-10 max-w-7xl mx-auto">
+    <div className="p-4 sm:p-6 lg:p-7 max-w-[1500px] w-full mx-auto space-y-4">
       <ToastComponent />
       
       {/* ── Main Header ── */}
-      <header className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-transparent pb-6 relative">
+      <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-transparent pb-3 relative">
         <div className="absolute bottom-[-1px] left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#C7A04A]/50 to-transparent" />
         <div className="absolute bottom-[-9px] left-1/2 -translate-x-1/2 flex items-center justify-center opacity-80">
            <CompassRose className="w-4 h-4 text-[#C7A04A]" />
         </div>
         
-        <div className="flex items-center gap-4">
-          <TreasureMap className="w-10 h-10 text-[#C7A04A] hidden md:block opacity-80" />
+        <div className="flex items-center gap-3">
+          <TreasureMap className="w-8 h-8 text-[#C7A04A] hidden sm:block opacity-80" />
           <div>
-            <h2 className="text-3xl md:text-4xl text-[#F4E7C7] mb-1 tracking-wider uppercase" style={{ fontFamily: '"Cinzel Decorative", "Cinzel", serif', textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}>
+            <h2 className="text-2xl sm:text-3xl text-[#F4E7C7] tracking-wider uppercase font-bold" style={{ fontFamily: '"Cinzel Decorative", "Cinzel", serif', textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}>
               Captain's Log
             </h2>
-            <p className="text-[#E7D19A]/80 text-xs tracking-[0.2em] uppercase font-bold">
+            <p className="text-[#E7D19A]/80 text-[10px] sm:text-xs tracking-[0.2em] uppercase font-bold">
               Manage your ECHONA expeditions and their crews.
             </p>
           </div>
         </div>
         
         <div>
-          <EchonaButton onClick={() => setShowNewForm(true)}>
+          <EchonaButton onClick={() => setShowNewForm(true)} className="text-[10px] sm:text-xs px-3 py-1.5">
             + New Expedition
           </EchonaButton>
         </div>
       </header>
 
       {/* ── Expedition Grid ── */}
-      <div className="space-y-6">
+      <div className="space-y-4">
         {quizzes.length === 0 ? (
           <EchonaEmptyState 
             title="NO EXPEDITIONS IN THE LOG" 

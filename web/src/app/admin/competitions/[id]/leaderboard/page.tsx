@@ -27,13 +27,13 @@ export default async function AdminLeaderboardPage({ params }: { params: Promise
   const leaderboard = await getLeaderboard(competitionId)
 
   return (
-    <div className="min-h-screen bg-[#1a1a1a] p-4 text-[#d4cbb3] font-sans sm:p-8">
+    <div className="p-4 sm:p-6 lg:p-7 max-w-[1500px] w-full mx-auto text-[#d4cbb3] font-sans space-y-4">
       <div className="mx-auto max-w-6xl">
-        <div className="mb-8 flex flex-col gap-4 border-b-2 border-[#8b7355] pb-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mb-4 flex flex-col gap-3 border-b-2 border-[#8b7355] pb-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold tracking-widest text-[#d4af37] sm:text-4xl">ADMIN BOUNTY BOARD</h1>
-            <p className="mt-2 text-lg text-[#8b7355]">{competition.name}</p>
-            <div className="mt-3"><LeaderboardRefresher competitionId={competitionId} /></div>
+            <h1 className="text-xl sm:text-3xl font-bold tracking-widest text-[#d4af37]">ADMIN BOUNTY BOARD</h1>
+            <p className="mt-1 text-sm text-[#8b7355]">{competition.name}</p>
+            <div className="mt-2"><LeaderboardRefresher competitionId={competitionId} /></div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <a href={`/api/admin/competitions/${competitionId}/export?type=leaderboard`} className="rounded border border-[#d4af37]/50 px-3 py-2 text-sm font-bold text-[#d4af37] hover:bg-[#d4af37]/10">

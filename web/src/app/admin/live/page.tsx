@@ -208,11 +208,11 @@ export default function LiveControlPage() {
   const activeQuiz = quizzes.find(q => q.id === activeQuizId);
 
   return (
-    <div className="p-4 md:p-8 max-w-[1600px] mx-auto min-h-screen flex flex-col">
+    <div className="p-4 sm:p-6 lg:p-7 max-w-[1600px] w-full mx-auto flex flex-col space-y-4">
       <ToastComponent />
       
-      {/* â”€â”€ Header â”€â”€ */}
-      <header className="mb-8 border-b border-[#8B5E34]/30 pb-6 flex flex-col md:flex-row justify-between items-start md:items-end gap-6 relative">
+      {/* ── Header ── */}
+      <header className="mb-3 border-b border-[#8B5E34]/30 pb-3 flex flex-col md:flex-row justify-between items-start md:items-end gap-4 relative">
         <div className="flex items-center gap-4">
           <ShipWheel className="w-12 h-12 text-[#C7A04A]" />
           <div>
