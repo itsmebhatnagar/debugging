@@ -4,14 +4,14 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import gsap from 'gsap';
 
 /**
- * Cinematic two-phase intro — seamless black-to-black handoff.
+ * Cinematic Interactive Scroll Sequence (as in Quiz).
  * 
- * Phase 1: echona_ink_intro.mp4 plays → fades to black naturally.
- * Phase 2: Scroll animation starts from near-black frame #1.
- *          User scrolls → pirate ship emerges from darkness.
- * 
- * The transition is invisible because both end/start in black.
- * No gimmicks. Just cinema.
+ * Directly opens into the interactive scroll experience:
+ * - User scrolls down → pirate ship sails across the ocean map.
+ * - Hardware-accelerated video & high-performance canvas scrubbing.
+ * - Top glowing pirate progress bar tracks voyage journey.
+ * - Dynamic "Scroll to sail" cue bounces until user starts sailing.
+ * - "The Quest Begins" and "Unfurl The Map" button smoothly emerges at journey's end.
  */
 
 const FRAME_COUNT = 240;
@@ -22,7 +22,6 @@ interface IntroSequenceProps {
 }
 
 export const IntroSequence: React.FC<IntroSequenceProps> = ({ onComplete }) => {
-  const videoRef = useRef<HTMLVideoElement>(null);
   const scrollVideoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -30,85 +29,11 @@ export const IntroSequence: React.FC<IntroSequenceProps> = ({ onComplete }) => {
   const currentFrameRef = useRef(0);
   const rafRef = useRef<number>(0);
 
-  const [phase, setPhase] = useState<'ink' | 'scroll'>('ink');
-  const [loadProgress, setLoadProgress] = useState(0);
   const [framesLoaded, setFramesLoaded] = useState(false);
   const [scrollFrac, setScrollFrac] = useState(0);
 
   // ═══════════════════════════════════════════════════════
-  // 1. Preload frames in background
-  // ═══════════════════════════════════════════════════════
-  useEffect(() => {
-    let loadedCount = 0;
-    const images: HTMLImageElement[] = new Array(FRAME_COUNT);
-
-    for (let i = 0; i < FRAME_COUNT; i++) {
-      const img = new Image();
-      img.src = IMG_PATH(i + 1);
-      const onDone = () => {
-        loadedCount++;
-        setLoadProgress(Math.floor((loadedCount / FRAME_COUNT) * 100));
-        if (loadedCount === FRAME_COUNT) {
-          imagesRef.current = images;
-          setFramesLoaded(true);
-        }
-      };
-      img.onload = onDone;
-      img.onerror = onDone;
-      images[i] = img;
-    }
-
-    return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    };
-  }, []);
-
-  // ═══════════════════════════════════════════════════════
-  // 2. Play intro video → switch to scroll on end or user scroll
-  // ═══════════════════════════════════════════════════════
-  useEffect(() => {
-    if (phase !== 'ink') return;
-
-    const video = videoRef.current;
-    let fallbackTimeout: NodeJS.Timeout;
-
-    const handleEnded = () => {
-      clearTimeout(fallbackTimeout);
-      window.scrollTo(0, 0);
-      setPhase('scroll');
-    };
-
-    if (video) {
-      video.addEventListener('ended', handleEnded);
-      video.addEventListener('error', handleEnded);
-      fallbackTimeout = setTimeout(handleEnded, 10000);
-
-      video.play().catch(() => {
-        setTimeout(handleEnded, 2000);
-      });
-    }
-
-    // If user tries to scroll while watching video, immediately jump into interactive scroll
-    const handleUserScroll = (e: Event) => {
-      handleEnded();
-    };
-
-    window.addEventListener('wheel', handleUserScroll, { passive: true, once: true });
-    window.addEventListener('touchmove', handleUserScroll, { passive: true, once: true });
-
-    return () => {
-      clearTimeout(fallbackTimeout);
-      if (video) {
-        video.removeEventListener('ended', handleEnded);
-        video.removeEventListener('error', handleEnded);
-      }
-      window.removeEventListener('wheel', handleUserScroll);
-      window.removeEventListener('touchmove', handleUserScroll);
-    };
-  }, [phase]);
-
-  // ═══════════════════════════════════════════════════════
-  // 3. Draw frame (cover-fit)
+  // 1. Draw frame (cover-fit on high-DPI canvas)
   // ═══════════════════════════════════════════════════════
   const drawFrame = useCallback((frameIndex: number) => {
     const canvas = canvasRef.current;
@@ -134,15 +59,44 @@ export const IntroSequence: React.FC<IntroSequenceProps> = ({ onComplete }) => {
   }, []);
 
   // ═══════════════════════════════════════════════════════
-  // 4. Scroll → video & frame scrub mapping
+  // 2. Preload frames with immediate frame 1 display
   // ═══════════════════════════════════════════════════════
   useEffect(() => {
-    if (phase !== 'scroll') return;
+    window.scrollTo(0, 0);
+    let loadedCount = 0;
+    const images: HTMLImageElement[] = new Array(FRAME_COUNT);
 
-    if (framesLoaded) {
-      drawFrame(0);
+    for (let i = 0; i < FRAME_COUNT; i++) {
+      const img = new Image();
+      img.src = IMG_PATH(i + 1);
+      const onDone = () => {
+        loadedCount++;
+        if (i === 0) {
+          imagesRef.current = images;
+          drawFrame(0);
+        }
+        if (loadedCount === FRAME_COUNT) {
+          imagesRef.current = images;
+          setFramesLoaded(true);
+          drawFrame(currentFrameRef.current);
+        }
+      };
+      img.onload = onDone;
+      img.onerror = onDone;
+      images[i] = img;
     }
 
+    imagesRef.current = images;
+
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, [drawFrame]);
+
+  // ═══════════════════════════════════════════════════════
+  // 3. Scroll → video scrub and canvas frame mapping
+  // ═══════════════════════════════════════════════════════
+  useEffect(() => {
     const updatePosition = () => {
       const container = scrollContainerRef.current;
       if (!container) return;
@@ -151,7 +105,7 @@ export const IntroSequence: React.FC<IntroSequenceProps> = ({ onComplete }) => {
       const maxScroll = container.scrollHeight - window.innerHeight;
       const fraction = Math.min(Math.max(scrollTop / Math.max(maxScroll, 1), 0), 1);
 
-      // Scrub HTML5 hardware-accelerated video
+      // Hardware-accelerated video scrub
       const sVideo = scrollVideoRef.current;
       if (sVideo && sVideo.duration) {
         const targetTime = fraction * sVideo.duration;
@@ -160,16 +114,14 @@ export const IntroSequence: React.FC<IntroSequenceProps> = ({ onComplete }) => {
         }
       }
 
-      // Scrub canvas frame if frames are loaded
-      if (framesLoaded) {
-        const frameIndex = Math.min(
-          Math.floor(fraction * (FRAME_COUNT - 1)),
-          FRAME_COUNT - 1
-        );
-        if (frameIndex !== currentFrameRef.current) {
-          currentFrameRef.current = frameIndex;
-          drawFrame(frameIndex);
-        }
+      // Canvas frame scrub
+      const frameIndex = Math.min(
+        Math.floor(fraction * (FRAME_COUNT - 1)),
+        FRAME_COUNT - 1
+      );
+      if (frameIndex !== currentFrameRef.current) {
+        currentFrameRef.current = frameIndex;
+        drawFrame(frameIndex);
       }
 
       setScrollFrac(fraction);
@@ -184,7 +136,7 @@ export const IntroSequence: React.FC<IntroSequenceProps> = ({ onComplete }) => {
 
     window.addEventListener('scroll', handleScroll, { passive: true });
     const handleResize = () => {
-      if (framesLoaded) drawFrame(currentFrameRef.current);
+      drawFrame(currentFrameRef.current);
       updatePosition();
     };
     window.addEventListener('resize', handleResize, { passive: true });
@@ -194,10 +146,10 @@ export const IntroSequence: React.FC<IntroSequenceProps> = ({ onComplete }) => {
       window.removeEventListener('resize', handleResize);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [phase, framesLoaded, drawFrame]);
+  }, [drawFrame]);
 
   // ═══════════════════════════════════════════════════════
-  // 5. Begin Quest exit
+  // 4. Begin Quest exit animation
   // ═══════════════════════════════════════════════════════
   const handleBeginQuest = () => {
     gsap.to('.scroll-viewport', {
@@ -213,46 +165,9 @@ export const IntroSequence: React.FC<IntroSequenceProps> = ({ onComplete }) => {
     });
   };
 
-  const showScrollHint = phase === 'scroll' && scrollFrac < 0.08;
-  const showButton = phase === 'scroll' && scrollFrac > 0.85;
+  const showScrollHint = scrollFrac < 0.08;
+  const showButton = scrollFrac > 0.85;
 
-  // ═══════════════════════════════════════════════════════
-  // 6. Render
-  // ═══════════════════════════════════════════════════════
-
-  // PHASE: INK / INTRO VIDEO
-  if (phase === 'ink') {
-    return (
-      <div 
-        className="fixed inset-0 z-[200] bg-black cursor-pointer select-none"
-        onClick={() => {
-          window.scrollTo(0, 0);
-          setPhase('scroll');
-        }}
-      >
-        <video
-          ref={videoRef}
-          className="w-full h-full object-cover pointer-events-none"
-          src="/pirate-ship.mp4"
-          muted
-          playsInline
-          preload="auto"
-        />
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            window.scrollTo(0, 0);
-            setPhase('scroll');
-          }}
-          className="absolute top-6 right-6 z-[210] px-4 py-2 text-xs tracking-widest text-[#D4AF37] hover:text-[#fff] border border-[#D4AF37]/50 rounded bg-black/70 backdrop-blur transition-all font-mono shadow-[0_0_15px_rgba(212,175,55,0.3)]"
-        >
-          SKIP ➔
-        </button>
-      </div>
-    );
-  }
-
-  // PHASE: SCROLL ANIMATION
   return (
     <div
       ref={scrollContainerRef}
@@ -260,7 +175,7 @@ export const IntroSequence: React.FC<IntroSequenceProps> = ({ onComplete }) => {
       style={{ height: '500vh' }}
     >
       <div className="scroll-viewport sticky top-0 h-screen w-full overflow-hidden">
-        {/* Hardware-accelerated native video background (scrubs smoothly on scroll) */}
+        {/* Hardware-accelerated native video background (scrubs with scroll) */}
         <video
           ref={scrollVideoRef}
           className="absolute inset-0 w-full h-full object-cover"
@@ -274,7 +189,7 @@ export const IntroSequence: React.FC<IntroSequenceProps> = ({ onComplete }) => {
         <canvas
           ref={canvasRef}
           className="absolute inset-0 w-full h-full"
-          style={{ display: framesLoaded ? 'block' : 'none' }}
+          style={{ display: 'block' }}
         />
 
         {/* Custom Pirate Top Scroll Progress Bar */}
