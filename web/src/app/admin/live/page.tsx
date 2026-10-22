@@ -20,7 +20,7 @@ export default function LiveControlPage() {
   const [quizzes, setQuizzes] = useState<any[]>([]);
   const [socket, setSocket] = useState<Socket | null>(null);
   const [liveStats, setLiveStats] = useState<Record<string, any>>({});
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [importModal, setImportModal] = useState<{ type: string; targetId: string } | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<'CONNECTED' | 'DISCONNECTED' | 'RECONNECTING'>('DISCONNECTED');
   
@@ -52,20 +52,18 @@ export default function LiveControlPage() {
   }, [eventLog]);
 
   const fetchQuizzes = () => {
-    fetch(`${(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001') || 'http://localhost:3001'}/api/quizzes`, { credentials: 'include' })
+    fetch('/api/quizzes', { credentials: 'include' })
       .then(res => res.json())
       .then(data => {
-        setQuizzes(data);
-        if (data.length > 0 && !activeQuizId) {
+        setQuizzes(Array.isArray(data) ? data : []);
+        if (Array.isArray(data) && data.length > 0 && !activeQuizId) {
           // Select the most active quiz, or the first one
           const active = data.find((q: any) => q.status === 'ACTIVE' || q.status === 'PAUSED');
           setActiveQuizId(active ? active.id : data[0].id);
         }
-        setLoading(false);
       })
       .catch(() => {
         showToast('error', 'SERVER OFFLINE', 'Could not establish contact with headquarters.');
-        setLoading(false);
       });
   };
 
@@ -73,10 +71,17 @@ export default function LiveControlPage() {
     fetchQuizzes();
 
     const token = getCookie('admin_token');
-    const newSocket = io(`${(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001') || 'http://localhost:3001'}/admin`, {
+    const realtimeUrl = process.env.NEXT_PUBLIC_REALTIME_URL;
+    if (!realtimeUrl) {
+      setConnectionStatus('DISCONNECTED');
+      addLog('Standing by in local mode. Real-time server offline.', 'info');
+      return;
+    }
+
+    const newSocket = io(`${realtimeUrl}/admin`, {
       auth: { token },
       withCredentials: true,
-      reconnectionAttempts: 10
+      reconnectionAttempts: 3
     });
 
     newSocket.on('connect', () => {

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
@@ -38,7 +38,7 @@ export default function QuizManagerPage() {
 
   const fetchQuizData = async () => {
     try {
-      const res = await fetch(`${(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001') || 'http://localhost:3001'}/api/quizzes/${quizId}`, { credentials: 'include' });
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/quizzes/${quizId}`, { credentials: 'include' });
       if (res.ok) {
         const data = await res.json();
         setQuiz(data);
@@ -51,7 +51,7 @@ export default function QuizManagerPage() {
 
   const fetchParticipants = async () => {
     try {
-      const res = await fetch(`${(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001') || 'http://localhost:3001'}/api/quizzes/${quizId}/participants`, { credentials: 'include' });
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/quizzes/${quizId}/participants`, { credentials: 'include' });
       if (res.ok) {
         const data = await res.json();
         setParticipants(data);
@@ -74,7 +74,7 @@ export default function QuizManagerPage() {
     if (isSubmittingRound) return;
     setIsSubmittingRound(true);
     try {
-      const res = await fetch(`${(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001') || 'http://localhost:3001'}/api/quizzes/${quizId}/rounds`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/quizzes/${quizId}/rounds`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -106,7 +106,7 @@ export default function QuizManagerPage() {
     
     if (deleteConfirm.type === 'round') {
       try {
-        await fetch(`${(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001') || 'http://localhost:3001'}/api/quizzes/rounds/${deleteConfirm.id}`, { method: 'DELETE', credentials: 'include' });
+        await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/quizzes/rounds/${deleteConfirm.id}`, { method: 'DELETE', credentials: 'include' });
         showToast('success', 'STAGE REMOVED', 'The stage has been erased from the log.');
         fetchQuizData();
       } catch (e) {
@@ -114,7 +114,7 @@ export default function QuizManagerPage() {
       }
     } else if (deleteConfirm.type === 'participant') {
       try {
-        await fetch(`${(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001') || 'http://localhost:3001'}/api/quizzes/participants/${deleteConfirm.id}`, { method: 'DELETE', credentials: 'include' });
+        await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/quizzes/participants/${deleteConfirm.id}`, { method: 'DELETE', credentials: 'include' });
         showToast('success', 'CREW MEMBER DISMISSED', 'Participant removed from manifest.');
         fetchParticipants();
       } catch (e) {
@@ -126,7 +126,7 @@ export default function QuizManagerPage() {
 
   const handleActivateQuiz = async () => {
     try {
-      const res = await fetch(`${(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001') || 'http://localhost:3001'}/api/quizzes/${quizId}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/quizzes/${quizId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -148,7 +148,7 @@ export default function QuizManagerPage() {
     if (isSubmittingParticipant) return;
     setIsSubmittingParticipant(true);
     try {
-      const res = await fetch(`${(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001') || 'http://localhost:3001'}/api/quizzes/${quizId}/participants`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/quizzes/${quizId}/participants`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

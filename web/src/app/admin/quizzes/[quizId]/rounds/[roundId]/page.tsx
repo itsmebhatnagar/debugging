@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
@@ -34,17 +34,17 @@ export default function RoundManagerPage() {
 
   const fetchData = async () => {
     try {
-      const resQuiz = await fetch(`${(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001') || 'http://localhost:3001'}/api/quizzes/${quizId}`, { credentials: 'include' });
+      const resQuiz = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/quizzes/${quizId}`, { credentials: 'include' });
       if (resQuiz.ok) {
         const quizData = await resQuiz.json();
         const r = quizData.rounds.find((rnd: any) => rnd.id === roundId);
         setRound(r);
       }
 
-      const resQ = await fetch(`${(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001') || 'http://localhost:3001'}/api/quizzes/rounds/${roundId}/questions`, { credentials: 'include' });
+      const resQ = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/quizzes/rounds/${roundId}/questions`, { credentials: 'include' });
       if (resQ.ok) setQuestions(await resQ.json());
 
-      const resS = await fetch(`${(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001') || 'http://localhost:3001'}/api/quizzes/rounds/${roundId}/scoreboard`, { credentials: 'include' });
+      const resS = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/quizzes/rounds/${roundId}/scoreboard`, { credentials: 'include' });
       if (resS.ok) setScoreboard(await resS.json());
 
     } catch (err) {
@@ -64,7 +64,7 @@ export default function RoundManagerPage() {
     if (isSubmitting) return;
     setIsSubmitting(true);
     try {
-      const res = await fetch(`${(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001') || 'http://localhost:3001'}/api/quizzes/rounds/${roundId}/questions`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/quizzes/rounds/${roundId}/questions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -97,7 +97,7 @@ export default function RoundManagerPage() {
   const handleDeleteConfirmed = async () => {
     if(!deleteConfirm) return;
     try {
-      await fetch(`${(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001') || 'http://localhost:3001'}/api/quizzes/questions/${deleteConfirm}`, { method: 'DELETE', credentials: 'include' });
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/quizzes/questions/${deleteConfirm}`, { method: 'DELETE', credentials: 'include' });
       showToast('success', 'QUESTION REMOVED', 'The question has been struck from the record.');
       fetchData();
     } catch (e) {

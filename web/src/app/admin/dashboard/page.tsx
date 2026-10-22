@@ -1,7 +1,6 @@
-"use client";
-import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import React from 'react';
 import Link from 'next/link';
+import { prisma } from '@/lib/prisma';
 import { TreasureMap } from '@/components/icons/TreasureMap';
 import { CrewEmblem } from '@/components/icons/CrewEmblem';
 import { CompassRose } from '@/components/icons/CompassRose';
@@ -12,44 +11,71 @@ import { NavigationChart } from '@/components/icons/NavigationChart';
 import { Rivet } from '@/components/icons/Rivet';
 import { Anchor } from '@/components/icons/Anchor';
 
-export default function AdminDashboardPage() {
-  const [data, setData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const router = useRouter();
-  const navigate = (path: string) => router.push(path);
+export const dynamic = 'force-dynamic';
 
-  useEffect(() => {
-    fetch(`${(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001') || 'http://localhost:3001'}/api/admin/dashboard`, {
-      credentials: 'include' // Ensure cookies are sent
-    })
-    .then(res => {
-      if (!res.ok) throw new Error('Unauthorized');
-      return res.json();
-    })
-    .then(data => {
-      setData(data);
-      setLoading(false);
-    })
-    .catch(() => navigate('/admin'));
-  }, [navigate]);
+export default async function AdminDashboardPage() {
+  let statsData = {
+    totalQuizzes: 0,
+    totalParticipants: 0,
+    totalRounds: 0,
+    activeQuiz: null as any
+  };
 
-  if (loading || !data) {
-    return (
-      <div className="h-full w-full flex items-center justify-center min-h-[500px]">
-        <div className="flex flex-col items-center gap-4">
-          <CompassRose className="w-12 h-12 text-[#C7A04A] animate-[spin_3s_linear_infinite]" />
-          <p className="text-[#C7A04A] font-pirate tracking-[0.2em] animate-pulse">Navigating...</p>
-        </div>
-      </div>
-    );
+  try {
+    const [totalQuizzes, totalParticipants, totalRounds, activeQuiz] = await Promise.all([
+      prisma.competition.count(),
+      prisma.competitionParticipant.count(),
+      prisma.round.count(),
+      prisma.competition.findFirst({
+        where: {
+          status: { in: ['ACTIVE', 'COUNTDOWN'] }
+        },
+        include: {
+          rounds: {
+            where: { status: 'ACTIVE' },
+            take: 1
+          },
+          _count: {
+            select: { participants: true, rounds: true }
+          }
+        }
+      })
+    ]);
+
+    let activeRoundName = 'No active round';
+    if (activeQuiz) {
+      if (activeQuiz.rounds.length > 0) {
+        activeRoundName = activeQuiz.rounds[0].name;
+      } else {
+        const totalRoundsForQuiz = activeQuiz._count.rounds;
+        activeRoundName = totalRoundsForQuiz > 0 ? `1 / ${totalRoundsForQuiz}` : 'Setting Sails';
+      }
+    }
+
+    statsData = {
+      totalQuizzes,
+      totalParticipants,
+      totalRounds,
+      activeQuiz: activeQuiz
+        ? {
+            id: activeQuiz.id,
+            name: activeQuiz.name,
+            status: activeQuiz.status,
+            currentRound: activeRoundName,
+            activeCrew: activeQuiz._count.participants
+          }
+        : null
+    };
+  } catch (err) {
+    console.error('Error fetching admin dashboard stats:', err);
   }
 
   // Use available stats or fallback to "—"
   const stats = [
-    { label: 'TOTAL QUIZZES', value: data.stats?.totalQuizzes ?? '—', icon: <TreasureMap className="w-10 h-10 text-[#C7A04A]" /> },
-    { label: 'TOTAL CREW', value: data.stats?.totalParticipants ?? '—', icon: <CrewEmblem className="w-10 h-10 text-[#C7A04A]" /> },
-    { label: 'TOTAL ROUNDS', value: data.stats?.totalRounds ?? '—', icon: <CompassRose className="w-10 h-10 text-[#C7A04A]" /> },
-    { label: 'ACTIVE QUIZ', value: data.stats?.activeQuiz ? '1' : '—', icon: <ShipWheel className="w-10 h-10 text-[#C7A04A]" /> }
+    { label: 'TOTAL QUIZZES', value: statsData.totalQuizzes ?? '—', icon: <TreasureMap className="w-10 h-10 text-[#C7A04A]" /> },
+    { label: 'TOTAL CREW', value: statsData.totalParticipants ?? '—', icon: <CrewEmblem className="w-10 h-10 text-[#C7A04A]" /> },
+    { label: 'TOTAL ROUNDS', value: statsData.totalRounds ?? '—', icon: <CompassRose className="w-10 h-10 text-[#C7A04A]" /> },
+    { label: 'ACTIVE QUIZ', value: statsData.activeQuiz ? '1' : '—', icon: <ShipWheel className="w-10 h-10 text-[#C7A04A]" /> }
   ];
 
   return (
@@ -144,7 +170,7 @@ export default function AdminDashboardPage() {
                 <h3 className="text-[#C7A04A] text-xs font-bold uppercase tracking-[0.25em] flex items-center gap-2">
                   <NavigationChart className="w-4 h-4" /> Current Expedition
                 </h3>
-                {data.stats?.activeQuiz ? (
+                {statsData.activeQuiz ? (
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse border border-black" />
                     <span className="text-emerald-500 text-[10px] uppercase tracking-widest font-black">Live</span>
@@ -153,13 +179,13 @@ export default function AdminDashboardPage() {
               </div>
               
               <div className="flex-1 p-8 flex flex-col items-center justify-center text-center relative z-10">
-                {data.stats?.activeQuiz ? (
+                {statsData.activeQuiz ? (
                   <div className="w-full max-w-lg bg-[#080706]/80 p-8 border border-[#8B5E34]/50 rounded-sm backdrop-blur-sm shadow-xl">
                     <h4 className="text-3xl text-[#F4E7C7] mb-2" style={{ fontFamily: '"Cinzel Decorative", serif', textShadow: '0 2px 4px rgba(0,0,0,1)' }}>
-                      {data.stats.activeQuiz.name || 'General Knowledge'}
+                      {statsData.activeQuiz.name || 'General Knowledge'}
                     </h4>
                     <p className="text-[#C7A04A] text-sm font-bold tracking-[0.25em] uppercase mb-8 border-b border-[#C7A04A]/20 pb-4 inline-block">
-                      Round 2 / 3
+                      {statsData.activeQuiz.currentRound}
                     </p>
                     
                     {/* Treasure Route Progress */}
@@ -175,7 +201,7 @@ export default function AdminDashboardPage() {
                     
                     <div className="flex items-center justify-center gap-2 text-[#E7D19A] text-xs font-bold tracking-widest uppercase">
                       <CrewEmblem className="w-4 h-4 text-[#C7A04A]" />
-                      84 Crew Active
+                      {statsData.activeQuiz.activeCrew} Crew Active
                     </div>
                   </div>
                 ) : (
@@ -196,9 +222,9 @@ export default function AdminDashboardPage() {
             Command Controls
           </h3>
           <div className="flex flex-col gap-4">
-            {/* Create Quiz Control */}
+            {/* Competitions Control */}
             <Link 
-              href="/admin/quizzes"
+              href="/admin/competitions"
               className="group relative block p-[1px] rounded-sm transition-all hover:scale-[1.02]"
               style={{ background: 'linear-gradient(to bottom, #C7A04A, #741714)', boxShadow: '0 6px 12px rgba(0,0,0,0.5)' }}
             >
@@ -211,8 +237,28 @@ export default function AdminDashboardPage() {
                 <Rivet className="absolute top-1.5 right-1.5 w-1.5 h-1.5" />
                 <Rivet className="absolute bottom-1.5 right-1.5 w-1.5 h-1.5" />
 
-                <span className="text-[#F4E7C7] text-sm font-bold tracking-[0.2em] uppercase relative z-10 drop-shadow-md">Create Quiz</span>
+                <span className="text-[#F4E7C7] text-sm font-bold tracking-[0.2em] uppercase relative z-10 drop-shadow-md">Competitions</span>
                 <QuillMap className="w-8 h-8 text-[#C7A04A] group-hover:text-[#F4E7C7] transition-colors relative z-10 drop-shadow-[0_2px_4px_rgba(0,0,0,1)]" />
+              </div>
+            </Link>
+
+            {/* Quiz Config Control */}
+            <Link 
+              href="/admin/quizzes"
+              className="group relative block p-[1px] rounded-sm transition-all hover:scale-[1.02]"
+              style={{ background: 'linear-gradient(to bottom, #8B5E34, #2B1710)', boxShadow: '0 6px 12px rgba(0,0,0,0.5)' }}
+            >
+              <div className="relative overflow-hidden bg-[#17100C] p-5 flex items-center justify-between">
+                <div className="absolute inset-0 opacity-20 pointer-events-none" style={{ background: 'repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(0,0,0,0.6) 2px, rgba(0,0,0,0.6) 4px)' }} />
+                <div className="absolute inset-0 bg-gradient-to-r from-[#2B1710]/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                
+                <Rivet className="absolute top-1.5 left-1.5 w-1.5 h-1.5" />
+                <Rivet className="absolute bottom-1.5 left-1.5 w-1.5 h-1.5" />
+                <Rivet className="absolute top-1.5 right-1.5 w-1.5 h-1.5" />
+                <Rivet className="absolute bottom-1.5 right-1.5 w-1.5 h-1.5" />
+
+                <span className="text-[#E7D19A] text-sm font-bold tracking-[0.2em] uppercase relative z-10 group-hover:text-[#F4E7C7] drop-shadow-md">Quiz Config</span>
+                <TreasureMap className="w-8 h-8 text-[#C7A04A] group-hover:text-[#F4E7C7] transition-colors relative z-10 drop-shadow-[0_2px_4px_rgba(0,0,0,1)]" />
               </div>
             </Link>
 
@@ -241,4 +287,4 @@ export default function AdminDashboardPage() {
       </div>
     </div>
   );
-};
+}

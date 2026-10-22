@@ -29,7 +29,7 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({ roundId, round
 
   const fetchScores = () => {
     const token = getCookie('admin_token') || '';
-    fetch(`${(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001') || 'http://localhost:3001'}/api/quizzes/rounds/${roundId}/scoreboard`, {
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/quizzes/rounds/${roundId}/scoreboard`, {
       headers: { 'Authorization': `Bearer ${token}` },
       credentials: 'include'
     })
@@ -64,7 +64,7 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({ roundId, round
     setEvaluating(true);
     const token = getCookie('admin_token') || '';
     try {
-      const res = await fetch(`${(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001') || 'http://localhost:3001'}/api/quizzes/rounds/${roundId}/evaluate`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/quizzes/rounds/${roundId}/evaluate`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',

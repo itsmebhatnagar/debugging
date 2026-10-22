@@ -31,6 +31,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const navItems = [
     { path: '/admin/dashboard', label: 'Dashboard', icon: <CompassRose className="w-5 h-5 shrink-0" /> },
+    { path: '/admin/competitions', label: 'Competitions', icon: <TreasureMap className="w-5 h-5 shrink-0" /> },
     { path: '/admin/quizzes', label: 'Quiz Config', icon: <TreasureMap className="w-5 h-5 shrink-0" /> },
     { path: '/admin/live', label: 'Live Control', icon: <ShipWheel className="w-5 h-5 shrink-0" /> },
   ];

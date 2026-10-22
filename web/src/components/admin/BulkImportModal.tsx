@@ -64,7 +64,7 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ onClose, onImp
       throw new Error("Missing required field: username (Login ID) must be provided for all crew members.");
     }
 
-    const res = await fetch(`${(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001') || 'http://localhost:3001'}/api/quizzes/${targetId}/participants/bulk`, {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/quizzes/${targetId}/participants/bulk`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -104,7 +104,7 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ onClose, onImp
       throw new Error("Missing required field: Question text is missing for one or more entries.");
     }
 
-    const res = await fetch(`${(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001') || 'http://localhost:3001'}/api/quizzes/rounds/${targetId}/questions/bulk`, {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/quizzes/rounds/${targetId}/questions/bulk`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',

@@ -15,6 +15,17 @@ export default auth((req) => {
     return NextResponse.next()
   }
 
+  // Handle API routes with proper JSON responses
+  if (nextUrl.pathname.startsWith("/api/")) {
+    if (!isLoggedIn) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+    if (nextUrl.pathname.startsWith("/api/admin/") && userRole !== "ADMIN") {
+      return NextResponse.json({ error: "Forbidden: Admin access required" }, { status: 403 })
+    }
+    return NextResponse.next()
+  }
+
   if (!isLoggedIn && !isPublicRoute) {
     return NextResponse.redirect(new URL("/login", nextUrl))
   }
