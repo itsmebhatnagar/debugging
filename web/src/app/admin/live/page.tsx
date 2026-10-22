@@ -166,9 +166,14 @@ export default function LiveControlPage() {
         if (!res.ok) throw new Error(result.error || 'Could not restart stage.');
         showToast('success', 'STAGE RESTARTED', 'The stage has been restarted and is now live.');
         addLog(`Stage ${roundId} restarted.`, 'success');
+      } else if (action === 'round:end') {
+        const res = await fetch(`/api/quizzes/rounds/${roundId}/end`, { method: 'POST', credentials: 'include' });
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.error || 'Could not end stage.');
+        showToast('success', 'STAGE COMPLETED', 'Unsubmitted work was recorded and the stage has ended.');
+        addLog(`Stage ${roundId} ended.`, 'success');
       } else {
         if (action === 'round:pause') showToast('warning', 'ROUND PAUSED', 'The expedition is currently halted.');
-        if (action === 'round:end') showToast('success', 'ROUND COMPLETED', 'All responses have been recorded.');
       }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Error occurred';
@@ -462,7 +467,7 @@ export default function LiveControlPage() {
                                   </EchonaButton>
                                 ) : null}
 
-                                {round.status !== 'COMPLETED' ? (
+                                {round.status !== 'COMPLETED' && round.status !== 'ENDED' ? (
                                   <EchonaButton 
                                     variant="danger" 
                                     className="col-span-2 w-full text-[10px] px-2 py-3"

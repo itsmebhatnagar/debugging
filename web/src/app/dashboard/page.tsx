@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma"
 import Link from "next/link"
 import { redirect } from "next/navigation"
 import { Spotlight } from "@/components/ui/spotlight"
+import { JoinCompetitionButton } from "@/components/JoinCompetitionButton"
 
 export default async function DashboardPage() {
   const session = await auth()
@@ -163,12 +164,16 @@ export default async function DashboardPage() {
 
                     {/* CTA */}
                     <div className="mt-8 pt-6 border-t border-[#d4af37]/10">
-                      <Link
-                        href={`/competition/${comp.id}`}
-                        className="block w-full text-center border border-[#d4af37]/40 bg-[#d4af37]/5 hover:bg-[#d4af37]/20 rounded-xl py-4 font-cinzel font-bold tracking-[0.2em] text-[#d4af37] text-xs uppercase transition-all"
-                      >
-                        {isLive ? "JOIN BATTLE NOW" : "ENTER ARENA"}
-                      </Link>
+                      {isLive ? (
+                        <JoinCompetitionButton competitionId={comp.id} />
+                      ) : (
+                        <Link
+                          href={`/competition/${comp.id}`}
+                          className="block w-full text-center border border-[#d4af37]/40 bg-[#d4af37]/5 hover:bg-[#d4af37]/20 rounded-xl py-4 font-cinzel font-bold tracking-[0.2em] text-[#d4af37] text-xs uppercase transition-all"
+                        >
+                          ENTER ARENA
+                        </Link>
+                      )}
                     </div>
                   </div>
                 </div>

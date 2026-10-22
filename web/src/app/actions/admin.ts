@@ -94,6 +94,16 @@ export async function startRoundAdmin(roundId: string) {
   return { success: true, round: startedRound }
 }
 
+export async function endRoundAdmin(roundId: string) {
+  await checkAdmin()
+  const round = await endRound(roundId)
+  revalidatePath("/admin/live")
+  revalidatePath(`/admin/competitions/${round.competitionId}`)
+  revalidatePath(`/competition/${round.competitionId}`)
+
+  return { success: true, round }
+}
+
 export async function endTestAdmin(competitionId: string) {
   await checkAdmin()
   const result = await endCompetition(competitionId)

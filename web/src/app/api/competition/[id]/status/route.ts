@@ -175,7 +175,8 @@ export async function GET(
         isDisqualified: false,
         dqReason: null,
         roundName: activeRound.name,
-        roundOrder: activeRound.order
+        roundOrder: activeRound.order,
+        canJoinActiveRound: !isDisqualified
       })
     }
 

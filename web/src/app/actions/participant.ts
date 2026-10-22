@@ -130,6 +130,59 @@ export async function startRoundNow(competitionId: string) {
   return { success: true }
 }
 
+export async function joinActiveRound(
+  competitionId: string
+): Promise<{ success: true } | { success: false; error: string }> {
+  const session = await auth()
+  if (!session?.user?.id) {
+    return { success: false, error: "Unauthorized: Please log in first." }
+  }
+
+  const [competition, participant, disqualification] = await Promise.all([
+    prisma.competition.findUnique({
+      where: { id: competitionId },
+      select: { status: true, rounds: { where: { status: "ACTIVE" }, select: { id: true } } }
+    }),
+    prisma.competitionParticipant.findUnique({
+      where: {
+        competitionId_userId: { competitionId, userId: session.user.id }
+      },
+      select: { status: true }
+    }),
+    prisma.competitionEvent.findFirst({
+      where: {
+        competitionId,
+        userId: session.user.id,
+        eventType: "PARTICIPANT_DISQUALIFIED"
+      },
+      select: { id: true }
+    })
+  ])
+
+  if (!competition) return { success: false, error: "Competition not found." }
+  if (competition.status !== "ACTIVE" || competition.rounds.length === 0) {
+    return { success: false, error: "There is no active stage to join." }
+  }
+  if (participant?.status === "DISQUALIFIED" || disqualification) {
+    return { success: false, error: "You have been disqualified from this competition." }
+  }
+
+  await prisma.competitionParticipant.upsert({
+    where: {
+      competitionId_userId: { competitionId, userId: session.user.id }
+    },
+    update: { status: "QUALIFIED" },
+    create: {
+      competitionId,
+      userId: session.user.id,
+      score: 0,
+      status: "QUALIFIED"
+    }
+  })
+
+  return { success: true }
+}
+
 export async function recordDisqualification(competitionId: string, reason: string = "FULLSCREEN_EXIT") {
   const session = await auth()
   if (!session?.user?.id) return { success: false }

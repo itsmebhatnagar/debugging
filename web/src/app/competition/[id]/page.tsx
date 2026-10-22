@@ -4,7 +4,7 @@ import { use, useCallback, useEffect, useState, useRef } from "react"
 import { useRealtime } from "@/hooks/useRealtime"
 import Editor from "@monaco-editor/react"
 import ReactMarkdown from "react-markdown"
-import { compileCode, submitFinalCode, saveDraft, startRoundNow, recordDisqualification, autoSubmitRound } from "@/app/actions/participant"
+import { compileCode, submitFinalCode, saveDraft, startRoundNow, joinActiveRound, recordDisqualification, autoSubmitRound } from "@/app/actions/participant"
 import Link from "next/link"
 import { Spotlight } from "@/components/ui/spotlight"
 import { C_STARTER_CODE, CODE_LANGUAGE } from "@/lib/code-language"
@@ -163,6 +163,9 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
   const [competitionName, setCompetitionName] = useState("Echona 2K26 — Pirate Code Championship")
   const [countdownSeconds, setCountdownSeconds] = useState(60)
   const [splashRoundName, setSplashRoundName] = useState("Quest for the Lost Treasure")
+  const [canJoinActiveRound, setCanJoinActiveRound] = useState(false)
+  const [joiningRound, setJoiningRound] = useState(false)
+  const [joinError, setJoinError] = useState<string | null>(null)
   const [round, setRound] = useState<RoundData | null>(null)
   const [selectedQuestionIndex, setSelectedQuestionIndex] = useState(0)
   const [language, setLanguage] = useState("c")
@@ -212,6 +215,7 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
       if (!res.ok) throw new Error(`Status request failed (${res.status})`)
       const data = await res.json()
       setStatusUnavailable(false)
+      setCanJoinActiveRound(data.canJoinActiveRound === true)
       if (data.userId) currentUserIdRef.current = data.userId
       if (data.competitionName) setCompetitionName(data.competitionName)
 
@@ -224,6 +228,10 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
       } else {
         setFullscreenExited(false)
         setDqReason(null)
+      }
+
+      if (data.status === "ACTIVE_ROUND" && arenaState === "ACTIVE" && round?.id === data.round.id) {
+        return
       }
 
       if (data.status === "WAITING" || data.status === "WAITING_ROUND") {
@@ -277,7 +285,7 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
     } finally {
       statusRequestInFlight.current = false
     }
-  }, [competitionId])
+  }, [arenaState, competitionId, round?.id])
 
   useEffect(() => { void fetchStatus() }, [fetchStatus])
 
@@ -292,7 +300,7 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
   }, [])
 
   useEffect(() => {
-    if (arenaState !== "WAITING" && arenaState !== "COUNTDOWN") return
+    if (arenaState !== "WAITING" && arenaState !== "COUNTDOWN" && arenaState !== "ACTIVE") return
     if (connected) return
     const interval = setInterval(() => { void fetchStatus() }, 15_000)
     return () => clearInterval(interval)
@@ -712,6 +720,15 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
       setSelectedQuestionIndex(0)
       setArenaState("WAITING")
     })
+    socket.on("round_ended", (data: any) => {
+      if (round?.id !== data.roundId) return
+      setRound(null)
+      setAttempts({})
+      setSubmissions({})
+      setCodes({})
+      setSelectedQuestionIndex(0)
+      setArenaState("WAITING")
+    })
     socket.on("participant_disqualified", (data: any) => {
       if (!currentUserIdRef.current || data.userId === currentUserIdRef.current) {
         setFullscreenExited(true)
@@ -744,6 +761,7 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
       socket.off("attempt_exceeded")
       socket.off("test_ended")
       socket.off("round_reset")
+      socket.off("round_ended")
       socket.off("participant_disqualified")
       socket.off("participant_status_changed")
     }
@@ -771,6 +789,26 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
     } catch {
       // If socket fires first that's fine; if activation fails, fall back to polling
       setTimeout(() => fetchStatus(), 2000)
+    }
+  }
+
+  const handleJoinActiveRound = async () => {
+    setJoiningRound(true)
+    setJoinError(null)
+
+    try {
+      const result = await joinActiveRound(competitionId)
+      if (!result.success) {
+        setJoinError(result.error || "Could not join the active stage.")
+        return
+      }
+
+      setCanJoinActiveRound(false)
+      await fetchStatus()
+    } catch (error: unknown) {
+      setJoinError(error instanceof Error ? error.message : "Could not join the active stage.")
+    } finally {
+      setJoiningRound(false)
     }
   }
 
@@ -998,7 +1036,7 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
                     className="text-xl sm:text-2xl lg:text-2xl text-[#F4E7C7] tracking-wider uppercase font-bold"
                     style={{ fontFamily: '"Cinzel Decorative", "Cinzel", serif', textShadow: '0 2px 8px rgba(0,0,0,0.9), 0 0 20px rgba(199,160,74,0.25)' }}
                   >
-                    WAITING FOR THE CAPTAIN
+                    {canJoinActiveRound ? "STAGE UNDERWAY — JOIN NOW" : "WAITING FOR THE CAPTAIN"}
                   </h1>
 
                   {/* Subtle Ornamental Gold Divider */}
@@ -1010,8 +1048,23 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
 
                   {/* Dispatch Briefing */}
                   <p className="font-garamond text-xs lg:text-[11px] text-[#E7D19A]/85 leading-relaxed max-w-sm mx-auto">
-                    The High Admiral is reviewing maritime charts and calibrating the arena. All crews will receive a 60-second preparation countdown to man their cannons!
+                    {canJoinActiveRound
+                      ? "The stage is live. Join now to enter the active challenge."
+                      : "The High Admiral is reviewing maritime charts and calibrating the arena. All crews will receive a 60-second preparation countdown to man their cannons!"}
                   </p>
+                  {canJoinActiveRound && (
+                    <div className="mt-3 w-full max-w-sm">
+                      <button
+                        type="button"
+                        onClick={handleJoinActiveRound}
+                        disabled={joiningRound}
+                        className="w-full rounded-sm border border-[#C7A04A] bg-gradient-to-r from-[#8B5E34] via-[#C7A04A] to-[#8B5E34] px-5 py-3 font-cinzel text-xs font-black uppercase tracking-[0.2em] text-[#17100C] transition-all hover:from-[#C7A04A] hover:to-[#E2C36A] disabled:cursor-wait disabled:opacity-60"
+                      >
+                        {joiningRound ? "JOINING STAGE..." : "JOIN ACTIVE STAGE"}
+                      </button>
+                      {joinError && <p role="alert" className="mt-2 text-xs text-red-400">{joinError}</p>}
+                    </div>
+                  )}
 
                   {/* Live Flagship Socket Telemetry */}
                   <div className="mt-3.5 pt-2.5 w-full border-t border-[#8B5E34]/30 flex items-center justify-between text-[10px] font-cinzel text-[#8B5E34]">
