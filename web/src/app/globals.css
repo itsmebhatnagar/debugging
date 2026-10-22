@@ -48,14 +48,34 @@
 
   --background: #05080f;
   --foreground: #f0e8d0;
+
+  /* ── Thematic Pirate Cursors ── */
+  --cursor-default: url('/cursors/default-32.png') 5 8, url('/cursors/default.png') 5 8, url('/default.png') 5 8, auto;
+  --cursor-hover: url('/cursors/hover-32.png') 5 8, url('/cursors/hover.png') 5 8, url('/hover.png') 5 8, pointer;
+  --cursor-link-hover: url('/cursors/link-hover-32.png') 5 8, url('/cursors/link-hover.png') 5 8, url('/link-hover.png') 5 8, pointer;
+  --cursor-button-hover: url('/cursors/button-hover-32.png') 5 8, url('/cursors/button-hover.png') 5 8, url('/button-hover.png') 5 8, pointer;
+  --cursor-click: url('/cursors/click-32.png') 5 8, url('/cursors/click.png') 5 8, url('/click.png') 5 8, pointer;
+  --cursor-button-click: url('/cursors/button-click-32.png') 5 8, url('/cursors/button-click.png') 5 8, url('/button-click.png') 5 8, pointer;
+  --cursor-disabled: url('/cursors/disabled-32.png') 5 8, url('/cursors/disabled.png') 5 8, url('/disabled.png') 5 8, not-allowed;
+  --cursor-drag: url('/cursors/drag-32.png') 16 16, url('/cursors/drag.png') 16 16, url('/drag.png') 16 16, grab;
+  --cursor-dragging: url('/cursors/drag-32.png') 16 16, url('/cursors/drag.png') 16 16, url('/drag.png') 16 16, grabbing;
+  --cursor-loading: url('/cursors/loading-32.png') 16 16, url('/cursors/loading.png') 16 16, url('/loading.png') 16 16, wait;
+  --cursor-precision: url('/cursors/precision-32.png') 16 16, url('/cursors/precision.png') 16 16, url('/precision.png') 16 16, crosshair;
+  --cursor-text: url('/cursors/text-select-32.png') 16 16, url('/cursors/text-select.png') 16 16, url('/text-select.png') 16 16, text;
 }
 
-/* ── Pirate Quill Needle Cursor (alternate.png) ────────────── */
+/* ── ECHONA Thematic Pirate Custom Cursors ────────────────── */
 html, body {
-  cursor: url('/cursor.png') 0 0, url('/cursor-32.png') 0 0, auto;
+  cursor: var(--cursor-default);
 }
 
+/* Link hover */
 a,
+a * {
+  cursor: var(--cursor-link-hover);
+}
+
+/* Button & interactive element hover */
 button,
 [role="button"],
 input[type="submit"],
@@ -68,24 +88,93 @@ summary,
 [style*="cursor:pointer"],
 .pq-btn,
 .pq-option,
-.voyage-btn {
-  cursor: url('/cursor-pointer.png') 0 0, url('/cursor-pointer-32.png') 0 0, pointer;
+.voyage-btn,
+.echona-button {
+  cursor: var(--cursor-button-hover);
 }
 
+/* Active / Clicking states */
+html:active, body:active {
+  cursor: var(--cursor-click);
+}
+
+a:active,
+a *:active {
+  cursor: var(--cursor-click);
+}
+
+button:active,
+[role="button"]:active,
+input[type="submit"]:active,
+input[type="button"]:active,
+.pq-btn:active,
+.voyage-btn:active,
+.echona-button:active {
+  cursor: var(--cursor-button-click) !important;
+}
+
+/* Disabled state */
 button:disabled,
+button[disabled],
 [disabled],
-.cursor-not-allowed {
-  cursor: not-allowed;
+[aria-disabled="true"],
+.disabled,
+.cursor-not-allowed,
+[style*="cursor: not-allowed"],
+[style*="cursor:not-allowed"],
+.pq-btn:disabled,
+.voyage-btn:disabled {
+  cursor: var(--cursor-disabled) !important;
 }
 
+/* Text editing / Input fields */
 input[type="text"],
 input[type="email"],
 input[type="password"],
 input[type="number"],
 input[type="tel"],
 input[type="search"],
-textarea {
-  cursor: text;
+textarea,
+[contenteditable="true"],
+.cursor-text,
+.code-input {
+  cursor: var(--cursor-text);
+}
+
+/* Precision / Target / Code / Inspector / Charts */
+pre,
+code,
+.font-mono,
+canvas,
+.cursor-crosshair,
+.precision-target,
+.code-editor,
+.quiz-chart,
+.treasure-map-view {
+  cursor: var(--cursor-precision);
+}
+
+/* Draggable / Movable items */
+[draggable="true"],
+.cursor-grab,
+.drag-handle {
+  cursor: var(--cursor-drag);
+}
+
+[draggable="true"]:active,
+.cursor-grabbing {
+  cursor: var(--cursor-dragging) !important;
+}
+
+/* Loading / Wait state */
+[aria-busy="true"],
+.loading,
+.is-loading,
+.cursor-wait,
+[style*="cursor: wait"],
+[style*="cursor:wait"],
+.echona-loader {
+  cursor: var(--cursor-loading) !important;
 }
 
 /* ── Base Reset ───────────────────────────────────────────── */

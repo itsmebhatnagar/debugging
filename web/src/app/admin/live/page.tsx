@@ -419,12 +419,13 @@ export default function LiveControlPage() {
                             {/* Chronometer & Controls (Right) */}
                             <div className="lg:col-span-1 border-l border-[#8B5E34]/20 pl-8 flex flex-col items-center justify-center">
                               {/* Nautical Chronometer (Placeholder for actual live timer if we had one) */}
-                              <div className="mb-6 w-32 h-32 rounded-full border-4 border-[#C7A04A] bg-[#17100C] shadow-[0_0_20px_rgba(199,160,74,0.1),inset_0_0_20px_rgba(0,0,0,0.8)] flex flex-col items-center justify-center relative">
-                                <div className="absolute top-2 text-[#8B5E34] text-[8px] font-bold tracking-widest uppercase">Chronometer</div>
-                                <span className={`text-3xl font-pirate ${isRoundActive ? 'text-[#10B981]' : 'text-[#E7D19A]'}`}>
+                              <div className="mb-6 w-32 h-32 rounded-full border-4 border-[#C7A04A] bg-[#17100C] shadow-[0_0_20px_rgba(199,160,74,0.1),inset_0_0_20px_rgba(0,0,0,0.8)] flex flex-col items-center justify-center relative overflow-hidden">
+                                <img src="/cursors/precision-256.png" alt="Reticle" className="absolute inset-0 w-full h-full object-contain opacity-20 pointer-events-none" />
+                                <div className="absolute top-2 text-[#8B5E34] text-[8px] font-bold tracking-widest uppercase relative z-10">Chronometer</div>
+                                <span className={`text-3xl font-pirate relative z-10 ${isRoundActive ? 'text-[#10B981]' : 'text-[#E7D19A]'}`}>
                                   {round.overallTimer ? 'LIVE' : 'READY'}
                                 </span>
-                                <div className="absolute bottom-2">
+                                <div className="absolute bottom-2 relative z-10">
                                   <Anchor className="w-4 h-4 text-[#8B5E34]/50" />
                                 </div>
                               </div>

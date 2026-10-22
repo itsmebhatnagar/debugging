@@ -146,9 +146,15 @@ export const EchonaStatus = ({ status }: { status: string }) => {
 
 // --- LOADER ---
 export const EchonaLoader = ({ text = "CHARTING..." }: { text?: string }) => (
-  <div className="flex flex-col items-center justify-center py-12">
-    <CompassRose className="w-10 h-10 text-[#C7A04A] animate-[spin_3s_linear_infinite]" />
-    <p className="text-[#C7A04A] text-xs font-bold tracking-[0.3em] uppercase mt-4 animate-pulse">{text}</p>
+  <div className="flex flex-col items-center justify-center py-12 echona-loader">
+    <div className="relative w-12 h-12 flex items-center justify-center mb-3">
+      <img 
+        src="/cursors/loading-256.png" 
+        alt="Loading" 
+        className="w-12 h-12 object-contain animate-[spin_4s_linear_infinite] drop-shadow-[0_0_10px_rgba(212,175,55,0.4)]" 
+      />
+    </div>
+    <p className="text-[#C7A04A] text-xs font-bold tracking-[0.3em] uppercase animate-pulse">{text}</p>
   </div>
 );
 
