@@ -1,6 +1,8 @@
 # Video files
 *.mp4
 !web/public/echona_ink_intro.mp4
+!web/public/pirate-ship.mp4
+!web/public/Pirate_ship_sailing_ocean_map_20260926111805.mp4
 
 # Gemini
 .gemini/
@@ -114,9 +116,12 @@ Thumbs.db
 # Reference images and screenshots
 alternate.png
 web/public/alternate.png
-web/public/cursor-*.png
-!web/public/cursor.png
-!web/public/cursor-pointer.png
+web/public/cursor-clean.png
+web/public/cursor-extracted.png
+web/public/cursor-master.png
+web/public/cursor-perfect.png
+web/public/cursor-sharp.png
+web/public/cursor-64.png
 
 # One-off patch, fix, rewrite, and test utility scripts
 web/fix*.py

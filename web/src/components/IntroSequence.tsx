@@ -23,6 +23,7 @@ interface IntroSequenceProps {
 
 export const IntroSequence: React.FC<IntroSequenceProps> = ({ onComplete }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const scrollVideoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const imagesRef = useRef<HTMLImageElement[]>([]);
@@ -35,7 +36,7 @@ export const IntroSequence: React.FC<IntroSequenceProps> = ({ onComplete }) => {
   const [scrollFrac, setScrollFrac] = useState(0);
 
   // ═══════════════════════════════════════════════════════
-  // 1. Preload frames in background during video playback
+  // 1. Preload frames in background
   // ═══════════════════════════════════════════════════════
   useEffect(() => {
     let loadedCount = 0;
@@ -63,12 +64,12 @@ export const IntroSequence: React.FC<IntroSequenceProps> = ({ onComplete }) => {
   }, []);
 
   // ═══════════════════════════════════════════════════════
-  // 2. Play video → switch to scroll on end
+  // 2. Play intro video → switch to scroll on end or user scroll
   // ═══════════════════════════════════════════════════════
   useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
+    if (phase !== 'ink') return;
 
+    const video = videoRef.current;
     let fallbackTimeout: NodeJS.Timeout;
 
     const handleEnded = () => {
@@ -77,23 +78,34 @@ export const IntroSequence: React.FC<IntroSequenceProps> = ({ onComplete }) => {
       setPhase('scroll');
     };
 
-    video.addEventListener('ended', handleEnded);
-    video.addEventListener('error', handleEnded);
+    if (video) {
+      video.addEventListener('ended', handleEnded);
+      video.addEventListener('error', handleEnded);
+      fallbackTimeout = setTimeout(handleEnded, 10000);
 
-    // Safety fallback: if video is blocked, 404, or stalls, transition seamlessly
-    fallbackTimeout = setTimeout(handleEnded, 8000);
+      video.play().catch(() => {
+        setTimeout(handleEnded, 2000);
+      });
+    }
 
-    video.play().catch(() => {
-      // Browser blocked autoplay
-      setTimeout(handleEnded, 2000);
-    });
+    // If user tries to scroll while watching video, immediately jump into interactive scroll
+    const handleUserScroll = (e: Event) => {
+      handleEnded();
+    };
+
+    window.addEventListener('wheel', handleUserScroll, { passive: true, once: true });
+    window.addEventListener('touchmove', handleUserScroll, { passive: true, once: true });
 
     return () => {
       clearTimeout(fallbackTimeout);
-      video.removeEventListener('ended', handleEnded);
-      video.removeEventListener('error', handleEnded);
+      if (video) {
+        video.removeEventListener('ended', handleEnded);
+        video.removeEventListener('error', handleEnded);
+      }
+      window.removeEventListener('wheel', handleUserScroll);
+      window.removeEventListener('touchmove', handleUserScroll);
     };
-  }, []);
+  }, [phase]);
 
   // ═══════════════════════════════════════════════════════
   // 3. Draw frame (cover-fit)
@@ -122,39 +134,59 @@ export const IntroSequence: React.FC<IntroSequenceProps> = ({ onComplete }) => {
   }, []);
 
   // ═══════════════════════════════════════════════════════
-  // 4. Scroll → frame mapping
+  // 4. Scroll → video & frame scrub mapping
   // ═══════════════════════════════════════════════════════
   useEffect(() => {
-    if (phase !== 'scroll' || !framesLoaded) return;
+    if (phase !== 'scroll') return;
 
-    drawFrame(0);
+    if (framesLoaded) {
+      drawFrame(0);
+    }
 
-    const handleScroll = () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    const updatePosition = () => {
+      const container = scrollContainerRef.current;
+      if (!container) return;
 
-      rafRef.current = requestAnimationFrame(() => {
-        const container = scrollContainerRef.current;
-        if (!container) return;
+      const scrollTop = window.scrollY;
+      const maxScroll = container.scrollHeight - window.innerHeight;
+      const fraction = Math.min(Math.max(scrollTop / Math.max(maxScroll, 1), 0), 1);
 
-        const scrollTop = window.scrollY;
-        const maxScroll = container.scrollHeight - window.innerHeight;
-        const fraction = Math.min(Math.max(scrollTop / maxScroll, 0), 1);
+      // Scrub HTML5 hardware-accelerated video
+      const sVideo = scrollVideoRef.current;
+      if (sVideo && sVideo.duration) {
+        const targetTime = fraction * sVideo.duration;
+        if (Math.abs(sVideo.currentTime - targetTime) > 0.03) {
+          sVideo.currentTime = targetTime;
+        }
+      }
+
+      // Scrub canvas frame if frames are loaded
+      if (framesLoaded) {
         const frameIndex = Math.min(
           Math.floor(fraction * (FRAME_COUNT - 1)),
           FRAME_COUNT - 1
         );
-
         if (frameIndex !== currentFrameRef.current) {
           currentFrameRef.current = frameIndex;
           drawFrame(frameIndex);
         }
+      }
 
-        setScrollFrac(fraction);
-      });
+      setScrollFrac(fraction);
     };
 
+    const handleScroll = () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      rafRef.current = requestAnimationFrame(updatePosition);
+    };
+
+    updatePosition();
+
     window.addEventListener('scroll', handleScroll, { passive: true });
-    const handleResize = () => drawFrame(currentFrameRef.current);
+    const handleResize = () => {
+      if (framesLoaded) drawFrame(currentFrameRef.current);
+      updatePosition();
+    };
     window.addEventListener('resize', handleResize, { passive: true });
 
     return () => {
@@ -188,7 +220,7 @@ export const IntroSequence: React.FC<IntroSequenceProps> = ({ onComplete }) => {
   // 6. Render
   // ═══════════════════════════════════════════════════════
 
-  // PHASE: INK VIDEO
+  // PHASE: INK / INTRO VIDEO
   if (phase === 'ink') {
     return (
       <div 
@@ -201,7 +233,7 @@ export const IntroSequence: React.FC<IntroSequenceProps> = ({ onComplete }) => {
         <video
           ref={videoRef}
           className="w-full h-full object-cover pointer-events-none"
-          src="/echona_ink_intro.mp4"
+          src="/pirate-ship.mp4"
           muted
           playsInline
           preload="auto"
@@ -212,9 +244,9 @@ export const IntroSequence: React.FC<IntroSequenceProps> = ({ onComplete }) => {
             window.scrollTo(0, 0);
             setPhase('scroll');
           }}
-          className="absolute top-6 right-6 z-[210] px-3 py-1.5 text-xs tracking-widest text-[#D4AF37]/80 hover:text-[#D4AF37] border border-[#D4AF37]/40 rounded bg-black/60 backdrop-blur transition-all font-mono"
+          className="absolute top-6 right-6 z-[210] px-4 py-2 text-xs tracking-widest text-[#D4AF37] hover:text-[#fff] border border-[#D4AF37]/50 rounded bg-black/70 backdrop-blur transition-all font-mono shadow-[0_0_15px_rgba(212,175,55,0.3)]"
         >
-          SKIP
+          SKIP ➔
         </button>
       </div>
     );
@@ -228,10 +260,21 @@ export const IntroSequence: React.FC<IntroSequenceProps> = ({ onComplete }) => {
       style={{ height: '500vh' }}
     >
       <div className="scroll-viewport sticky top-0 h-screen w-full overflow-hidden">
+        {/* Hardware-accelerated native video background (scrubs smoothly on scroll) */}
+        <video
+          ref={scrollVideoRef}
+          className="absolute inset-0 w-full h-full object-cover"
+          src="/pirate-ship.mp4"
+          muted
+          playsInline
+          preload="auto"
+        />
+
+        {/* High-fidelity Canvas frame overlay */}
         <canvas
           ref={canvasRef}
           className="absolute inset-0 w-full h-full"
-          style={{ display: 'block' }}
+          style={{ display: framesLoaded ? 'block' : 'none' }}
         />
 
         {/* Custom Pirate Top Scroll Progress Bar */}

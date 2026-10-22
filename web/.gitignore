@@ -44,9 +44,12 @@ next-env.d.ts
 
 # Intermediate cursor assets & screenshots
 /public/alternate.png
-/public/cursor-*.png
-!/public/cursor.png
-!/public/cursor-pointer.png
+/public/cursor-clean.png
+/public/cursor-extracted.png
+/public/cursor-master.png
+/public/cursor-perfect.png
+/public/cursor-sharp.png
+/public/cursor-64.png
 
 # Scratch, fix, and test scripts
 fix*.py
