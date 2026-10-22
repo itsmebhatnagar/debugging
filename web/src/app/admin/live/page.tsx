@@ -29,6 +29,7 @@ export default function LiveControlPage() {
   const [scoreboardModal, setScoreboardModal] = useState<{ roundId: string; roundName: string } | null>(null);
   const [eventLog, setEventLog] = useState<{time: string, msg: string, type: 'info'|'success'|'warning'|'error'}[]>([]);
   const logEndRef = useRef<HTMLDivElement>(null);
+  const realtimeOutageLogged = useRef(false);
 
   const { showToast, ToastComponent } = useEchonaToast();
 
@@ -71,41 +72,53 @@ export default function LiveControlPage() {
     fetchQuizzes();
 
     const token = getCookie('admin_token');
-    const realtimeUrl = process.env.NEXT_PUBLIC_REALTIME_URL;
-    if (!realtimeUrl) {
-      setConnectionStatus('DISCONNECTED');
-      addLog('Standing by in local mode. Real-time server offline.', 'info');
-      return;
-    }
+    const realtimeUrl = process.env.NEXT_PUBLIC_REALTIME_URL || 'http://localhost:3001';
 
     const newSocket = io(realtimeUrl, {
       auth: { token },
-      withCredentials: true,
-      reconnectionAttempts: 3
+      timeout: 10_000,
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 1_000,
+      reconnectionDelayMax: 5_000,
+      randomizationFactor: 0.5,
     });
 
     newSocket.on('connect', () => {
       setConnectionStatus('CONNECTED');
-      addLog('Command link established.', 'success');
-      showToast('success', 'LINK ACTIVE', 'Command deck is now connected to the real-time server.');
+      if (realtimeOutageLogged.current) {
+        addLog('Command link restored.', 'success');
+        showToast('success', 'LINK RESTORED', 'Command deck reconnected to the real-time server.');
+      } else {
+        addLog('Command link established.', 'success');
+        showToast('success', 'LINK ACTIVE', 'Command deck is now connected to the real-time server.');
+      }
+      realtimeOutageLogged.current = false;
     });
     
     newSocket.on('disconnect', (reason) => {
-      setConnectionStatus('DISCONNECTED');
-      addLog(`Command link lost (${reason}). Attempting reconnection...`, 'error');
-      showToast('error', 'LINK LOST', `Real-time connection severed: ${reason}`);
+      if (reason === 'io client disconnect') return;
+      setConnectionStatus('RECONNECTING');
+      if (!realtimeOutageLogged.current) {
+        addLog(`Command link lost (${reason}). Reconnecting...`, 'warning');
+        realtimeOutageLogged.current = true;
+      }
     });
 
     newSocket.on('connect_error', (err) => {
-      console.error('Socket connection error:', err);
-      addLog(`Connection error: ${err.message}`, 'error');
+      setConnectionStatus('RECONNECTING');
+      if (!realtimeOutageLogged.current) {
+        console.error('Socket connection error:', err);
+        addLog(`Realtime service unavailable at ${realtimeUrl} (${err.message}). Retrying...`, 'warning');
+        realtimeOutageLogged.current = true;
+      }
       if (err.message === 'Invalid token' || err.message === 'No token') {
         // Token is invalid, clear it
         localStorage.removeItem('admin_token');
       }
     });
 
-    newSocket.on('reconnecting', () => {
+    newSocket.io.on('reconnect_attempt', () => {
       setConnectionStatus('RECONNECTING');
     });
 
