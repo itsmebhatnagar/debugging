@@ -164,11 +164,7 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
   const [splashRoundName, setSplashRoundName] = useState("Quest for the Lost Treasure")
   const [round, setRound] = useState<RoundData | null>(null)
   const [selectedQuestionIndex, setSelectedQuestionIndex] = useState(0)
-<<<<<<< HEAD
   const [language, setLanguage] = useState("c")
-=======
-  const language = CODE_LANGUAGE
->>>>>>> b6de5438a00f9994b8cade4efe75ab809e762c39
   const [codes, setCodes] = useState<Record<string, string>>({})
   const [attempts, setAttempts] = useState<Record<string, number>>({})
   const [submissions, setSubmissions] = useState<Record<string, string>>({})
@@ -258,20 +254,15 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
               newCodes[`${q.id}_${sc.language.toLowerCase()}`] = sc.code
             })
             const draft = data.userState.drafts?.[q.id]
-            if (draft?.code && draft.language === CODE_LANGUAGE) {
+            if (draft?.code) {
               newCodes[q.id] = draft.code
               if (draft.language) {
                 newCodes[`${q.id}_${draft.language.toLowerCase()}`] = draft.code
               }
             } else {
-<<<<<<< HEAD
               const starter = getQuestionStarterCode(q, language)
               newCodes[q.id] = starter
               newCodes[`${q.id}_${language.toLowerCase()}`] = starter
-=======
-              const starter = q.starterCodes.find((s) => s.language === CODE_LANGUAGE)
-              newCodes[q.id] = starter?.code || C_STARTER_CODE
->>>>>>> b6de5438a00f9994b8cade4efe75ab809e762c39
             }
           })
           setCodes(newCodes)
@@ -691,17 +682,12 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
         setRound({ id: data.roundId, name: data.roundName, order: data.roundOrder, maxCompileAttempts: data.maxCompileAttempts, questions: data.questions })
         const initialCodes: Record<string, string> = {}
         data.questions.forEach((q: QuestionData) => {
-<<<<<<< HEAD
           q.starterCodes?.forEach((sc: any) => {
             initialCodes[`${q.id}_${sc.language.toLowerCase()}`] = sc.code
           })
           const starter = getQuestionStarterCode(q, language)
           initialCodes[q.id] = starter
           initialCodes[`${q.id}_${language.toLowerCase()}`] = starter
-=======
-          const starter = q.starterCodes?.find((s) => s.language === CODE_LANGUAGE)
-          initialCodes[q.id] = starter?.code || C_STARTER_CODE
->>>>>>> b6de5438a00f9994b8cade4efe75ab809e762c39
         })
         setCodes(initialCodes)
         setSelectedQuestionIndex(0)
@@ -824,16 +810,12 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
   const handleCodeChange = (newVal: string | undefined) => {
     if (!currentQuestion) return
     const updated = newVal || ""
-<<<<<<< HEAD
     const langKey = `${currentQuestion.id}_${language.toLowerCase()}`
     setCodes((prev) => ({
       ...prev,
       [langKey]: updated,
       [currentQuestion.id]: updated
     }))
-    saveDraft(currentQuestion.id, language, updated).catch(() => {})
-=======
-    setCodes((prev) => ({ ...prev, [currentQuestion.id]: updated }))
     pendingDraftRef.current = { questionId: currentQuestion.id, code: updated }
     if (draftSaveTimeoutRef.current) clearTimeout(draftSaveTimeoutRef.current)
     draftSaveTimeoutRef.current = setTimeout(() => {
@@ -849,7 +831,6 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
         console.error("Draft save failed:", error)
       })
     }, 600)
->>>>>>> b6de5438a00f9994b8cade4efe75ab809e762c39
   }
 
   const handleCompile = async () => {
@@ -1757,7 +1738,6 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#d4af37" strokeWidth="2">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
                   </svg>
-<<<<<<< HEAD
                   <select
                     value={language}
                     onChange={(e) => handleLanguageChange(e.target.value)}
@@ -1778,11 +1758,6 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
                     <RotateCcw className="w-2.5 h-2.5" />
                     <span className="hidden sm:inline">RESET STARTER</span>
                   </button>
-=======
-                  <span className="text-[#d4af37] text-xs font-cinzel font-bold uppercase tracking-wider">
-                    C — GCC Latest
-                  </span>
->>>>>>> b6de5438a00f9994b8cade4efe75ab809e762c39
                 </div>
                 
                 <div className="flex items-center gap-2">
@@ -1798,11 +1773,7 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
                 <Editor
                   height="100%"
                   theme="vs-dark"
-<<<<<<< HEAD
                   language={language === "cpp" ? "cpp" : language === "c" ? "c" : language === "java" ? "java" : language === "python" ? "python" : "javascript"}
-=======
-                  language="c"
->>>>>>> b6de5438a00f9994b8cade4efe75ab809e762c39
                   value={currentCode}
                   onChange={handleCodeChange}
                   onMount={handleEditorMount}
