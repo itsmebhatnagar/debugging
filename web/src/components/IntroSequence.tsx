@@ -205,7 +205,7 @@ export const IntroSequence: React.FC<IntroSequenceProps> = ({ onComplete }) => {
       className="intro-scroll-container relative bg-black w-full"
       style={{ height: '450vh' }}
     >
-      <div className="scroll-viewport sticky top-0 h-screen h-[100dvh] w-full overflow-hidden">
+      <div className="scroll-viewport fixed inset-0 h-screen h-[100dvh] w-full overflow-hidden z-20 pointer-events-none">
         {/* High-fidelity Responsive Canvas */}
         <canvas
           ref={canvasRef}
