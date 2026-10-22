@@ -8,6 +8,7 @@ import { compileCode, submitFinalCode, saveDraft, startRoundNow, recordDisqualif
 import Link from "next/link"
 import { Spotlight } from "@/components/ui/spotlight"
 import { C_STARTER_CODE, CODE_LANGUAGE } from "@/lib/code-language"
+import { Rivet } from "@/components/icons/Rivet"
 import {
   Anchor,
   Compass,
@@ -914,35 +915,41 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
   // ── STATE: WAITING ────────────────────────────────────────────
   if (arenaState === "WAITING") {
     return (
-      <div className="relative min-h-screen lg:h-screen lg:max-h-screen lg:overflow-hidden pt-16 lg:pt-0 pb-6 lg:pb-0 px-4 sm:px-6 flex flex-col items-center justify-center z-10">
+      <div className="relative min-h-screen lg:h-screen lg:max-h-screen lg:overflow-hidden pt-16 lg:pt-0 pb-6 lg:pb-0 px-4 sm:px-6 flex flex-col items-center justify-center z-10 bg-[#080504]">
         
-        {/* Subtle ambient nautical background glow */}
+        {/* Subtle ambient warm pirate gold lantern glow */}
         <div
-          className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full opacity-60"
+          className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[900px] rounded-full opacity-60"
           style={{
-            background: "radial-gradient(circle, rgba(212,175,55,0.08) 0%, rgba(14,24,44,0.3) 50%, transparent 75%)",
+            background: "radial-gradient(circle, rgba(199,160,74,0.12) 0%, rgba(35,20,13,0.35) 50%, transparent 75%)",
           }}
         />
 
         {/* Tactical Coordinates Header */}
-        <div className="relative z-10 mb-2.5 lg:mb-3 flex items-center gap-2 text-[10px] font-cinzel font-bold tracking-[0.3em] text-[#d4af37]/70 uppercase">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#d4af37]/60" />
+        <div className="relative z-10 mb-2.5 lg:mb-3 flex items-center gap-2 text-[10px] font-cinzel font-bold tracking-[0.3em] text-[#C7A04A]/90 uppercase">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#C7A04A]" />
           <span>PORT ROYAL ANCHORAGE · 17°26&apos;N 76°48&apos;W</span>
-          <span className="w-1.5 h-1.5 rounded-full bg-[#d4af37]/60" />
+          <span className="w-1.5 h-1.5 rounded-full bg-[#C7A04A]" />
         </div>
 
         <div className="relative z-10 w-full max-w-2xl lg:max-w-5xl animate-treasure-in flex flex-col">
-          {/* Dual-border luxury maritime glass container */}
-          <div className="relative w-full overflow-hidden rounded-[2rem] lg:rounded-[2.5rem] bg-gradient-to-b from-[#d4af37]/35 via-[#d4af37]/15 to-[#d4af37]/30 p-[1px] shadow-[0_25px_80px_rgba(0,0,0,0.85),0_0_50px_rgba(212,175,55,0.08)]">
-            <Spotlight className="from-[#f4ede0] via-[#d4af37] to-transparent blur-3xl opacity-35" size={600} />
+          {/* Dual-border antique gold & distressed wood container */}
+          <div className="relative w-full overflow-hidden rounded-sm bg-gradient-to-b from-[#C7A04A] via-[#8B5E34] to-[#C7A04A]/50 p-[1px] shadow-[0_25px_80px_rgba(0,0,0,0.95),0_0_50px_rgba(199,160,74,0.15)]">
+            <Spotlight className="from-[#F4E7C7] via-[#C7A04A] to-transparent blur-3xl opacity-25" size={600} />
 
-            <div className="relative w-full rounded-[2rem] lg:rounded-[2.5rem] bg-[#121620]/94 backdrop-blur-2xl p-5 sm:p-7 lg:p-7 border border-[#d4af37]/15 overflow-hidden">
+            <div className="relative w-full rounded-sm bg-[#120B08]/96 backdrop-blur-2xl p-5 sm:p-7 lg:p-7 border border-[#8B5E34]/40 overflow-hidden">
               
-              {/* Antique Brass Corner Rivets/Brackets */}
-              <span className="pointer-events-none absolute top-4 left-4 w-3.5 h-3.5 border-t-2 border-l-2 border-[#d4af37]/50" />
-              <span className="pointer-events-none absolute top-4 right-4 w-3.5 h-3.5 border-t-2 border-r-2 border-[#d4af37]/50" />
-              <span className="pointer-events-none absolute bottom-4 left-4 w-3.5 h-3.5 border-b-2 border-l-2 border-[#d4af37]/50" />
-              <span className="pointer-events-none absolute bottom-4 right-4 w-3.5 h-3.5 border-b-2 border-r-2 border-[#d4af37]/50" />
+              {/* Corner Rivets */}
+              <Rivet className="absolute top-2 left-2 w-2 h-2 text-[#C7A04A]" />
+              <Rivet className="absolute top-2 right-2 w-2 h-2 text-[#C7A04A]" />
+              <Rivet className="absolute bottom-2 left-2 w-2 h-2 text-[#C7A04A]" />
+              <Rivet className="absolute bottom-2 right-2 w-2 h-2 text-[#C7A04A]" />
+
+              {/* Antique Brass Corner Brackets */}
+              <span className="pointer-events-none absolute top-3.5 left-3.5 w-3.5 h-3.5 border-t-2 border-l-2 border-[#C7A04A]/70" />
+              <span className="pointer-events-none absolute top-3.5 right-3.5 w-3.5 h-3.5 border-t-2 border-r-2 border-[#C7A04A]/70" />
+              <span className="pointer-events-none absolute bottom-3.5 left-3.5 w-3.5 h-3.5 border-b-2 border-l-2 border-[#C7A04A]/70" />
+              <span className="pointer-events-none absolute bottom-3.5 right-3.5 w-3.5 h-3.5 border-b-2 border-r-2 border-[#C7A04A]/70" />
 
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-8 items-center">
                 
@@ -951,57 +958,60 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
                   
                   {/* Bespoke Nautical Astrolabe & Anchor Crest */}
                   <div className="relative mb-3 flex items-center justify-center">
-                    <div className="absolute inset-0 rounded-full animate-ping opacity-20 bg-[#d4af37]" />
-                    <div className="absolute -inset-2.5 rounded-full border border-dashed border-[#d4af37]/30 animate-[spin_40s_linear_infinite]" />
-                    <div className="absolute -inset-1 rounded-full border border-[#d4af37]/20" />
+                    <div className="absolute inset-0 rounded-full animate-ping opacity-20 bg-[#C7A04A]" />
+                    <div className="absolute -inset-2.5 rounded-full border border-dashed border-[#C7A04A]/30 animate-[spin_40s_linear_infinite]" />
+                    <div className="absolute -inset-1 rounded-full border border-[#C7A04A]/25" />
 
                     <div
-                      className="relative flex h-14 w-14 lg:h-18 lg:w-18 items-center justify-center rounded-2xl shadow-[0_0_35px_rgba(212,175,55,0.25)] border-2 border-[#d4af37]/60"
+                      className="relative flex h-14 w-14 lg:h-18 lg:w-18 items-center justify-center rounded-xl shadow-[0_0_35px_rgba(199,160,74,0.3)] border-2 border-[#C7A04A]/70"
                       style={{
-                        background: "radial-gradient(circle at 30% 30%, #1e293b 0%, #0a0f1d 75%)",
+                        background: "radial-gradient(circle at 35% 35%, #2B1710 0%, #17100C 85%)",
                       }}
                     >
-                      <Anchor className="w-7 h-7 lg:w-9 lg:h-9 text-[#f4ede0] drop-shadow-[0_2px_10px_rgba(212,175,55,0.5)]" strokeWidth={1.75} />
+                      <Anchor className="w-7 h-7 lg:w-9 lg:h-9 text-[#F4E7C7] drop-shadow-[0_2px_10px_rgba(199,160,74,0.6)]" strokeWidth={1.75} />
                     </div>
                   </div>
 
                   {/* Harbor Telemetry Status Pill */}
-                  <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full border border-[#d4af37]/35 bg-[#d4af37]/10 shadow-[0_0_15px_rgba(212,175,55,0.08)] mb-2.5">
+                  <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full border border-[#C7A04A]/40 bg-[#17100C] shadow-[0_0_15px_rgba(199,160,74,0.1)] mb-2.5">
                     <span className="relative flex h-2 w-2">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
                       <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400 shadow-[0_0_8px_#34d399]" />
                     </span>
-                    <span className="font-cinzel text-[10px] font-bold tracking-[0.25em] text-[#f4ede0] uppercase">
+                    <span className="font-cinzel text-[10px] font-bold tracking-[0.25em] text-[#E7D19A] uppercase">
                       HARBOR FLEET STANDBY
                     </span>
                   </div>
 
                   {/* Majestic Headline in Cinzel */}
-                  <h1 className="font-cinzel text-xl sm:text-2xl lg:text-2xl font-black tracking-[0.08em] text-[#f4ede0] uppercase drop-shadow-[0_4px_24px_rgba(0,0,0,0.9)]">
+                  <h1 
+                    className="text-xl sm:text-2xl lg:text-2xl text-[#F4E7C7] tracking-wider uppercase font-bold"
+                    style={{ fontFamily: '"Cinzel Decorative", "Cinzel", serif', textShadow: '0 2px 8px rgba(0,0,0,0.9), 0 0 20px rgba(199,160,74,0.25)' }}
+                  >
                     WAITING FOR THE CAPTAIN
                   </h1>
 
                   {/* Subtle Ornamental Gold Divider */}
-                  <div className="flex items-center justify-center gap-3 my-2 w-full max-w-xs opacity-75">
-                    <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-[#d4af37] to-[#d4af37]/40" />
-                    <div className="w-1.5 h-1.5 rotate-45 border border-[#d4af37] bg-[#d4af37]/40" />
-                    <div className="h-[1px] flex-1 bg-gradient-to-l from-transparent via-[#d4af37] to-[#d4af37]/40" />
+                  <div className="flex items-center justify-center gap-3 my-2 w-full max-w-xs opacity-80">
+                    <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-[#C7A04A] to-[#C7A04A]/40" />
+                    <div className="w-1.5 h-1.5 rotate-45 border border-[#C7A04A] bg-[#C7A04A]/40" />
+                    <div className="h-[1px] flex-1 bg-gradient-to-l from-transparent via-[#C7A04A] to-[#C7A04A]/40" />
                   </div>
 
                   {/* Dispatch Briefing */}
-                  <p className="font-garamond text-xs lg:text-[11px] text-[#c8b887] leading-relaxed max-w-sm mx-auto">
+                  <p className="font-garamond text-xs lg:text-[11px] text-[#E7D19A]/85 leading-relaxed max-w-sm mx-auto">
                     The High Admiral is reviewing maritime charts and calibrating the arena. All crews will receive a 60-second preparation countdown to man their cannons!
                   </p>
 
                   {/* Live Flagship Socket Telemetry */}
-                  <div className="mt-3.5 pt-2.5 w-full border-t border-[#d4af37]/15 flex items-center justify-between text-[10px] font-cinzel text-[#8e8271]">
+                  <div className="mt-3.5 pt-2.5 w-full border-t border-[#8B5E34]/30 flex items-center justify-between text-[10px] font-cinzel text-[#8B5E34]">
                     <div className="flex items-center gap-1.5">
-                      <Radio className="w-3 h-3 text-[#d4af37]" />
+                      <Radio className="w-3 h-3 text-[#C7A04A]" />
                       <span className={connected ? "text-emerald-400 font-bold" : "text-red-400 font-bold"}>
                         {connected ? "LIVE CONNECTION" : statusUnavailable ? "RETRYING CONNECTION..." : "CONNECTING TO FLEET..."}
                       </span>
                     </div>
-                    <span className="text-[9px] text-[#695e50] tracking-wider uppercase hidden sm:inline-block">
+                    <span className="text-[9px] text-[#C7A04A]/70 tracking-wider uppercase hidden sm:inline-block">
                       FREQ 4.8 GHZ
                     </span>
                   </div>
@@ -1009,7 +1019,7 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
                   <Link
                     href="/dashboard"
                     prefetch={false}
-                    className="mt-3 inline-flex min-h-10 items-center justify-center self-center rounded-lg border border-[#d4af37]/40 bg-[#d4af37]/10 px-5 py-2 font-cinzel text-[10px] font-bold tracking-[0.16em] text-[#d4af37] transition-colors hover:bg-[#d4af37]/20 lg:self-start"
+                    className="mt-3 inline-flex min-h-10 items-center justify-center self-center rounded-sm border border-[#C7A04A]/50 bg-[#17100C] hover:bg-[#2B1710] px-5 py-2 font-cinzel text-[10px] font-bold tracking-[0.16em] text-[#E2C36A] transition-colors shadow-md lg:self-start"
                   >
                     GO TO DASHBOARD
                   </Link>
@@ -1017,17 +1027,17 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
 
                 {/* ── RIGHT COLUMN: Expedition Standing Orders ───────── */}
                 <div className="lg:col-span-7 flex flex-col">
-                  <div className="w-full rounded-2xl border border-[#d4af37]/25 bg-[#0a0f1d]/75 backdrop-blur-md p-3.5 sm:p-4 lg:p-3.5 text-left shadow-[inset_0_1px_0_rgba(212,175,55,0.1)]">
+                  <div className="w-full rounded-sm border border-[#8B5E34]/50 bg-[#17100C]/90 backdrop-blur-md p-3.5 sm:p-4 lg:p-3.5 text-left shadow-[inset_0_1px_0_rgba(199,160,74,0.1)]">
                     
                     {/* Dossier Header */}
-                    <div className="flex items-center justify-between pb-2 mb-2 border-b border-[#d4af37]/15">
+                    <div className="flex items-center justify-between pb-2 mb-2 border-b border-[#8B5E34]/40">
                       <div className="flex items-center gap-2">
-                        <Scroll className="w-3.5 h-3.5 text-[#d4af37]" />
-                        <span className="font-cinzel text-[11px] font-bold uppercase tracking-[0.2em] text-[#d4af37]">
+                        <Scroll className="w-3.5 h-3.5 text-[#C7A04A]" />
+                        <span className="font-cinzel text-[11px] font-bold uppercase tracking-[0.2em] text-[#C7A04A]">
                           EXPEDITION STANDING ORDERS
                         </span>
                       </div>
-                      <span className="text-[9px] font-cinzel font-semibold tracking-widest text-[#8e8271] uppercase">
+                      <span className="text-[9px] font-cinzel font-semibold tracking-widest text-[#E7D19A]/60 uppercase">
                         ARCHIPELAGO · 3 ROUNDS
                       </span>
                     </div>
@@ -1042,7 +1052,7 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
                           questions: "3 Questions",
                           attempts: "5 Compiles Max",
                           icon: Compass,
-                          colorClass: "text-[#d4af37] border-[#d4af37]/30 bg-[#d4af37]/10",
+                          colorClass: "text-[#C7A04A] border-[#C7A04A]/40 bg-[#2B1710]/40",
                         },
                         {
                           order: "ROUND II",
@@ -1051,7 +1061,7 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
                           questions: "2 Questions",
                           attempts: "3 Compiles Max",
                           icon: Waves,
-                          colorClass: "text-cyan-400 border-cyan-500/30 bg-cyan-950/30",
+                          colorClass: "text-[#E2C36A] border-[#E2C36A]/40 bg-[#2B1710]/40",
                         },
                         {
                           order: "ROUND III",
@@ -1060,39 +1070,39 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
                           questions: "1 Question",
                           attempts: "2 Compiles Max",
                           icon: Swords,
-                          colorClass: "text-amber-400 border-amber-500/30 bg-amber-950/30",
+                          colorClass: "text-[#F4E7C7] border-[#C7A04A]/50 bg-[#2B1710]/40",
                         },
                       ].map((r) => {
                         const IconComponent = r.icon
                         return (
                           <div
                             key={r.order}
-                            className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 p-2 sm:px-3 sm:py-2 rounded-xl bg-[#131a29]/60 border border-[#d4af37]/15 hover:border-[#d4af37]/35 transition-all"
+                            className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 p-2 sm:px-3 sm:py-2 rounded-sm bg-[#080706] border border-[#8B5E34]/40 hover:border-[#C7A04A]/60 transition-all"
                           >
                             <div className="flex items-center gap-2.5">
-                              <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border ${r.colorClass}`}>
+                              <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-sm border ${r.colorClass}`}>
                                 <IconComponent className="w-3.5 h-3.5" />
                               </div>
                               <div>
                                 <div className="flex items-center gap-2">
-                                  <span className="font-cinzel text-[10px] font-bold text-[#d4af37] tracking-wider">
+                                  <span className="font-cinzel text-[10px] font-bold text-[#C7A04A] tracking-wider">
                                     {r.order}:
                                   </span>
-                                  <span className="font-cinzel text-[11px] font-bold text-[#f4ede0] tracking-wide">
+                                  <span className="font-cinzel text-[11px] font-bold text-[#F4E7C7] tracking-wide">
                                     {r.title}
                                   </span>
                                 </div>
-                                <div className="font-garamond text-[11px] text-[#8e8271]">
+                                <div className="font-garamond text-[11px] text-[#E7D19A]/70">
                                   {r.lore}
                                 </div>
                               </div>
                             </div>
 
                             <div className="flex items-center gap-1.5 self-end sm:self-auto shrink-0">
-                              <span className="px-2 py-0.5 rounded-md border border-[#d4af37]/25 bg-black/40 text-[9px] font-cinzel font-bold text-[#d4af37] tracking-wider">
+                              <span className="px-2 py-0.5 rounded-sm border border-[#C7A04A]/30 bg-[#17100C] text-[9px] font-cinzel font-bold text-[#E2C36A] tracking-wider">
                                 {r.questions}
                               </span>
-                              <span className="px-2 py-0.5 rounded-md border border-white/10 bg-black/30 text-[9px] font-cinzel text-[#8e8271] tracking-wider">
+                              <span className="px-2 py-0.5 rounded-sm border border-[#8B5E34]/40 bg-black/40 text-[9px] font-cinzel text-[#8B5E34] tracking-wider">
                                 {r.attempts}
                               </span>
                             </div>
@@ -1102,11 +1112,11 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
                     </div>
 
                     {/* Critical Directive */}
-                    <div className="mt-2 flex items-center gap-2 p-2 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-200">
+                    <div className="mt-2 flex items-center gap-2 p-2 rounded-sm border border-amber-600/40 bg-[#251508]/80 text-[#E7D19A]">
                       <ShieldAlert className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                       <div className="text-[10px] font-cinzel tracking-wider leading-relaxed">
                         <span className="font-bold text-amber-300 uppercase">CHRONOMETER PROTOCOL:</span>{" "}
-                        <span className="font-garamond text-xs text-amber-200/90 font-medium normal-case">
+                        <span className="font-garamond text-xs text-[#E7D19A]/90 font-medium normal-case">
                           Battle timers run strictly on the High Admiral&apos;s flagship server — hidden from your console to enforce true maritime focus.
                         </span>
                       </div>
@@ -1127,43 +1137,49 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
   if (arenaState === "COUNTDOWN") {
     const isUrgent = countdownSeconds <= 10
     return (
-      <div className="relative min-h-screen lg:h-screen lg:max-h-screen lg:overflow-hidden pt-16 lg:pt-0 pb-6 lg:pb-0 px-4 sm:px-6 flex flex-col items-center justify-center z-10 text-center">
+      <div className="relative min-h-screen lg:h-screen lg:max-h-screen lg:overflow-hidden pt-16 lg:pt-0 pb-6 lg:pb-0 px-4 sm:px-6 flex flex-col items-center justify-center z-10 text-center bg-[#080504]">
         {/* Subtle ambient nautical background glow */}
         <div
-          className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full opacity-60"
+          className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[900px] rounded-full opacity-60"
           style={{
             background: isUrgent
-              ? "radial-gradient(circle, rgba(239,68,68,0.15) 0%, rgba(14,24,44,0.3) 50%, transparent 75%)"
-              : "radial-gradient(circle, rgba(212,175,55,0.1) 0%, rgba(14,24,44,0.3) 50%, transparent 75%)",
+              ? "radial-gradient(circle, rgba(155,28,28,0.2) 0%, rgba(35,15,10,0.5) 50%, transparent 75%)"
+              : "radial-gradient(circle, rgba(199,160,74,0.15) 0%, rgba(35,20,13,0.4) 50%, transparent 75%)",
             animation: "orbPulse 3s ease-in-out infinite",
           }}
         />
 
         {/* Tactical Coordinates Header */}
-        <div className="relative z-10 mb-2.5 lg:mb-3 flex items-center gap-2 text-[10px] font-cinzel font-bold tracking-[0.3em] text-[#d4af37]/70 uppercase">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#d4af37]/60" />
+        <div className="relative z-10 mb-2.5 lg:mb-3 flex items-center gap-2 text-[10px] font-cinzel font-bold tracking-[0.3em] text-[#C7A04A]/90 uppercase">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#C7A04A]" />
           <span>PORT ROYAL BATTLE STATIONS · 17°26&apos;N 76°48&apos;W</span>
-          <span className="w-1.5 h-1.5 rounded-full bg-[#d4af37]/60" />
+          <span className="w-1.5 h-1.5 rounded-full bg-[#C7A04A]" />
         </div>
 
         <div className="relative z-10 w-full max-w-xl lg:max-w-4xl animate-treasure-in flex flex-col">
-          {/* Dual-border luxury maritime glass container */}
+          {/* Dual-border luxury maritime container */}
           <div
-            className={`relative w-full overflow-hidden rounded-[2rem] lg:rounded-[2.5rem] p-[1px] shadow-[0_25px_80px_rgba(0,0,0,0.85)] transition-all ${
+            className={`relative w-full overflow-hidden rounded-sm p-[1px] shadow-[0_25px_80px_rgba(0,0,0,0.95)] transition-all ${
               isUrgent
-                ? "bg-gradient-to-b from-red-500/50 via-red-500/20 to-red-500/40 shadow-[0_0_60px_rgba(239,68,68,0.25)]"
-                : "bg-gradient-to-b from-[#d4af37]/35 via-[#d4af37]/15 to-[#d4af37]/30"
+                ? "bg-gradient-to-b from-red-600/70 via-red-950/80 to-[#17100C] shadow-[0_0_60px_rgba(155,28,28,0.35)]"
+                : "bg-gradient-to-b from-[#C7A04A] via-[#8B5E34] to-[#C7A04A]/50"
             }`}
           >
-            <Spotlight className={isUrgent ? "from-red-500/30 via-[#d4af37]/20 to-transparent blur-3xl opacity-35" : "from-[#f4ede0] via-[#d4af37] to-transparent blur-3xl opacity-35"} size={600} />
+            <Spotlight className={isUrgent ? "from-red-500/30 via-[#C7A04A]/20 to-transparent blur-3xl opacity-35" : "from-[#F4E7C7] via-[#C7A04A] to-transparent blur-3xl opacity-35"} size={600} />
 
-            <div className="relative w-full rounded-[2rem] lg:rounded-[2.5rem] bg-[#121620]/94 backdrop-blur-2xl p-6 sm:p-8 lg:p-8 border border-[#d4af37]/15 overflow-hidden">
+            <div className={`relative w-full rounded-sm ${isUrgent ? "bg-[#180806]/96 border border-red-600/50" : "bg-[#120B08]/96 border border-[#8B5E34]/40"} backdrop-blur-2xl p-6 sm:p-8 lg:p-8 overflow-hidden`}>
               
-              {/* Antique Brass Corner Rivets/Brackets */}
-              <span className={`pointer-events-none absolute top-4 left-4 w-3.5 h-3.5 border-t-2 border-l-2 ${isUrgent ? "border-red-500/60" : "border-[#d4af37]/50"}`} />
-              <span className={`pointer-events-none absolute top-4 right-4 w-3.5 h-3.5 border-t-2 border-r-2 ${isUrgent ? "border-red-500/60" : "border-[#d4af37]/50"}`} />
-              <span className={`pointer-events-none absolute bottom-4 left-4 w-3.5 h-3.5 border-b-2 border-l-2 ${isUrgent ? "border-red-500/60" : "border-[#d4af37]/50"}`} />
-              <span className={`pointer-events-none absolute bottom-4 right-4 w-3.5 h-3.5 border-b-2 border-r-2 ${isUrgent ? "border-red-500/60" : "border-[#d4af37]/50"}`} />
+              {/* Corner Rivets */}
+              <Rivet className="absolute top-2 left-2 w-2 h-2 text-[#C7A04A]" />
+              <Rivet className="absolute top-2 right-2 w-2 h-2 text-[#C7A04A]" />
+              <Rivet className="absolute bottom-2 left-2 w-2 h-2 text-[#C7A04A]" />
+              <Rivet className="absolute bottom-2 right-2 w-2 h-2 text-[#C7A04A]" />
+
+              {/* Antique Brass Corner Brackets */}
+              <span className={`pointer-events-none absolute top-3.5 left-3.5 w-3.5 h-3.5 border-t-2 border-l-2 ${isUrgent ? "border-red-500/70" : "border-[#C7A04A]/70"}`} />
+              <span className={`pointer-events-none absolute top-3.5 right-3.5 w-3.5 h-3.5 border-t-2 border-r-2 ${isUrgent ? "border-red-500/70" : "border-[#C7A04A]/70"}`} />
+              <span className={`pointer-events-none absolute bottom-3.5 left-3.5 w-3.5 h-3.5 border-b-2 border-l-2 ${isUrgent ? "border-red-500/70" : "border-[#C7A04A]/70"}`} />
+              <span className={`pointer-events-none absolute bottom-3.5 right-3.5 w-3.5 h-3.5 border-b-2 border-r-2 ${isUrgent ? "border-red-500/70" : "border-[#C7A04A]/70"}`} />
 
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-center">
                 
@@ -1173,55 +1189,53 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
                   {/* Top row badge */}
                   <div className="flex items-center gap-3 mb-2.5">
                     <div
-                      className={`relative flex h-11 w-11 items-center justify-center rounded-xl shadow-[0_0_25px_rgba(212,175,55,0.25)] border-2 ${
-                        isUrgent ? "border-red-500/70" : "border-[#d4af37]/60"
+                      className={`relative flex h-11 w-11 items-center justify-center rounded-sm shadow-[0_0_25px_rgba(199,160,74,0.3)] border-2 ${
+                        isUrgent ? "border-red-500/70 bg-[#250808]" : "border-[#C7A04A]/70 bg-[#2B1710]"
                       }`}
-                      style={{
-                        background: isUrgent
-                          ? "radial-gradient(circle at 30% 30%, #260808 0%, #0d0202 75%)"
-                          : "radial-gradient(circle at 30% 30%, #1e293b 0%, #0a0f1d 75%)",
-                      }}
                     >
-                      <Swords className={`w-5 h-5 ${isUrgent ? "text-red-400" : "text-[#ffd700]"}`} strokeWidth={1.75} />
+                      <Swords className={`w-5 h-5 ${isUrgent ? "text-red-400" : "text-[#E2C36A]"}`} strokeWidth={1.75} />
                     </div>
 
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-red-500/40 bg-red-950/40 text-red-400 font-cinzel text-[10px] font-bold tracking-[0.2em] uppercase">
-                      <Flame className="w-3.5 h-3.5 text-red-400 animate-pulse" />
+                    <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full border ${isUrgent ? "border-red-500/50 bg-red-950/60 text-red-300" : "border-[#C7A04A]/40 bg-[#17100C] text-[#E2C36A]"} font-cinzel text-[10px] font-bold tracking-[0.2em] uppercase`}>
+                      <Flame className={`w-3.5 h-3.5 ${isUrgent ? "text-red-400" : "text-[#C7A04A]"} animate-pulse`} />
                       BATTLE COMMENCING · CANNONS PRIMED
                     </div>
                   </div>
 
                   {/* Headline */}
-                  <h1 className="font-cinzel text-2xl sm:text-3xl lg:text-3xl font-black text-[#fdf6e2] uppercase tracking-[0.08em] drop-shadow-[0_4px_24px_rgba(0,0,0,0.9)]">
+                  <h1 
+                    className="font-pirate text-2xl sm:text-3xl lg:text-3xl font-black text-[#F4E7C7] uppercase tracking-[0.08em] drop-shadow-[0_4px_24px_rgba(0,0,0,0.9)]"
+                    style={{ fontFamily: '"Cinzel Decorative", "Cinzel", serif' }}
+                  >
                     PREPARE YE CANNONS!
                   </h1>
 
                   {/* Voyage indicator */}
-                  <div className="mt-1 flex items-center gap-2 font-garamond text-sm text-[#c8b887]">
+                  <div className="mt-1 flex items-center gap-2 font-garamond text-sm text-[#E7D19A]/85">
                     <span>Next Voyage:</span>
-                    <span className="font-cinzel font-bold text-[#ffd700] tracking-wider uppercase text-xs px-2.5 py-0.5 rounded-md border border-[#d4af37]/30 bg-[#d4af37]/10">
+                    <span className="font-cinzel font-bold text-[#E2C36A] tracking-wider uppercase text-xs px-2.5 py-0.5 rounded-sm border border-[#C7A04A]/40 bg-[#17100C]">
                       {splashRoundName}
                     </span>
                   </div>
 
                   {/* Divider */}
-                  <div className="flex items-center gap-3 my-2.5 w-full max-w-md opacity-75">
-                    <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-[#d4af37] to-[#d4af37]/40" />
-                    <div className="w-1.5 h-1.5 rotate-45 border border-[#d4af37] bg-[#d4af37]/40" />
-                    <div className="h-[1px] flex-1 bg-gradient-to-l from-transparent via-[#d4af37] to-[#d4af37]/40" />
+                  <div className="flex items-center gap-3 my-2.5 w-full max-w-md opacity-80">
+                    <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-[#C7A04A] to-[#C7A04A]/40" />
+                    <div className="w-1.5 h-1.5 rotate-45 border border-[#C7A04A] bg-[#C7A04A]/40" />
+                    <div className="h-[1px] flex-1 bg-gradient-to-l from-transparent via-[#C7A04A] to-[#C7A04A]/40" />
                   </div>
 
-                  <p className="font-garamond text-xs sm:text-sm text-[#a09483] leading-relaxed max-w-md mb-4">
+                  <p className="font-garamond text-xs sm:text-sm text-[#E7D19A]/75 leading-relaxed max-w-md mb-4">
                     The High Admiral has sounded battle stations. The sails hoist automatically when the chronometer strikes zero, or embark immediately below!
                   </p>
 
                   <button
                     onClick={handleStartTestNow}
-                    className="flex items-center justify-center gap-3 border border-[#d4af37]/60 bg-gradient-to-r from-[#d4af37]/20 via-[#ffd700]/25 to-[#d4af37]/20 hover:from-[#d4af37]/35 hover:to-[#ffd700]/40 font-cinzel text-[#f4ede0] w-full sm:w-auto px-8 py-3 rounded-xl text-xs sm:text-sm font-bold tracking-[0.25em] uppercase transition-all shadow-[0_0_30px_rgba(212,175,55,0.25)] hover:scale-[1.02] active:scale-[0.98]"
+                    className="flex items-center justify-center gap-3 border border-[#C7A04A] bg-gradient-to-r from-[#8B5E34] via-[#C7A04A] to-[#8B5E34] hover:from-[#C7A04A] hover:to-[#E2C36A] font-cinzel text-[#17100C] w-full sm:w-auto px-8 py-3 rounded-sm text-xs sm:text-sm font-black tracking-[0.25em] uppercase transition-all shadow-[0_0_30px_rgba(199,160,74,0.35)] hover:scale-[1.02] active:scale-[0.98]"
                   >
-                    <Swords className="w-4 h-4 text-[#ffd700]" />
+                    <Swords className="w-4 h-4 text-[#17100C]" />
                     ENTER BATTLE ARENA NOW
-                    <Swords className="w-4 h-4 text-[#ffd700]" />
+                    <Swords className="w-4 h-4 text-[#17100C]" />
                   </button>
                 </div>
 
@@ -1230,33 +1244,33 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
                   <div
                     className="relative flex h-36 w-36 sm:h-40 sm:w-40 lg:h-44 lg:w-44 items-center justify-center rounded-full p-3 transition-all"
                     style={{
-                      background: "radial-gradient(circle at 35% 35%, #1e293b 0%, #0a0f1d 75%)",
-                      border: `3px solid ${isUrgent ? "#ef4444" : "#ffd700"}`,
-                      boxShadow: `0 0 ${isUrgent ? "50px rgba(239,68,68,0.5)" : "40px rgba(255,215,0,0.3)"}`,
+                      background: "radial-gradient(circle at 35% 35%, #2B1710 0%, #0A0705 85%)",
+                      border: `3px solid ${isUrgent ? "#ef4444" : "#C7A04A"}`,
+                      boxShadow: `0 0 ${isUrgent ? "50px rgba(239,68,68,0.5)" : "40px rgba(199,160,74,0.35)"}`,
                     }}
                   >
                     {/* Rotating degree ring */}
-                    <div className="absolute -inset-3 rounded-full border border-dashed border-[#d4af37]/30 animate-[spin_50s_linear_infinite]" />
-                    <div className="absolute -inset-1 rounded-full border border-[#d4af37]/20" />
+                    <div className="absolute -inset-3 rounded-full border border-dashed border-[#C7A04A]/30 animate-[spin_50s_linear_infinite]" />
+                    <div className="absolute -inset-1 rounded-full border border-[#C7A04A]/25" />
 
                     <div className="flex flex-col items-center justify-center">
                       <span
-                        className="font-cinzel text-4xl sm:text-5xl lg:text-5xl font-black leading-none"
+                        className="font-pirate text-4xl sm:text-5xl lg:text-5xl font-black leading-none"
                         style={{
-                          color: isUrgent ? "#ef4444" : "#ffd700",
-                          textShadow: `0 0 25px ${isUrgent ? "rgba(239,68,68,0.8)" : "rgba(255,215,0,0.6)"}`,
+                          color: isUrgent ? "#ef4444" : "#F4E7C7",
+                          textShadow: `0 0 25px ${isUrgent ? "rgba(239,68,68,0.8)" : "rgba(199,160,74,0.6)"}`,
                           animation: isUrgent ? "urgentPulse 0.8s ease-in-out infinite" : undefined,
                         }}
                       >
                         {countdownSeconds}
                       </span>
-                      <span className="font-cinzel text-[10px] sm:text-xs font-bold text-[#8e8271] tracking-[0.25em] uppercase mt-2">
+                      <span className="font-cinzel text-[10px] sm:text-xs font-bold text-[#8B5E34] tracking-[0.25em] uppercase mt-2">
                         SECONDS
                       </span>
                     </div>
                   </div>
 
-                  <span className="mt-3 font-cinzel text-[9px] tracking-[0.25em] text-[#8e8271] uppercase">
+                  <span className="mt-3 font-cinzel text-[9px] tracking-[0.25em] text-[#8B5E34] uppercase">
                     CHRONOMETER SYNC · CANNONS READY
                   </span>
                 </div>

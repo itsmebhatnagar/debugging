@@ -405,176 +405,153 @@ export function ParticipantsClient({ initialParticipants, competitions }: Partic
 
       {/* ── Participants Table ── */}
       <div className="border border-[#8B5E34]/40 bg-[#080706] rounded-sm overflow-hidden shadow-2xl">
-        <div className="overflow-x-auto w-full">
-          <table className="w-full text-left border-collapse min-w-[1240px]">
+        <div className="overflow-x-auto w-full max-w-full">
+          <table className="w-full text-left border-collapse min-w-[760px]">
             <thead>
               <tr className="bg-[#17100C] border-b border-[#C7A04A]/30">
-                <th className="px-4 py-3.5 text-[10px] font-bold text-[#C7A04A] uppercase tracking-[0.2em] whitespace-nowrap min-w-[200px]">Pirate Sailor</th>
-                <th className="px-4 py-3.5 text-[10px] font-bold text-[#C7A04A] uppercase tracking-[0.2em] whitespace-nowrap min-w-[210px]">Contact</th>
-                <th className="px-4 py-3.5 text-[10px] font-bold text-[#C7A04A] uppercase tracking-[0.2em] whitespace-nowrap min-w-[230px]">Expedition</th>
-                <th className="px-4 py-3.5 text-[10px] font-bold text-[#C7A04A] uppercase tracking-[0.2em] whitespace-nowrap text-center min-w-[100px]">Score</th>
-                <th className="px-4 py-3.5 text-[10px] font-bold text-[#C7A04A] uppercase tracking-[0.2em] whitespace-nowrap text-center min-w-[230px]">Live Status</th>
-                <th className="px-4 py-3.5 text-[10px] font-bold text-[#C7A04A] uppercase tracking-[0.2em] whitespace-nowrap text-right min-w-[320px] pr-6">Actions</th>
+                <th className="px-4 py-3 text-[10px] font-bold text-[#C7A04A] uppercase tracking-[0.2em]">Pirate Sailor</th>
+                <th className="px-4 py-3 text-[10px] font-bold text-[#C7A04A] uppercase tracking-[0.2em]">Contact</th>
+                <th className="px-4 py-3 text-[10px] font-bold text-[#C7A04A] uppercase tracking-[0.2em]">Expedition</th>
+                <th className="px-4 py-3 text-[10px] font-bold text-[#C7A04A] uppercase tracking-[0.2em]">Bounty Score</th>
+                <th className="px-4 py-3 text-[10px] font-bold text-[#C7A04A] uppercase tracking-[0.2em] text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
               {filteredParticipants.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="p-16">
+                  <td colSpan={5} className="p-16">
                     <EchonaEmptyState 
                       title="NO SAILORS FOUND" 
-                      description="No participants match your search criteria. Enroll registered users or restore the sample fleet."
-                    />
-                  </td>
-                </tr>
-              ) : (
-                filteredParticipants.map((p, idx) => {
-                  const isUpdating = updatingUserId === p.userId;
-                  const status = p.status || "WAITING";
+                    description="No participants match your search criteria. Enroll registered users or restore the sample fleet."
+                  />
+                </td>
+              </tr>
+            ) : (
+              filteredParticipants.map((p, idx) => {
+                const isUpdating = updatingUserId === p.userId;
+                const status = p.status || "WAITING";
 
-                  return (
-                    <tr 
-                      key={p.id}
-                      className={`border-b border-[#8B5E34]/20 hover:bg-[#17100C]/60 transition-colors ${
-                        idx % 2 === 0 ? 'bg-[#0a0504]' : 'bg-[#080706]'
-                      }`}
-                    >
-                      {/* Name & ID */}
-                      <td className="px-4 py-3.5 align-middle">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-[#17100C] border border-[#C7A04A]/40 flex items-center justify-center shrink-0">
-                            <CrewEmblem className="w-5 h-5 text-[#C7A04A]" />
-                          </div>
-                          <div className="min-w-0">
-                            <div className="text-sm font-bold text-[#F4E7C7] tracking-wider uppercase whitespace-nowrap">
-                              {p.user?.name || "Unknown Sailor"}
-                            </div>
-                            <div className="text-[10px] text-[#8B5E34] font-mono whitespace-nowrap">
-                              ID: {p.userId.slice(-8)}
-                            </div>
-                          </div>
+                return (
+                  <tr 
+                    key={p.id}
+                    className={`border-b border-[#8B5E34]/20 hover:bg-[#17100C]/60 transition-colors ${
+                      idx % 2 === 0 ? 'bg-[#0a0504]' : 'bg-[#080706]'
+                    }`}
+                  >
+                    {/* Name & ID */}
+                    <td className="p-4 flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-full bg-[#17100C] border border-[#C7A04A]/40 flex items-center justify-center shrink-0">
+                        <CrewEmblem className="w-5 h-5 text-[#C7A04A]" />
+                      </div>
+                      <div>
+                        <div className="text-sm font-bold text-[#F4E7C7] tracking-wider uppercase">
+                          {p.user?.name || "Unknown Sailor"}
                         </div>
-                      </td>
+                        <div className="text-[10px] text-[#8B5E34] font-mono">
+                          ID: {p.userId.slice(-8)}
+                        </div>
+                      </div>
+                    </td>
 
-                      {/* Contact */}
-                      <td className="px-4 py-3.5 align-middle text-xs text-[#E7D19A]/80 font-mono whitespace-nowrap">
-                        <div>{p.user?.email}</div>
-                        {p.user?.mobile && (
-                          <div className="text-[#C7A04A] text-[10px] mt-0.5">{p.user.mobile}</div>
-                        )}
-                      </td>
+                    {/* Contact */}
+                    <td className="p-4 text-xs text-[#E7D19A]/80 font-mono">
+                      <div>{p.user?.email}</div>
+                      {p.user?.mobile && (
+                        <div className="text-[#C7A04A] text-[10px] mt-0.5">{p.user.mobile}</div>
+                      )}
+                    </td>
 
-                      {/* Expedition */}
-                      <td className="px-4 py-3.5 align-middle text-xs font-semibold text-[#E7D19A] tracking-wider uppercase whitespace-nowrap">
-                        {p.competition?.name || "Echona Pirate Clash"}
-                      </td>
+                    {/* Expedition */}
+                    <td className="p-4 text-xs font-semibold text-[#E7D19A] tracking-wider uppercase">
+                      {p.competition?.name || "Echona Pirate Clash"}
+                    </td>
 
-                      {/* Score */}
-                      <td className="px-4 py-3.5 align-middle text-center whitespace-nowrap">
-                        <span className="font-pirate text-xl text-[#10B981]">{p.score}</span>
-                        <span className="text-[10px] text-[#8B5E34] font-bold ml-1 uppercase">PTS</span>
-                      </td>
+                    {/* Score */}
+                    <td className="p-4">
+                      <span className="font-pirate text-xl text-[#10B981]">{p.score}</span>
+                      <span className="text-[10px] text-[#8B5E34] font-bold ml-1 uppercase">PTS</span>
+                    </td>
 
-                      {/* Current Live Status Badge */}
-                      <td className="px-4 py-3.5 align-middle text-center whitespace-nowrap">
-                        {status === "QUALIFIED" ? (
-                          <span className="inline-flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-950/70 border border-emerald-500/70 text-emerald-400 whitespace-nowrap shadow-sm">
-                            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-                            <span>QUALIFIED (IN BATTLE)</span>
-                          </span>
-                        ) : status === "DISQUALIFIED" ? (
-                          <span className="inline-flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-red-950/70 border border-red-500/70 text-red-400 whitespace-nowrap shadow-sm">
-                            <span className="w-2 h-2 rounded-full bg-red-400 animate-pulse shrink-0" />
-                            <span>DISQUALIFIED</span>
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-950/70 border border-amber-500/70 text-amber-400 whitespace-nowrap shadow-sm">
-                            <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0" />
-                            <span>WAITING (NOT STARTED)</span>
-                          </span>
-                        )}
-                      </td>
-
-                      {/* Actions: Live status + Delete */}
-                      <td className="px-4 py-3.5 align-middle text-right whitespace-nowrap pr-6">
-                        <div className="inline-flex items-center justify-end gap-1.5">
-                          <div className="inline-flex items-center gap-1 bg-[#17100C] border border-[#8B5E34]/40 p-1 rounded-sm shadow-inner">
-                            {/* WAITING */}
-                            <button
-                              type="button"
-                              onClick={() => handleStatusChange(p.competitionId, p.userId, "WAITING", p.user?.name)}
-                              disabled={isUpdating || isDeleting}
-                              className={`px-2.5 py-1 rounded-sm text-[9px] font-bold tracking-wider uppercase transition-all ${
-                                status === "WAITING"
-                                  ? "bg-amber-500/30 border border-amber-400 text-amber-300 shadow-sm"
-                                  : "text-[#8B5E34] hover:text-amber-300 hover:bg-amber-500/10"
-                              } disabled:opacity-50`}
-                              title="Mark as Waiting (Not started)"
-                            >
-                              WAITING
-                            </button>
-
-                            {/* QUALIFIED */}
-                            <button
-                              type="button"
-                              onClick={() => handleStatusChange(p.competitionId, p.userId, "QUALIFIED", p.user?.name)}
-                              disabled={isUpdating || isDeleting}
-                              className={`px-2.5 py-1 rounded-sm text-[9px] font-bold tracking-wider uppercase transition-all ${
-                                status === "QUALIFIED"
-                                  ? "bg-emerald-500/30 border border-emerald-400 text-emerald-300 shadow-sm"
-                                  : "text-[#8B5E34] hover:text-emerald-300 hover:bg-emerald-500/10"
-                              } disabled:opacity-50`}
-                              title="Mark as Qualified (In Battle / Active)"
-                            >
-                              QUALIFIED
-                            </button>
-
-                            {/* DISQUALIFIED */}
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (confirm(`Disqualify ${p.user?.name || "this sailor"}? They will be locked out.`)) {
-                                  handleStatusChange(p.competitionId, p.userId, "DISQUALIFIED", p.user?.name);
-                                }
-                              }}
-                              disabled={isUpdating || isDeleting}
-                              className={`px-2.5 py-1 rounded-sm text-[9px] font-bold tracking-wider uppercase transition-all ${
-                                status === "DISQUALIFIED"
-                                  ? "bg-red-500/30 border border-red-500 text-red-300 shadow-sm"
-                                  : "text-[#8B5E34] hover:text-red-400 hover:bg-red-500/10"
-                              } disabled:opacity-50`}
-                              title="Disqualify sailor"
-                            >
-                              DISQUALIFY
-                            </button>
-                          </div>
-
-                          {/* DELETE BUTTON */}
+                    {/* Actions: Live status + Delete */}
+                    <td className="p-4 text-right">
+                      <div className="inline-flex items-center gap-1.5">
+                        <div className="inline-flex items-center gap-1 bg-[#17100C] border border-[#8B5E34]/40 p-1 rounded-sm shadow-inner">
+                          {/* WAITING */}
                           <button
                             type="button"
-                            onClick={() => setDeleteTarget({
-                              userId: p.userId,
-                              userName: p.user?.name || null,
-                              userEmail: p.user?.email || "Unknown",
-                              competitionId: p.competitionId,
-                              role: p.user?.role
-                            })}
+                            onClick={() => handleStatusChange(p.competitionId, p.userId, "WAITING", p.user?.name)}
                             disabled={isUpdating || isDeleting}
-                            className="px-2.5 py-1.5 rounded-sm text-[9px] font-bold tracking-wider uppercase transition-all bg-red-950/70 border border-red-600/70 text-red-300 hover:bg-red-900 hover:text-white hover:border-red-400 disabled:opacity-40 flex items-center gap-1 shadow-md shrink-0"
-                            title="Expel / Delete user from fleet or database"
+                            className={`px-2.5 py-1 rounded-sm text-[9px] font-bold tracking-wider uppercase transition-all ${
+                              status === "WAITING"
+                                ? "bg-amber-500/30 border border-amber-400 text-amber-300 shadow-sm"
+                                : "text-[#8B5E34] hover:text-amber-300 hover:bg-amber-500/10"
+                            } disabled:opacity-50`}
+                            title="Mark as Waiting (Not started)"
                           >
-                            <svg className="w-3 h-3 text-red-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                            <span>DELETE</span>
+                            WAITING
+                          </button>
+
+                          {/* QUALIFIED */}
+                          <button
+                            type="button"
+                            onClick={() => handleStatusChange(p.competitionId, p.userId, "QUALIFIED", p.user?.name)}
+                            disabled={isUpdating || isDeleting}
+                            className={`px-2.5 py-1 rounded-sm text-[9px] font-bold tracking-wider uppercase transition-all ${
+                              status === "QUALIFIED"
+                                ? "bg-emerald-500/30 border border-emerald-400 text-emerald-300 shadow-sm"
+                                : "text-[#8B5E34] hover:text-emerald-300 hover:bg-emerald-500/10"
+                            } disabled:opacity-50`}
+                            title="Mark as Qualified (In Battle / Active)"
+                          >
+                            QUALIFIED
+                          </button>
+
+                          {/* DISQUALIFIED */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (confirm(`Disqualify ${p.user?.name || "this sailor"}? They will be locked out.`)) {
+                                handleStatusChange(p.competitionId, p.userId, "DISQUALIFIED", p.user?.name);
+                              }
+                            }}
+                            disabled={isUpdating || isDeleting}
+                            className={`px-2.5 py-1 rounded-sm text-[9px] font-bold tracking-wider uppercase transition-all ${
+                              status === "DISQUALIFIED"
+                                ? "bg-red-500/30 border border-red-500 text-red-300 shadow-sm"
+                                : "text-[#8B5E34] hover:text-red-400 hover:bg-red-500/10"
+                            } disabled:opacity-50`}
+                            title="Disqualify sailor"
+                          >
+                            DISQUALIFY
                           </button>
                         </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
+
+                        {/* DELETE BUTTON */}
+                        <button
+                          type="button"
+                          onClick={() => setDeleteTarget({
+                            userId: p.userId,
+                            userName: p.user?.name || null,
+                            userEmail: p.user?.email || "Unknown",
+                            competitionId: p.competitionId,
+                            role: p.user?.role
+                          })}
+                          disabled={isUpdating || isDeleting}
+                          className="px-2.5 py-1.5 rounded-sm text-[9px] font-bold tracking-wider uppercase transition-all bg-red-950/70 border border-red-600/70 text-red-300 hover:bg-red-900 hover:text-white hover:border-red-400 disabled:opacity-40 flex items-center gap-1 shadow-md"
+                          title="Expel / Delete user from fleet or database"
+                        >
+                          <svg className="w-3 h-3 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                          <span>DELETE</span>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
         </table>
         </div>
       </div>
