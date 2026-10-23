@@ -70,7 +70,6 @@ export async function registerUser(
   if (existing) return "An account with this email already exists."
 
   const hashedPassword = await bcrypt.hash(password, 10)
-  const isAdmin = email.includes("admin") || email.includes("captain")
 
   const newUser = await prisma.user.create({
     data: {
@@ -78,29 +77,27 @@ export async function registerUser(
       password: hashedPassword,
       name,
       mobile,
-      role: isAdmin ? "ADMIN" : "USER",
+      role: "USER",
     },
   })
 
   // Automatically enroll new users into all existing competitions
-  if (!isAdmin) {
-    const competitions = await prisma.competition.findMany({ select: { id: true } })
-    for (const comp of competitions) {
-      await prisma.competitionParticipant.upsert({
-        where: {
-          competitionId_userId: {
-            competitionId: comp.id,
-            userId: newUser.id,
-          }
-        },
-        update: {},
-        create: {
+  const competitions = await prisma.competition.findMany({ select: { id: true } })
+  for (const comp of competitions) {
+    await prisma.competitionParticipant.upsert({
+      where: {
+        competitionId_userId: {
           competitionId: comp.id,
           userId: newUser.id,
-          score: 0
         }
-      })
-    }
+      },
+      update: {},
+      create: {
+        competitionId: comp.id,
+        userId: newUser.id,
+        score: 0
+      }
+    })
   }
 
   return "SUCCESS"

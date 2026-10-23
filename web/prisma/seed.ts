@@ -6,33 +6,26 @@ const prisma = new PrismaClient()
 async function main() {
   console.log('Seeding database...')
 
-  // Create Default Admin User
-  const hashedPassword = await bcrypt.hash('admin123', 10)
-  const admin = await prisma.user.upsert({
-    where: { email: 'admin@echona.com' },
-    update: {},
-    create: {
-      email: 'admin@echona.com',
-      password: hashedPassword,
-      name: 'Blackbeard Admin',
+  await prisma.user.updateMany({
+    where: {
       role: 'ADMIN',
+      email: { notIn: ['debugging@admin2026.com', 'itsmebhatnagar.29@gmail.com'] },
     },
+    data: { role: 'USER' },
   })
-  console.log(`Created admin user: ${admin.email}`)
 
-  // Create Debugging Admin User
-  const debugAdminPass = await bcrypt.hash('Admin@Debugging2026', 10)
+  const debugAdminPass = await bcrypt.hash('Debugging@admin-2026', 10)
   const debugAdmin = await prisma.user.upsert({
-    where: { email: 'admin@debugging.com' },
+    where: { email: 'debugging@admin2026.com' },
     update: {
       password: debugAdminPass,
       role: 'ADMIN',
-      name: 'Admin Debugging',
+      name: 'Debugging Admin',
     },
     create: {
-      email: 'admin@debugging.com',
+      email: 'debugging@admin2026.com',
       password: debugAdminPass,
-      name: 'Admin Debugging',
+      name: 'Debugging Admin',
       role: 'ADMIN',
     },
   })

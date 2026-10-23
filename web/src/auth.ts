@@ -3,6 +3,7 @@ import CredentialsProvider from "next-auth/providers/credentials"
 import { PrismaAdapter } from "@auth/prisma-adapter"
 import bcrypt from "bcryptjs"
 import { prisma } from "@/lib/prisma"
+import { isAdminEmail } from "@/lib/admin-access"
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
@@ -85,26 +86,37 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             name: user.name,
             mobile: user.mobile,
             role: user.role
-          } as any
+          }
         }
         return null
       }
     })
   ],
   callbacks: {
-    jwt({ token, user }) {
-      if (user) { // User is available during sign-in
+    async jwt({ token, user }) {
+      if (user) {
         token.id = user.id
-        token.role = (user as any).role
-        token.mobile = (user as any).mobile
+        token.mobile = user.mobile
       }
+
+      const userId = typeof token.id === "string" ? token.id : undefined
+      const currentUser = userId
+        ? await prisma.user.findUnique({
+            where: { id: userId },
+            select: { email: true, role: true },
+          })
+        : null
+
+      token.role = currentUser?.role === "ADMIN" && isAdminEmail(currentUser.email)
+        ? "ADMIN"
+        : "USER"
       return token
     },
     session({ session, token }) {
       if (token && session.user) {
-        session.user.id = token.id as string
-        session.user.role = token.role as "ADMIN" | "USER"
-        ;(session.user as any).mobile = token.mobile as string | null
+        if (token.id) session.user.id = token.id
+        session.user.role = token.role === "ADMIN" ? "ADMIN" : "USER"
+        session.user.mobile = token.mobile ?? null
       }
       return session
     }
