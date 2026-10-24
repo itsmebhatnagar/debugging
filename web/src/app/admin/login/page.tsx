@@ -29,7 +29,7 @@ export default function AdminLoginPage() {
 
     while (attempts < maxAttempts) {
       try {
-        const res = await fetch(`${(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001') || 'http://localhost:3001'}/api/auth/login`, {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/auth/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
@@ -38,7 +38,7 @@ export default function AdminLoginPage() {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Login failed');
         localStorage.setItem('admin_token', data.token);
-        navigate('/admin/dashboard');
+        window.location.href = '/admin/dashboard';
         return; // Success, exit
       } catch (err: any) {
         attempts++;

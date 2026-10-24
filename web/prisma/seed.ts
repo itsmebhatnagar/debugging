@@ -9,27 +9,27 @@ async function main() {
   await prisma.user.updateMany({
     where: {
       role: 'ADMIN',
-      email: { notIn: ['debugging@admin2026.com', 'itsmebhatnagar.29@gmail.com'] },
+      email: { not: 'itsmebhatnagar.29@gmail.com' },
     },
     data: { role: 'USER' },
   })
 
-  const debugAdminPass = await bcrypt.hash('Debugging@admin-2026', 10)
-  const debugAdmin = await prisma.user.upsert({
-    where: { email: 'debugging@admin2026.com' },
+  const adminPass = await bcrypt.hash('adminsecret', 10)
+  const admin = await prisma.user.upsert({
+    where: { email: 'itsmebhatnagar.29@gmail.com' },
     update: {
-      password: debugAdminPass,
+      password: adminPass,
       role: 'ADMIN',
-      name: 'Debugging Admin',
+      name: 'Harshil Bhatnagar',
     },
     create: {
-      email: 'debugging@admin2026.com',
-      password: debugAdminPass,
-      name: 'Debugging Admin',
+      email: 'itsmebhatnagar.29@gmail.com',
+      password: adminPass,
+      name: 'Harshil Bhatnagar',
       role: 'ADMIN',
     },
   })
-  console.log(`Created admin user: ${debugAdmin.email}`)
+  console.log(`Created admin user: ${admin.email}`)
 
   // Create a Sample Competition
   const comp = await prisma.competition.upsert({

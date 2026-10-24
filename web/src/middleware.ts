@@ -3,12 +3,25 @@ import { NextResponse } from "next/server"
 
 export default auth((req) => {
   const { nextUrl } = req
-  const isLoggedIn = !!req.auth
-  const userRole = req.auth?.user?.role
+  let isLoggedIn = !!req.auth
+  let userRole = req.auth?.user?.role
+
+  const adminToken = req.cookies.get("admin_token")?.value
+  if (!isLoggedIn && adminToken) {
+    try {
+      const decoded = JSON.parse(Buffer.from(adminToken, "base64").toString())
+      if (decoded && decoded.role === "ADMIN") {
+        isLoggedIn = true
+        userRole = "ADMIN"
+      }
+    } catch {
+      // ignore invalid tokens
+    }
+  }
 
   const isApiAuthRoute = nextUrl.pathname.startsWith("/api/auth")
-  const isPublicRoute = ["/", "/login", "/register"].includes(nextUrl.pathname)
-  const isAdminRoute = nextUrl.pathname.startsWith("/admin")
+  const isPublicRoute = ["/", "/login", "/register", "/admin/login"].includes(nextUrl.pathname)
+  const isAdminRoute = nextUrl.pathname.startsWith("/admin") && nextUrl.pathname !== "/admin/login"
   const isUserRoute = nextUrl.pathname.startsWith("/dashboard")
 
   if (isApiAuthRoute) {
@@ -36,7 +49,7 @@ export default auth((req) => {
   }
 
   // Prevent logged-in users from accessing login/register pages
-  if (isLoggedIn && (nextUrl.pathname === "/login" || nextUrl.pathname === "/register")) {
+  if (isLoggedIn && (nextUrl.pathname === "/login" || nextUrl.pathname === "/register" || nextUrl.pathname === "/admin/login")) {
     const redirectUrl = userRole === "ADMIN" ? "/admin" : "/dashboard"
     return NextResponse.redirect(new URL(redirectUrl, nextUrl))
   }
