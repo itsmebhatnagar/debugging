@@ -1,8 +1,8 @@
-import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
 import { getCompetitionLeaderboard } from "@/lib/leaderboard"
 import { deduplicateByUserDetails } from "@/lib/deduplicate"
 import { NextRequest, NextResponse } from "next/server"
+import { getAdminSession } from "@/lib/admin-auth"
 
 function csvCell(value: string | number): string {
   let text = String(value)
@@ -26,7 +26,7 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const session = await auth()
+  const session = await getAdminSession(request)
   if (session?.user?.role !== "ADMIN") {
     return NextResponse.json({ error: "Admin access required" }, { status: 403 })
   }

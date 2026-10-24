@@ -34,6 +34,7 @@ export default function LiveControlPage() {
   const { showToast, ToastComponent } = useEchonaToast();
 
   const getCookie = (name: string) => {
+    if (typeof window === 'undefined') return null;
     const local = localStorage.getItem(name);
     if (local) return local;
     
@@ -52,15 +53,34 @@ export default function LiveControlPage() {
     if (logEndRef.current) logEndRef.current.scrollIntoView({ behavior: 'smooth' });
   }, [eventLog]);
 
+  // Sync token from localStorage to cookie if not already set
+  useEffect(() => {
+    const token = getCookie('admin_token');
+    if (token && typeof document !== 'undefined' && !document.cookie.includes('admin_token=')) {
+      document.cookie = `admin_token=${token}; path=/; max-age=604800; SameSite=Lax`;
+    }
+  }, []);
+
   const fetchQuizzes = () => {
-    fetch('/api/quizzes', { credentials: 'include' })
+    const token = getCookie('admin_token');
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    fetch('/api/quizzes', { credentials: 'include', headers })
       .then(res => res.json())
       .then(data => {
-        setQuizzes(Array.isArray(data) ? data : []);
-        if (Array.isArray(data) && data.length > 0 && !activeQuizId) {
-          // Select the most active quiz, or the first one
-          const active = data.find((q: any) => q.status === 'ACTIVE' || q.status === 'PAUSED');
-          setActiveQuizId(active ? active.id : data[0].id);
+        const list = Array.isArray(data) ? data : [];
+        setQuizzes(list);
+        if (list.length > 0) {
+          setActiveQuizId(prev => {
+            if (prev && list.some((q: any) => q.id === prev)) {
+              return prev;
+            }
+            const active = list.find((q: any) => q.status === 'ACTIVE' || q.status === 'PAUSED' || q.status === 'WAITING');
+            return active ? active.id : list[0].id;
+          });
+        } else {
+          setActiveQuizId(null);
         }
       })
       .catch(() => {
@@ -141,46 +161,78 @@ export default function LiveControlPage() {
   const handleAction = async () => {
     if (!confirmAction) return;
     
+    const token = getCookie('admin_token');
+    const authHeaders: Record<string, string> = {};
+    if (token) authHeaders['Authorization'] = `Bearer ${token}`;
+
     const { action, roundId } = confirmAction;
     try {
       if (action === 'quiz:reset') {
-        const res = await fetch(`/api/quizzes/${activeQuizId}/reset`, { method: 'POST', credentials: 'include' });
+        const res = await fetch(`/api/quizzes/${activeQuizId}/reset`, { 
+          method: 'POST', 
+          credentials: 'include',
+          headers: authHeaders
+        });
         const result = await res.json();
         if (!res.ok) throw new Error(result.error || 'Could not reset expedition.');
         showToast('success', 'EXPEDITION RESET', 'All scores, timers, and stages have been restored.');
         addLog('Expedition successfully reset to waiting state.', 'success');
       } else if (action === 'quiz:restart') {
-        const res = await fetch(`/api/quizzes/${activeQuizId}/restart`, { method: 'POST', credentials: 'include' });
+        const res = await fetch(`/api/quizzes/${activeQuizId}/restart`, { 
+          method: 'POST', 
+          credentials: 'include',
+          headers: authHeaders
+        });
         const result = await res.json();
         if (!res.ok) throw new Error(result.error || 'Could not restart expedition.');
         showToast('success', 'EXPEDITION RESTARTED', 'Round 1 is now underway.');
         addLog('Expedition restarted from Round 1.', 'success');
       } else if (action === 'quiz:restore_seed') {
-        const res = await fetch('/api/admin/restore-seed', { method: 'POST', credentials: 'include' });
+        const res = await fetch('/api/admin/restore-seed', { 
+          method: 'POST', 
+          credentials: 'include',
+          headers: authHeaders
+        });
         const result = await res.json();
         if (!res.ok) throw new Error(result.error || 'Could not restore database.');
         showToast('success', 'DATABASE RESTORED', 'All rounds and questions restored.');
         addLog('Pirate championship database restored.', 'success');
       } else if (action === 'round:start') {
-        const res = await fetch(`/api/quizzes/rounds/${roundId}/start`, { method: 'POST', credentials: 'include' });
+        const res = await fetch(`/api/quizzes/rounds/${roundId}/start`, { 
+          method: 'POST', 
+          credentials: 'include',
+          headers: authHeaders
+        });
         const result = await res.json();
         if (!res.ok) throw new Error(result.error || 'Could not start stage.');
         showToast('success', 'ROUND UNDERWAY', 'The stage has been initiated.');
         addLog(`Stage ${roundId} started.`, 'success');
       } else if (action === 'round:reset') {
-        const res = await fetch(`/api/quizzes/rounds/${roundId}/reset`, { method: 'POST', credentials: 'include' });
+        const res = await fetch(`/api/quizzes/rounds/${roundId}/reset`, { 
+          method: 'POST', 
+          credentials: 'include',
+          headers: authHeaders
+        });
         const result = await res.json();
         if (!res.ok) throw new Error(result.error || 'Could not reset stage.');
         showToast('success', 'STAGE RESET', 'The stage has been reset to pending.');
         addLog(`Stage ${roundId} reset.`, 'success');
       } else if (action === 'round:restart') {
-        const res = await fetch(`/api/quizzes/rounds/${roundId}/restart`, { method: 'POST', credentials: 'include' });
+        const res = await fetch(`/api/quizzes/rounds/${roundId}/restart`, { 
+          method: 'POST', 
+          credentials: 'include',
+          headers: authHeaders
+        });
         const result = await res.json();
         if (!res.ok) throw new Error(result.error || 'Could not restart stage.');
         showToast('success', 'STAGE RESTARTED', 'The stage has been restarted and is now live.');
         addLog(`Stage ${roundId} restarted.`, 'success');
       } else if (action === 'round:end') {
-        const res = await fetch(`/api/quizzes/rounds/${roundId}/end`, { method: 'POST', credentials: 'include' });
+        const res = await fetch(`/api/quizzes/rounds/${roundId}/end`, { 
+          method: 'POST', 
+          credentials: 'include',
+          headers: authHeaders
+        });
         const result = await res.json();
         if (!res.ok) throw new Error(result.error || 'Could not end stage.');
         showToast('success', 'STAGE ENDED', 'The active stage has been closed.');
@@ -321,10 +373,25 @@ export default function LiveControlPage() {
       </header>
 
       {!activeQuiz ? (
-        <EchonaEmptyState 
-          title="NO ACTIVE EXPEDITION" 
-          description="Launch an expedition from Debugging Configuration to begin live control."
-        />
+        <div className="flex flex-col items-center justify-center p-8 space-y-4">
+          <EchonaEmptyState 
+            title="NO ACTIVE EXPEDITION" 
+            description="Launch an expedition from Debugging Configuration to begin live control, or restore the default pirate championship."
+          />
+          <button
+            type="button"
+            onClick={() => setConfirmAction({
+              action: 'quiz:restore_seed',
+              roundId: '',
+              title: 'RESTORE DATABASE SEED?',
+              message: 'This will restore all 3 standard competition rounds and seeded questions into the database.',
+              confirmText: 'RESTORE SEED'
+            })}
+            className="px-5 py-2.5 rounded-sm border border-[#C7A04A] bg-[#17100C] text-[#C7A04A] hover:text-[#F4E7C7] hover:bg-[#C7A04A]/20 text-xs font-bold tracking-widest uppercase transition-all shadow-lg"
+          >
+            ⚓ RESTORE DEFAULT EXPEDITION
+          </button>
+        </div>
       ) : (
         <div className="grid grid-cols-1 xl:grid-cols-4 gap-6 flex-1">
           
@@ -388,7 +455,9 @@ export default function LiveControlPage() {
                                 </div>
                                 <div className="flex justify-between items-center pb-2 border-b border-[#8B5E34]/20">
                                   <span className="text-[#E7D19A]/60 text-xs tracking-widest uppercase">Timer Mode</span>
-                                  <span className="text-[#C7A04A] text-xs font-bold">{round.overallTimer ? `${Math.round(round.overallTimer / 60)}m Total` : 'Untimed'}</span>
+                                  <span className="text-[#C7A04A] text-xs font-bold">
+                                    {round.durationSeconds ? `${Math.round(round.durationSeconds / 60)}m Total` : (round.overallTimer ? `${Math.round(round.overallTimer / 60)}m Total` : 'Untimed')}
+                                  </span>
                                 </div>
                                 <div className="flex justify-between items-center">
                                   <span className="text-[#E7D19A]/60 text-xs tracking-widest uppercase">Questions</span>
@@ -444,7 +513,7 @@ export default function LiveControlPage() {
                                 <img src="/cursors/precision-256.png" alt="Reticle" className="absolute inset-0 w-full h-full object-contain opacity-20 pointer-events-none" />
                                 <div className="absolute top-2 text-[#8B5E34] text-[8px] font-bold tracking-widest uppercase relative z-10">Chronometer</div>
                                 <span className={`text-3xl font-pirate relative z-10 ${isRoundActive ? 'text-[#10B981]' : 'text-[#E7D19A]'}`}>
-                                  {round.overallTimer ? 'LIVE' : 'READY'}
+                                  {round.status === 'ACTIVE' ? 'LIVE' : (round.status === 'ENDED' || round.status === 'COMPLETED' ? 'ENDED' : 'READY')}
                                 </span>
                                 <div className="absolute bottom-2 relative z-10">
                                   <Anchor className="w-4 h-4 text-[#8B5E34]/50" />

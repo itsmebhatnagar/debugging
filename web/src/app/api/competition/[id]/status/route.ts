@@ -213,11 +213,13 @@ export async function GET(
   }
 }
 
+import { getAdminSession } from "@/lib/admin-auth"
+
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth()
+  const session = await getAdminSession(req)
   if (session?.user?.role !== "ADMIN") {
     return NextResponse.json({ error: "Unauthorized Admin Only" }, { status: 401 })
   }

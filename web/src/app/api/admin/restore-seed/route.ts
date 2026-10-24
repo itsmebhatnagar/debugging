@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { getAdminSession } from "@/lib/admin-auth";
 import { seedPirateChampionship } from "@/lib/seed-championship";
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await auth();
+    const session = await getAdminSession(req);
     if (session?.user?.role !== "ADMIN") {
       return NextResponse.json({ error: "Admin access required" }, { status: 403 });
     }

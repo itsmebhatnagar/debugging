@@ -14,10 +14,11 @@ import {
 import { seedPirateChampionship } from "@/lib/seed-championship"
 import { runAICompetitionEvaluation } from "@/lib/ai-debugger"
 import { C_STARTER_CODE, CODE_LANGUAGE } from "@/lib/code-language"
+import { getAdminSession } from "@/lib/admin-auth"
 
 async function checkAdmin() {
-  const session = await auth()
-  if (session?.user?.role !== "ADMIN") {
+  const session = await getAdminSession()
+  if (!session || session.user?.role !== "ADMIN") {
     throw new Error("Unauthorized: Captain's Quarters (Admin) access only!")
   }
   return session

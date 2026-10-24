@@ -6,7 +6,14 @@ export default auth((req) => {
   let isLoggedIn = !!req.auth
   let userRole = req.auth?.user?.role
 
-  const adminToken = req.cookies.get("admin_token")?.value
+  let adminToken = req.cookies.get("admin_token")?.value
+  if (!adminToken) {
+    const authHeader = req.headers.get("authorization")
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      adminToken = authHeader.substring(7).trim()
+    }
+  }
+
   if (!isLoggedIn && adminToken) {
     try {
       const decoded = JSON.parse(Buffer.from(adminToken, "base64").toString())
