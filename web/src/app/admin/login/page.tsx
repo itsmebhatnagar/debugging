@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { signIn } from 'next-auth/react';
 
 export default function AdminLoginPage() {
   const [username, setUsername] = useState('');
@@ -38,6 +39,13 @@ export default function AdminLoginPage() {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Login failed');
         localStorage.setItem('admin_token', data.token);
+        try {
+          await signIn('credentials', {
+            email: username,
+            password,
+            redirect: false,
+          });
+        } catch {}
         window.location.href = '/admin/dashboard';
         return; // Success, exit
       } catch (err: any) {

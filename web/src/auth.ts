@@ -66,9 +66,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null
+        const identifier = (credentials.email as string).trim().toLowerCase()
         
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email as string }
+        const user = await prisma.user.findFirst({
+          where: {
+            OR: [
+              { email: identifier },
+              { email: { startsWith: identifier } },
+            ]
+          }
         })
         
         if (!user || !user.password) return null
@@ -96,27 +102,24 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id
-        token.mobile = user.mobile
+        token.email = user.email
+        token.name = user.name
+        token.mobile = (user as any).mobile
+        token.role = (user as any).role === "ADMIN" && isAdminEmail(user.email)
+          ? "ADMIN"
+          : "USER"
+      } else if (token.email) {
+        token.role = token.role === "ADMIN" && isAdminEmail(token.email as string)
+          ? "ADMIN"
+          : (token.role || "USER")
       }
-
-      const userId = typeof token.id === "string" ? token.id : undefined
-      const currentUser = userId
-        ? await prisma.user.findUnique({
-            where: { id: userId },
-            select: { email: true, role: true },
-          })
-        : null
-
-      token.role = currentUser?.role === "ADMIN" && isAdminEmail(currentUser.email)
-        ? "ADMIN"
-        : "USER"
       return token
     },
     session({ session, token }) {
       if (token && session.user) {
-        if (token.id) session.user.id = token.id
+        if (token.id) session.user.id = token.id as string
         session.user.role = token.role === "ADMIN" ? "ADMIN" : "USER"
-        session.user.mobile = token.mobile ?? null
+        session.user.mobile = (token.mobile as string) ?? null
       }
       return session
     }

@@ -5,11 +5,28 @@ import { redirect } from "next/navigation";
 import { ParticipantsClient } from "./ParticipantsClient";
 import { deduplicateByUserDetails } from "@/lib/deduplicate";
 
+import { cookies } from "next/headers";
+
 export const dynamic = "force-dynamic";
 
 export default async function ParticipantsPage() {
   const session = await auth();
-  if (session?.user?.role !== "ADMIN") {
+  let isAdmin = session?.user?.role === "ADMIN";
+
+  if (!isAdmin) {
+    const cookieStore = await cookies();
+    const adminToken = cookieStore.get("admin_token")?.value;
+    if (adminToken) {
+      try {
+        const decoded = JSON.parse(Buffer.from(adminToken, "base64").toString());
+        if (decoded?.role === "ADMIN") {
+          isAdmin = true;
+        }
+      } catch {}
+    }
+  }
+
+  if (!isAdmin) {
     redirect("/admin/login");
   }
 

@@ -4,6 +4,8 @@ import { signIn } from "@/auth"
 import { AuthError } from "next-auth"
 import bcrypt from "bcryptjs"
 import { prisma } from "@/lib/prisma"
+import { isAdminEmail } from "@/lib/admin-access"
+import { cookies } from "next/headers"
 
 const loginLimiter = new Map<string, { count: number; expiresAt: number }>()
 
@@ -13,11 +15,13 @@ export async function authenticate(
 ) {
   const email = (formData.get("email") as string)?.trim().toLowerCase()
   if (!email) return "Email is required."
+  const password = formData.get("password") as string
+  if (!password) return "Password is required."
 
   // Rate Limiting
   const now = Date.now()
   const limitWindow = 15 * 60 * 1000 // 15 minutes
-  const maxAttempts = 5
+  const maxAttempts = 10
 
   let limitRecord = loginLimiter.get(email)
   if (limitRecord) {
@@ -34,8 +38,58 @@ export async function authenticate(
   limitRecord.count += 1
   loginLimiter.set(email, limitRecord)
 
+  // Find user to check role
+  let isAdmin = isAdminEmail(email)
+  let userRecord = null
+
   try {
-    await signIn("credentials", formData)
+    userRecord = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { email },
+          { email: { startsWith: email } },
+        ]
+      }
+    })
+    if (userRecord && userRecord.role === "ADMIN" && isAdminEmail(userRecord.email)) {
+      isAdmin = true
+    }
+  } catch (err) {
+    console.error("User lookup error during authenticate:", err)
+  }
+
+  const redirectTo = isAdmin ? "/admin/dashboard" : "/dashboard"
+
+  // Set admin_token cookie if admin so that all admin sub-panels work seamlessly
+  if (isAdmin && userRecord) {
+    try {
+      const token = Buffer.from(
+        JSON.stringify({
+          id: userRecord.id,
+          email: userRecord.email,
+          role: userRecord.role,
+          issuedAt: Date.now(),
+        })
+      ).toString("base64")
+      const cookieStore = await cookies()
+      cookieStore.set("admin_token", token, {
+        httpOnly: false,
+        secure: process.env.NODE_ENV === "production",
+        path: "/",
+        sameSite: "lax",
+        maxAge: 60 * 60 * 24 * 7,
+      })
+    } catch (e) {
+      console.error("Error setting admin_token cookie:", e)
+    }
+  }
+
+  try {
+    await signIn("credentials", {
+      email,
+      password,
+      redirectTo,
+    })
   } catch (error) {
     if (error instanceof AuthError) {
       switch (error.type) {

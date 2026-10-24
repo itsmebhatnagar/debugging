@@ -8,7 +8,21 @@ import { redirect } from "next/navigation"
 
 export default async function AdminLeaderboardPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
-  if (session?.user?.role !== "ADMIN") redirect("/login")
+  let isAdmin = session?.user?.role === "ADMIN"
+
+  if (!isAdmin) {
+    const { cookies } = await import("next/headers")
+    const cookieStore = await cookies()
+    const adminToken = cookieStore.get("admin_token")?.value
+    if (adminToken) {
+      try {
+        const decoded = JSON.parse(Buffer.from(adminToken, "base64").toString())
+        if (decoded?.role === "ADMIN") isAdmin = true
+      } catch {}
+    }
+  }
+
+  if (!isAdmin) redirect("/admin/login")
 
   const { id: competitionId } = await params
   
