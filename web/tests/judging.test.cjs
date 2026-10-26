@@ -58,6 +58,8 @@ test("preserves terminal Judge0 verdict categories when aggregating multiple tes
   assert.equal(getOverallVerdict([{ verdict: "Compilation Error" }]), "Compilation Error")
   assert.equal(getOverallVerdict([{ verdict: "Runtime Error" }]), "Runtime Error")
   assert.equal(getOverallVerdict([{ verdict: "Time Limit Exceeded" }]), "Time Limit Exceeded")
+  assert.equal(getOverallVerdict([{ verdict: "Memory Limit Exceeded" }]), "Memory Limit Exceeded")
+  assert.equal(getOverallVerdict([{ verdict: "Output Limit Exceeded" }]), "Output Limit Exceeded")
   assert.equal(getOverallVerdict([{ verdict: "Internal Error" }]), "Internal Error")
   assert.equal(
     getOverallVerdict([{ verdict: "Wrong Answer" }, { verdict: "Time Limit Exceeded" }]),
@@ -71,6 +73,8 @@ test("maps user-facing verdicts to database-compatible submission statuses", () 
   assert.equal(toSubmissionStatus("Compilation Error"), "COMPILATION_ERROR")
   assert.equal(toSubmissionStatus("Runtime Error"), "RUNTIME_ERROR")
   assert.equal(toSubmissionStatus("Time Limit Exceeded"), "TIME_LIMIT_EXCEEDED")
+  assert.equal(toSubmissionStatus("Memory Limit Exceeded"), "MEMORY_LIMIT_EXCEEDED")
+  assert.equal(toSubmissionStatus("Output Limit Exceeded"), "OUTPUT_LIMIT_EXCEEDED")
   assert.equal(toSubmissionStatus("Internal Error"), "INTERNAL_ERROR")
 })
 

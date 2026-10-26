@@ -18,23 +18,30 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 ## Code execution
 
-Only C, C++, and Java are supported by the arena. Code is compiled and run by a hosted Judge0-compatible service using the [Judge0 CE API](https://ce.judge0.com/) submission and status contract. For each run, the backend reads `/languages`, resolves the latest matching C/GCC, C++/G++, and Java/OpenJDK IDs from that service's catalog, and submits through `POST /submissions?base64_encoded=false&wait=false`. It polls `GET /submissions/{token}?base64_encoded=false` until a terminal Judge0 status is returned. Language IDs are not hardcoded because they are assigned by each instance; real IDs cannot be verified until the deployment URL is configured.
+Only C, C++, and Java are supported. The backend uses the Docker Engine through the `docker` CLI and fixed compiler images (`gcc:16.2` for C/C++, `eclipse-temurin:25-jdk` for Java). Images are pulled on first use when absent. Every test case gets a fresh container; Java public class names are used as source filenames and launch classes.
 
-Expected and actual output are compared in the backend after normalizing line endings and whitespace runs (leading/trailing whitespace is ignored; non-whitespace characters and token order must match). All configured public and hidden test cases run on the backend. Only public-case input, expected output, and diagnostics can be returned to participants; hidden test data and per-hidden-case output are not included in responses.
+Containers have no network, run as UID/GID 10001, use a read-only root filesystem, drop all Linux capabilities, enable `no-new-privileges`, and receive only a size-limited executable tmpfs at `/work`. They have 256 MiB memory, one CPU, 64 processes, CPU/file/open-file limits, a 5-second execution wall timeout, and a 64 KiB combined program-output cap. Source code and test data are sent over Docker CLI stdin; no host directories, Docker socket, app secrets, or host files are mounted into contestant containers. Judge concurrency is limited to four active and twenty queued executions per Node process. Results distinguish accepted, wrong answer, compilation/runtime errors, timeouts, detected memory-limit failures, output-limit failures, and infrastructure errors.
 
-Judge0 status IDs are mapped to Accepted, Wrong Answer, Compilation Error, Runtime Error, Time Limit Exceeded, and Internal Error. A submission is Accepted only if every test case executes successfully and the normalized output matches; Internal Error awards no points. Each request sets 2 seconds CPU time, 1 second extra CPU time, 5 seconds wall time, 128,000 KB memory, 64,000 KB stack, 30 max processes/threads, 1,024 KB maximum file size, and disables network access. The hosted service itself must run Judge0's isolated sandbox (e.g., isolate) with its own worker, process, storage, and request quotas; these request limits do not make an unsandboxed service safe.
+The default line comparator normalizes CR/LF, trims horizontal whitespace per line, and ignores trailing blank lines while preserving meaningful line boundaries. The existing `exact` and `token` modes remain available to configured callers. Problems require at least one server-side test case; hidden cases are evaluated on the backend and are excluded from participant-facing test details. A submission receives the problem's configured points only when all test cases are accepted; the current schema has no explicit partial-credit or per-case weight policy, so failed solutions receive zero.
 
-Set these exact variables in the **backend/server deployment environment**:
+### Windows / Docker Desktop setup
 
-| Variable | Required | Value |
-| --- | --- | --- |
-| `JUDGE0_API_URL` | Yes | HTTPS base URL for the hosted Judge0-compatible API, including its API prefix if needed (for example, `/api/v1`). Do not include credentials or query-string secrets. |
-| `JUDGE0_AUTHN_TOKEN` | No | Judge0 authentication token; sent as `X-Auth-Token`. |
-| `JUDGE0_AUTHZ_TOKEN` | No | Judge0 authorization token; sent as `X-Auth-User`. |
+1. Install Docker Desktop for Windows (for example, `winget install --id Docker.DockerDesktop -e`) and launch it.
+2. In Docker Desktop, enable the WSL 2 based engine under **Settings → General** if prompted, then wait until Docker Desktop reports that its engine is running. If Windows asks to enable virtualization or WSL, complete that setup and restart Windows.
+3. In PowerShell, verify `docker version` shows both Client and Server and `docker info --format '{{.OSType}}/{{.Architecture}}'` reports a Linux engine. This backend expects Linux containers.
+4. From PowerShell, pull/verify compiler images: `docker pull gcc:16.2` and `docker pull eclipse-temurin:25-jdk`.
+5. Run the Next.js backend on the Windows host with Docker CLI access (`npm run dev`). The backend performs an Engine health check for each execution and reports Docker/image/container setup failures; Docker Desktop must remain running.
 
-Tokens must not use `NEXT_PUBLIC_` names or be placed in frontend settings. Configure the remote instance to provide C, C++, and Java runtimes through `/languages`, honor the documented Judge0 submission/status format and resource-limit fields, enforce network isolation, and allow backend egress to the API. Without `JUDGE0_API_URL`, requests fail with `Compiler service not configured`; network/protocol failures are returned as service errors, never successful or fabricated execution results. No Docker, WSL, or local execution fallback is used.
+The application does not claim Docker is ready until its live integration tests have compiled and run the supported toolchains. In PowerShell, run:
 
-Run mocked protocol and judging tests with `npm run test:execution`. They validate request formats, catalog-based ID resolution, status handling, polling, output normalization, and resource limits. They do not verify an actual hosted compiler or live language IDs.
+```powershell
+$env:RUN_DOCKER_TESTS = "1"
+npm run test:docker
+```
+
+This verifies actual containers, compiler/runtime/wrong-answer handling, cgroup resource limits, time/output limits, and concurrent execution. `npm run test:execution` runs the judging and Judge0 protocol unit tests; the Judge0 tests preserve the unused legacy provider and are mocked, not proof of Docker execution.
+
+Docker containers share the host kernel. The controls above reduce exposure but do not eliminate kernel/container-runtime vulnerabilities; run the backend and Docker daemon on a dedicated, patched host, do not expose the daemon to untrusted users, and consider a stronger isolation runtime (for example, gVisor or a microVM) for a public multi-tenant judge. If the backend itself is containerized, access to the Docker Engine is a privileged host capability and must be isolated from contestant containers.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 

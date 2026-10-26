@@ -15,6 +15,7 @@ import { seedPirateChampionship } from "@/lib/seed-championship"
 import { runAICompetitionEvaluation } from "@/lib/ai-debugger"
 import { normalizeSupportedLanguage } from "@/lib/code-language"
 import { getAdminSession } from "@/lib/admin-auth"
+import { totalBestQuestionScore } from "@/lib/score-calculation"
 
 async function checkAdmin() {
   const session = await getAdminSession()
@@ -653,14 +654,22 @@ export async function resetRoundAdmin(roundId: string) {
     where: { competitionId: round.competitionId },
     select: {
       id: true,
-      scores: { select: { pointsEarned: true } }
+      scores: {
+        select: {
+          pointsEarned: true,
+          submission: { select: { questionId: true } }
+        }
+      }
     }
   })
   await Promise.all(participants.map(participant =>
     prisma.competitionParticipant.update({
       where: { id: participant.id },
       data: {
-        score: participant.scores.reduce((total, score) => total + score.pointsEarned, 0)
+        score: totalBestQuestionScore(participant.scores.map((score) => ({
+          questionId: score.submission.questionId,
+          pointsEarned: score.pointsEarned,
+        })))
       }
     })
   ))

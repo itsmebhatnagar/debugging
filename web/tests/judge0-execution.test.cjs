@@ -150,6 +150,8 @@ test("maps compilation, runtime, time-limit, and internal service statuses", asy
     { statusId: 11, status: "Runtime Error (NZEC)", expected: "Runtime Error", stderr: "runtime diagnostic", exit_code: 17 },
     { statusId: 3, status: "Accepted", expected: "Runtime Error", stdout: "wrong", exit_code: 17 },
     { statusId: 5, status: "Time Limit Exceeded", expected: "Time Limit Exceeded" },
+    { statusId: 8, status: "Memory Limit Exceeded", expected: "Memory Limit Exceeded" },
+    { statusId: 12, status: "Output Limit Exceeded", expected: "Output Limit Exceeded" },
     { statusId: 13, status: "Internal Error", expected: "Internal Error" },
   ]
 

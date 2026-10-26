@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma"
 import { deduplicateByUserDetails } from "@/lib/deduplicate"
+import { bestScoreByQuestion } from "@/lib/score-calculation"
 
 export async function getCompetitionLeaderboard(competitionId: string) {
   const [competition, participants] = await Promise.all([
@@ -21,7 +22,7 @@ export async function getCompetitionLeaderboard(competitionId: string) {
             pointsEarned: true,
             createdAt: true,
             submission: {
-              select: { question: { select: { roundId: true } } },
+              select: { question: { select: { id: true, roundId: true } } },
             },
           },
         },
@@ -32,13 +33,16 @@ export async function getCompetitionLeaderboard(competitionId: string) {
   if (!competition) throw new Error("Competition not found")
 
   const leaderboard = participants.map((participant) => {
+    const bestScores = bestScoreByQuestion(participant.scores.map((score) => ({
+      questionId: score.submission.question.id,
+      pointsEarned: score.pointsEarned,
+    })))
     const roundScores = competition.rounds.map((round) => ({
       ...round,
-      score: participant.scores.reduce(
-        (total, score) =>
-          total + (score.submission.question.roundId === round.id ? score.pointsEarned : 0),
-        0,
-      ),
+      score: [...bestScores].reduce((total, [questionId, pointsEarned]) => {
+        const score = participant.scores.find((item) => item.submission.question.id === questionId)
+        return total + (score?.submission.question.roundId === round.id ? pointsEarned : 0)
+      }, 0),
     }))
     const totalScore = roundScores.reduce((total, round) => total + round.score, 0)
     const lastUpdate = participant.scores.reduce(

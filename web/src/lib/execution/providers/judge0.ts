@@ -352,14 +352,16 @@ function getVerdict(
       return "Time Limit Exceeded"
     case 6:
       return "Compilation Error"
+    case 8:
+      return "Memory Limit Exceeded"
+    case 12:
+      return "Output Limit Exceeded"
     case 13:
       return "Internal Error"
     case 7:
-    case 8:
     case 9:
     case 10:
     case 11:
-    case 12:
     case 14:
       return "Runtime Error"
     default:

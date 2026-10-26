@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma"
+import { totalBestQuestionScore } from "@/lib/score-calculation"
 
 export interface AIAnalysisResult {
   correctness: number // 0 - 100
@@ -309,7 +310,12 @@ export async function runAICompetitionEvaluation(competitionId: string) {
     where: { competitionId },
     include: {
       user: true,
-      scores: true
+      scores: {
+        select: {
+          pointsEarned: true,
+          submission: { select: { questionId: true } }
+        }
+      }
     }
   })
 
@@ -340,7 +346,10 @@ export async function runAICompetitionEvaluation(competitionId: string) {
   // Aggregate participant stats with AI scores
   const evaluatedParticipants = participants.map((p) => {
     const userSubmissions = userSubmissionsMap.get(p.userId) || []
-    const testCasePoints = p.scores.reduce((acc, s) => acc + s.pointsEarned, 0)
+    const testCasePoints = totalBestQuestionScore(p.scores.map((score) => ({
+      questionId: score.submission.questionId,
+      pointsEarned: score.pointsEarned,
+    })))
       
       // Calculate AI Quality & Correctness Bonus
       let totalAICorrectness = 0

@@ -32,8 +32,13 @@ export async function judgeTestCases(
     })
     results.push(result)
 
-    // Short-circuit on Compilation Error or Internal Error because subsequent test cases cannot pass
-    if (result.verdict === "Compilation Error" || result.verdict === "Internal Error") {
+    if (
+      result.verdict === "Compilation Error"
+      || result.verdict === "Internal Error"
+      || result.verdict === "Time Limit Exceeded"
+      || result.verdict === "Memory Limit Exceeded"
+      || result.verdict === "Output Limit Exceeded"
+    ) {
       break
     }
   }
@@ -108,8 +113,10 @@ export function getOverallVerdict(results: ExecutionResult[]): ExecutionVerdict 
   const failures: ExecutionVerdict[] = [
     "Internal Error",
     "Compilation Error",
+    "Memory Limit Exceeded",
     "Runtime Error",
     "Time Limit Exceeded",
+    "Output Limit Exceeded",
     "Wrong Answer",
   ]
   return failures.find((verdict) => results.some((result) => result.verdict === verdict)) ?? "Accepted"

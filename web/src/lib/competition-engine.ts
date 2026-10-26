@@ -6,6 +6,7 @@ import { analyzeSubmission, runAICompetitionEvaluation } from "./ai-debugger"
 import { C_STARTER_CODE, CODE_LANGUAGE, isSupportedLanguage, normalizeSupportedLanguage } from "./code-language"
 import { ExecutionResult, ExecutionVerdict } from "./execution/types"
 import { getPublicTestResults, judgeTestCases, toSubmissionStatus } from "./execution/judging"
+import { pointsForVerdict, totalBestQuestionScore } from "./score-calculation"
 
 function executionOutputLines(result: ExecutionResult): string[] {
   const output: string[] = [
@@ -406,12 +407,8 @@ export async function submitSolution(
     throw error
   }
 
-  const totalPoints = question.points || 100
-  
-  // Baseline points based purely on execution
-  const pointsEarned = verdict === "Internal Error"
-    ? 0
-    : Math.round((passedCount / allTestCases.length) * totalPoints)
+  const totalPoints = question.points
+  const pointsEarned = pointsForVerdict(verdict, totalPoints)
 
   const finalSubmission = await prisma.submission.update({
     where: { id: submission.id },
@@ -425,7 +422,7 @@ export async function submitSolution(
     where: { submissionId: submission.id },
     create: {
       submissionId: submission.id,
-      correctness: Math.round((pointsEarned / totalPoints) * 100),
+      correctness: totalPoints === 0 ? 0 : Math.round((pointsEarned / totalPoints) * 100),
       codeQuality: 0,
       bugs: !allPassed ? executionSummary : "None detected",
       feedback: executionSummary,
@@ -477,9 +474,16 @@ export async function submitSolution(
 
   // Update participant cumulative score
   const allParticipantScores = await prisma.score.findMany({
-    where: { participantId: participant.id }
+    where: { participantId: participant.id },
+    select: {
+      pointsEarned: true,
+      submission: { select: { questionId: true } },
+    },
   })
-  const totalAccumulatedScore = allParticipantScores.reduce((sum, s) => sum + s.pointsEarned, 0)
+  const totalAccumulatedScore = totalBestQuestionScore(allParticipantScores.map((score) => ({
+    questionId: score.submission.questionId,
+    pointsEarned: score.pointsEarned,
+  })))
   await prisma.competitionParticipant.update({
     where: { id: participant.id },
     data: { score: totalAccumulatedScore }
