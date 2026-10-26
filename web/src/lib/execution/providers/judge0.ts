@@ -88,9 +88,9 @@ const POLL_INTERVAL_MS = 750
 const REQUEST_TIMEOUT_MS = 10_000
 
 const COMPILERS: Record<SupportedLanguage, { name: string; pattern: RegExp }> = {
-  c: { name: "GCC", pattern: /^C \(GCC ([\d.]+)\)$/i },
-  cpp: { name: "G++", pattern: /^C\+\+ \((?:G\+\+|GCC) ([\d.]+)\)$/i },
-  java: { name: "OpenJDK", pattern: /^Java \(OpenJDK ([\d.]+)\)$/i },
+  c: { name: "GCC", pattern: /^C \((?:GCC) ([\d.]+).*\)$/i },
+  cpp: { name: "G++", pattern: /^C\+\+ \((?:G\+\+|GCC) ([\d.]+).*\)$/i },
+  java: { name: "OpenJDK", pattern: /^Java \((?:OpenJDK|JDK) ([\d.]+).*\)$/i },
 }
 
 export class Judge0ExecutionService implements ExecutionService {
@@ -119,9 +119,11 @@ export class Judge0ExecutionService implements ExecutionService {
 
     const authnToken = process.env.JUDGE0_AUTHN_TOKEN?.trim()
     const authzToken = process.env.JUDGE0_AUTHZ_TOKEN?.trim()
+    const rapidApiKey = process.env.JUDGE0_RAPIDAPI_KEY?.trim()
     this.authHeaders = {
       ...(authnToken ? { "X-Auth-Token": authnToken } : {}),
       ...(authzToken ? { "X-Auth-User": authzToken } : {}),
+      ...(rapidApiKey ? { "X-RapidAPI-Key": rapidApiKey, "X-RapidAPI-Host": apiUrl.host } : {}),
     }
   }
 
@@ -161,7 +163,7 @@ export class Judge0ExecutionService implements ExecutionService {
       throw new Error("Judge0 returned a completed submission without the required execution result fields.")
     }
 
-    const verdict = getVerdict(result, request.expectedOutput)
+    const verdict = getVerdict(result, request.expectedOutput, request.judgingMode)
     return {
       stdout: result.stdout ?? null,
       stderr: result.stderr ?? null,
@@ -327,7 +329,11 @@ function isFiniteNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value)
 }
 
-function getVerdict(result: Judge0Submission, expectedOutput: string): ExecutionVerdict {
+function getVerdict(
+  result: Judge0Submission,
+  expectedOutput: string,
+  judgingMode?: "line" | "token" | "exact"
+): ExecutionVerdict {
   if (!isValidStatus(result.status)) {
     throw new Error("Judge0 returned a completed submission without a valid status.")
   }
@@ -341,7 +347,7 @@ function getVerdict(result: Judge0Submission, expectedOutput: string): Execution
       if (result.exit_code !== 0) {
         return "Runtime Error"
       }
-      return matchesExpectedOutput(result.stdout ?? null, expectedOutput) ? "Accepted" : "Wrong Answer"
+      return matchesExpectedOutput(result.stdout ?? null, expectedOutput, judgingMode) ? "Accepted" : "Wrong Answer"
     case 5:
       return "Time Limit Exceeded"
     case 6:

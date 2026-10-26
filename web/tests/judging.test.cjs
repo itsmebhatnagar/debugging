@@ -21,14 +21,32 @@ const {
   judgeTestCases,
   matchesExpectedOutput,
   normalizeOutput,
+  normalizeTokenOutput,
   toSubmissionStatus,
 } =
   require("../src/lib/execution/judging.ts")
 
-test("compares output while treating whitespace runs and line endings as equivalent", () => {
-  assert.equal(normalizeOutput("  alpha \r\n\t beta  "), "alpha beta")
+test("compares output while treating whitespace runs and line endings as equivalent without silently collapsing line breaks", () => {
+  // Line preservation: line breaks are preserved
+  assert.equal(normalizeOutput("  alpha \r\n\t beta  "), "alpha\nbeta")
+  assert.equal(normalizeTokenOutput("  alpha \r\n\t beta  "), "alpha beta")
+
+  // Intra-line whitespace and line endings normalization
   assert.equal(matchesExpectedOutput("  1\t2\n", "1 2"), true)
   assert.equal(matchesExpectedOutput("12", "1 2"), false)
+
+  // Meaningful differences: multi-line vs single-line is NOT silently accepted in line mode
+  assert.equal(matchesExpectedOutput("1 2", "1\n2"), false)
+  assert.equal(matchesExpectedOutput("1 2", "1\n2", "token"), true)
+
+  // Trailing newlines / CRLF tolerance
+  assert.equal(matchesExpectedOutput("hello\r\n\r\n", "hello\n"), true)
+
+  // Empty outputs
+  assert.equal(matchesExpectedOutput("", ""), true)
+  assert.equal(matchesExpectedOutput("\n\n", ""), true)
+  assert.equal(matchesExpectedOutput(null, ""), true)
+  assert.equal(matchesExpectedOutput(null, "output"), false)
 })
 
 test("returns Accepted only when all test-case results are accepted", () => {
@@ -93,4 +111,39 @@ test("executes public and hidden cases but only returns public-case detail for a
   assert.equal(publicResults.length, 2)
   assert.ok(publicResults.every(({ testCase }) => !testCase.isHidden))
   assert.equal(JSON.stringify(publicResults).includes("secret hidden"), false)
+})
+
+test("short-circuits on terminal Compilation Error without executing subsequent test cases", async () => {
+  const testCases = [
+    { input: "1", expected: "1", isHidden: false },
+    { input: "2", expected: "2", isHidden: true },
+    { input: "3", expected: "3", isHidden: true },
+  ]
+  let executionCount = 0
+  const executionService = {
+    async execute() {
+      executionCount++
+      return {
+        stdout: null,
+        stderr: "syntax error",
+        compileOutput: "syntax error on line 1",
+        time: null,
+        memory: null,
+        statusId: 6,
+        statusDescription: "Compilation Error",
+        verdict: "Compilation Error",
+        passed: false,
+      }
+    },
+  }
+
+  const judging = await judgeTestCases(executionService, "c", "invalid_syntax", testCases)
+  assert.equal(executionCount, 1) // Only test case 1 ran
+  assert.equal(judging.verdict, "Compilation Error")
+  assert.equal(judging.passedCount, 0)
+  assert.equal(judging.results.length, 1)
+
+  const publicResults = getPublicTestResults(testCases, judging.results)
+  assert.equal(publicResults.length, 1)
+  assert.equal(publicResults[0].result.verdict, "Compilation Error")
 })

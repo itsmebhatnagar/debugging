@@ -3,6 +3,7 @@ export interface ExecutionRequest {
   code: string
   input: string
   expectedOutput: string
+  judgingMode?: "line" | "token" | "exact"
 }
 
 export type ExecutionVerdict =

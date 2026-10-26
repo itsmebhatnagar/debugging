@@ -5,22 +5,32 @@ import { prisma } from "@/lib/prisma"
 import { requestCompile, submitSolution, saveDraftCode } from "@/lib/competition-engine"
 import { C_STARTER_CODE, isSupportedLanguage, normalizeSupportedLanguage } from "@/lib/code-language"
 
+const inFlightLocks = new Set<string>()
+
 export async function compileCode(questionId: string, language: string, code: string) {
   const session = await auth()
   if (!session?.user?.id) {
     return { success: false, error: "Unauthorized: Please log in first." }
   }
 
+  const lockKey = `compile_${session.user.id}_${questionId}`
+  if (inFlightLocks.has(lockKey)) {
+    return { success: false, error: "A compilation request is already in progress. Please wait for it to finish." }
+  }
+
+  inFlightLocks.add(lockKey)
   try {
     const attempt = await requestCompile(session.user.id, questionId, language, code)
     return { success: true, attempt }
   } catch (error: any) {
-    const isExceeded = error.message.includes("ATTEMPT LIMIT EXHAUSTED")
+    const isExceeded = error.message?.includes("ATTEMPT LIMIT EXHAUSTED")
     return {
       success: false,
-      error: error.message,
+      error: error.message || "Compilation failed.",
       autoSubmitted: isExceeded
     }
+  } finally {
+    inFlightLocks.delete(lockKey)
   }
 }
 
@@ -30,11 +40,19 @@ export async function submitFinalCode(questionId: string, language: string, code
     return { success: false, error: "Unauthorized: Please log in first." }
   }
 
+  const lockKey = `submit_${session.user.id}_${questionId}`
+  if (inFlightLocks.has(lockKey)) {
+    return { success: false, error: "A submission is already being evaluated. Please wait." }
+  }
+
+  inFlightLocks.add(lockKey)
   try {
     const submission = await submitSolution(session.user.id, questionId, language, code, false)
     return { success: true, submission }
   } catch (error: any) {
-    return { success: false, error: error.message }
+    return { success: false, error: error.message || "Submission failed." }
+  } finally {
+    inFlightLocks.delete(lockKey)
   }
 }
 

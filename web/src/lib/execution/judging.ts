@@ -1,9 +1,12 @@
-import type { ExecutionRequest, ExecutionResult, ExecutionService, ExecutionVerdict } from "./types"
+import type { ExecutionResult, ExecutionService, ExecutionVerdict } from "./types"
+
+export type JudgingMode = "line" | "token" | "exact"
 
 export interface JudgingTestCase {
   input: string
   expected: string
   isHidden: boolean
+  mode?: JudgingMode
 }
 
 export async function judgeTestCases(
@@ -16,13 +19,25 @@ export async function judgeTestCases(
     throw new Error("Cannot judge a submission without test cases.")
   }
 
-  const requests: ExecutionRequest[] = testCases.map((testCase) => ({
-    language,
-    code,
-    input: testCase.input,
-    expectedOutput: testCase.expected,
-  }))
-  const results = await Promise.all(requests.map((request) => executionService.execute(request)))
+  const results: ExecutionResult[] = []
+
+  for (let index = 0; index < testCases.length; index++) {
+    const testCase = testCases[index]
+    const result = await executionService.execute({
+      language,
+      code,
+      input: testCase.input,
+      expectedOutput: testCase.expected,
+      judgingMode: testCase.mode,
+    })
+    results.push(result)
+
+    // Short-circuit on Compilation Error or Internal Error because subsequent test cases cannot pass
+    if (result.verdict === "Compilation Error" || result.verdict === "Internal Error") {
+      break
+    }
+  }
+
   return {
     results,
     verdict: getOverallVerdict(results),
@@ -34,21 +49,55 @@ export function getPublicTestResults<T extends JudgingTestCase>(
   testCases: T[],
   results: ExecutionResult[],
 ): Array<{ result: ExecutionResult; testCase: T }> {
-  if (testCases.length !== results.length) {
-    throw new Error("Cannot match test-case results to the submitted test cases.")
-  }
-
   return results
     .map((result, index) => ({ result, testCase: testCases[index] }))
-    .filter(({ testCase }) => !testCase.isHidden)
+    .filter(({ testCase }) => testCase && !testCase.isHidden)
+}
+
+export function normalizeLineOutput(output: string): string {
+  const lines = output
+    .replace(/\r\n?/gu, "\n")
+    .split("\n")
+    .map((line) => line.trim().replace(/[ \t]+/gu, " "))
+
+  // Strip trailing empty lines
+  while (lines.length > 0 && lines[lines.length - 1] === "") {
+    lines.pop()
+  }
+
+  return lines.join("\n")
+}
+
+export function normalizeTokenOutput(output: string): string {
+  return output.trim().replace(/\s+/gu, " ")
 }
 
 export function normalizeOutput(output: string): string {
-  return output.replace(/\s+/gu, " ").trim()
+  return normalizeLineOutput(output)
 }
 
-export function matchesExpectedOutput(actual: string | null, expected: string): boolean {
-  return normalizeOutput(actual ?? "") === normalizeOutput(expected)
+export function matchesExpectedOutput(
+  actual: string | null,
+  expected: string,
+  mode: JudgingMode = "line"
+): boolean {
+  if (actual == null && expected === "") return true
+  if (actual == null) return false
+
+  if (mode === "exact") {
+    return actual === expected
+  }
+
+  if (mode === "token") {
+    const actualTokens = actual.trim().split(/\s+/u).filter(Boolean)
+    const expectedTokens = expected.trim().split(/\s+/u).filter(Boolean)
+    if (actualTokens.length !== expectedTokens.length) return false
+    return actualTokens.every((token, index) => token === expectedTokens[index])
+  }
+
+  // mode === "line" (default for ordinary output comparison):
+  // Line boundaries are preserved. Whitespace runs on the same line and trailing newlines are normalized.
+  return normalizeLineOutput(actual) === normalizeLineOutput(expected)
 }
 
 export function getOverallVerdict(results: ExecutionResult[]): ExecutionVerdict {
