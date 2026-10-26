@@ -3,24 +3,22 @@ import { prisma } from "@/lib/prisma"
 import { getExecutionService } from "./execution"
 import { broadcastEvent } from "./realtime"
 import { analyzeSubmission, runAICompetitionEvaluation } from "./ai-debugger"
-import { assertSupportedLanguage, C_STARTER_CODE, CODE_LANGUAGE } from "./code-language"
-import { ExecutionResult } from "./execution/types"
+import { C_STARTER_CODE, CODE_LANGUAGE, isSupportedLanguage, normalizeSupportedLanguage } from "./code-language"
+import { ExecutionResult, ExecutionVerdict } from "./execution/types"
+import { getPublicTestResults, judgeTestCases, toSubmissionStatus } from "./execution/judging"
 
 function executionOutputLines(result: ExecutionResult): string[] {
-  const output: string[] = [`Compiler: GCC ${result.compilerVersion || "version unavailable"}`]
+  const output: string[] = [
+    `Compiler: ${result.compilerName || "Compiler"} ${result.compilerVersion || "version unavailable"}`,
+  ]
 
+  if (result.statusDescription) output.push(`Execution status: ${result.statusDescription}`)
   if (result.compileOutput) output.push(`Compiler output:\n${result.compileOutput.trimEnd()}`)
   if (result.stdout) output.push(`Program output:\n${result.stdout.trimEnd()}`)
   if (result.stderr) output.push(`Error output:\n${result.stderr.trimEnd()}`)
-  output.push(`Execution time: ${result.time}s`)
+  output.push(`Execution time: ${result.time === null ? "unavailable" : `${result.time}s`}`)
+  if (result.memory !== null) output.push(`Memory: ${result.memory} KB`)
   return output
-}
-
-function formatExecutionResult(result: ExecutionResult): string {
-  return [
-    `${result.passed ? "PASSED" : "FAILED"}: ${result.passed ? "Program ran successfully." : "Compilation or execution failed."}`,
-    ...executionOutputLines(result),
-  ].join("\n")
 }
 
 /**
@@ -191,8 +189,7 @@ export async function requestCompile(
   language: string,
   code: string
 ) {
-  assertSupportedLanguage(language)
-  language = CODE_LANGUAGE
+  language = normalizeSupportedLanguage(language)
 
   // 1. Fetch question and round
   const question = await prisma.question.findUnique({
@@ -270,13 +267,13 @@ export async function requestCompile(
   })
 
   // Execute Code against public test cases
-  const execService = getExecutionService()
   const publicTestCases = await prisma.testCase.findMany({
     where: { questionId, isHidden: false }
   })
 
   let executionResult = ""
   try {
+    const execService = getExecutionService()
     if (publicTestCases.length === 0) {
       const res = await execService.execute({
         language,
@@ -284,7 +281,11 @@ export async function requestCompile(
         input: "",
         expectedOutput: ""
       })
-      executionResult = formatExecutionResult(res)
+      executionResult = [
+        "No public test cases are configured; no judging verdict is available.",
+        `Execution check: ${res.verdict}`,
+        ...executionOutputLines(res),
+      ].join("\n")
     } else {
       const tc = publicTestCases[0]
       const res = await execService.execute({
@@ -295,7 +296,7 @@ export async function requestCompile(
       })
 
       executionResult = [
-        `${res.passed ? "PASSED" : "FAILED"}: Public test case 1`,
+        `Verdict: ${res.verdict} (public test case 1)`,
         `Input:\n${tc.input || "(empty)"}`,
         `Expected:\n${tc.expected || "(empty)"}`,
         ...executionOutputLines(res),
@@ -343,8 +344,7 @@ export async function submitSolution(
   code: string,
   isAutoSubmit: boolean = false
 ) {
-  assertSupportedLanguage(language)
-  language = CODE_LANGUAGE
+  language = normalizeSupportedLanguage(language)
 
   const question = await prisma.question.findUnique({
     where: { id: questionId },
@@ -353,6 +353,14 @@ export async function submitSolution(
   
   if (!question) throw new Error("Question not found")
   const round = question.round
+
+  const allTestCases = await prisma.testCase.findMany({
+    where: { questionId },
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+  })
+  if (allTestCases.length === 0) {
+    throw new Error("This question has no test cases configured and cannot be judged.")
+  }
 
   // Create submission record
   const submission = await prisma.submission.create({
@@ -365,57 +373,50 @@ export async function submitSolution(
     },
   })
 
-  // Run against ALL test cases (public + hidden) concurrently
-  const execService = getExecutionService()
-  const allTestCases = await prisma.testCase.findMany({
-    where: { questionId }
-  })
-
   let passedCount = 0
-  let allPassed = true
-  let totalTimeMs = 0
-  let executionLogs = ""
+  let allPassed = false
+  let executionSummary = ""
+  let verdict: ExecutionVerdict
 
-  if (allTestCases.length > 0) {
-    const results = await Promise.all(
-      allTestCases.map(tc =>
-        execService.execute({
-          language,
-          code,
-          input: tc.input,
-          expectedOutput: tc.expected
-        })
-      )
-    )
+  try {
+    const execService = getExecutionService()
+    const judging = await judgeTestCases(execService, language, code, allTestCases)
+    const { results } = judging
+    passedCount = judging.passedCount
+    allPassed = passedCount === allTestCases.length
+    verdict = judging.verdict
 
-    results.forEach((res) => {
-      totalTimeMs += res.time
-      if (res.passed) {
-        passedCount++
-        executionLogs += `Test Case passed.\n`
-      } else {
-        allPassed = false
-        executionLogs += `Test Case failed. Output: ${res.stdout || res.stderr}\n`
-      }
+    const publicResults = getPublicTestResults(allTestCases, results)
+    executionSummary = [
+      `Verdict: ${verdict}`,
+      `Public test cases passed: ${publicResults.filter(({ result }) => result.passed).length}/${publicResults.length}`,
+      ...publicResults.map(({ result, testCase }, index) => [
+        `Public test case ${index + 1}: ${result.verdict}`,
+        `Input:\n${testCase.input || "(empty)"}`,
+        `Expected:\n${testCase.expected || "(empty)"}`,
+        ...executionOutputLines(result),
+      ].join("\n")),
+      ...(publicResults.length === 0 ? ["No public test-case details are available."] : []),
+    ].join("\n")
+  } catch (error) {
+    await prisma.submission.update({
+      where: { id: submission.id },
+      data: { status: "FAILED" },
     })
-  } else {
-    // Execute without inputs to get baseline execution info
-    const res = await execService.execute({ language, code, input: "", expectedOutput: "" })
-    totalTimeMs += res.time
-    executionLogs += res.passed ? `Execution passed: ${res.stdout}\n` : `Execution failed: ${res.stderr || res.stdout}\n`
+    throw error
   }
 
   const totalPoints = question.points || 100
   
   // Baseline points based purely on execution
-  const pointsEarned = allTestCases.length > 0
-    ? Math.round((passedCount / allTestCases.length) * totalPoints)
-    : (code.length > 10 ? totalPoints : 0)
+  const pointsEarned = verdict === "Internal Error"
+    ? 0
+    : Math.round((passedCount / allTestCases.length) * totalPoints)
 
   const finalSubmission = await prisma.submission.update({
     where: { id: submission.id },
     data: {
-      status: "ACCEPTED" // Instantly show accepted as requested
+      status: toSubmissionStatus(verdict),
     }
   })
 
@@ -426,12 +427,13 @@ export async function submitSolution(
       submissionId: submission.id,
       correctness: Math.round((pointsEarned / totalPoints) * 100),
       codeQuality: 0,
-      bugs: !allPassed ? "Some tests failed" : "None detected",
-      feedback: "AI Evaluation Pending...",
+      bugs: !allPassed ? executionSummary : "None detected",
+      feedback: executionSummary,
       status: "PENDING"
     },
     update: {
-      feedback: "AI Evaluation Pending...",
+      bugs: !allPassed ? executionSummary : "None detected",
+      feedback: executionSummary,
       status: "PENDING"
     }
   })
@@ -492,14 +494,15 @@ export async function submitSolution(
     submissionId: finalSubmission.id,
     isAutoSubmit,
     pointsEarned,
-    status: finalSubmission.status
+    status: finalSubmission.status,
+    verdict,
   })
 
   await broadcastEvent(round.competitionId, "leaderboard_updated", {
     competitionId: round.competitionId
   })
 
-  return finalSubmission
+  return { ...finalSubmission, executionSummary, verdict }
 }
 
 /**
@@ -511,8 +514,7 @@ export async function saveDraftCode(
   language: string,
   code: string
 ) {
-  assertSupportedLanguage(language)
-  language = CODE_LANGUAGE
+  language = normalizeSupportedLanguage(language)
 
   return await prisma.draftCode.upsert({
     where: {
@@ -585,15 +587,18 @@ export async function endCompetition(competitionId: string) {
   const draftMap = new Map(allDrafts.map(d => [`${d.userId}_${d.questionId}`, d]))
 
   // 3. Batch auto-submit missing submissions concurrently
-  const missingTasks: Array<() => Promise<any>> = []
+  const missingTasks: Array<() => Promise<unknown>> = []
   for (const p of participants) {
     for (const q of questions) {
       const key = `${p.userId}_${q.id}`
       if (!submittedKeySet.has(key)) {
         const draft = draftMap.get(key)
-        const codeToSubmit = draft?.language === CODE_LANGUAGE ? draft.code : C_STARTER_CODE
+        const draftLanguage = draft && isSupportedLanguage(draft.language)
+          ? draft.language
+          : CODE_LANGUAGE
+        const codeToSubmit = draft && draftLanguage === draft.language ? draft.code : C_STARTER_CODE
         missingTasks.push(() =>
-          submitSolution(p.userId, q.id, CODE_LANGUAGE, codeToSubmit, true).catch(e =>
+          submitSolution(p.userId, q.id, draftLanguage, codeToSubmit, true).catch(e =>
             console.error(`Error auto-submitting for user ${p.userId} question ${q.id}:`, e)
           )
         )

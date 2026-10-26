@@ -3,7 +3,7 @@
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
 import { requestCompile, submitSolution, saveDraftCode } from "@/lib/competition-engine"
-import { C_STARTER_CODE, CODE_LANGUAGE } from "@/lib/code-language"
+import { C_STARTER_CODE, isSupportedLanguage, normalizeSupportedLanguage } from "@/lib/code-language"
 
 export async function compileCode(questionId: string, language: string, code: string) {
   const session = await auth()
@@ -275,18 +275,23 @@ export async function autoSubmitRound(
       .filter((q) => !submittedQIds.has(q.id))
       .map(async (q) => {
         let codeToSubmit = codes[q.id]
+        let languageToSubmit = normalizeSupportedLanguage(language)
+        const draft = draftMap.get(q.id)
+        if (draft && isSupportedLanguage(draft.language) && codeToSubmit === draft.code) {
+          languageToSubmit = draft.language
+        }
         if (!codeToSubmit || !codeToSubmit.trim()) {
-          const draft = draftMap.get(q.id)
-          if (draft?.language === CODE_LANGUAGE) {
+          if (draft && isSupportedLanguage(draft.language)) {
+            languageToSubmit = draft.language
             codeToSubmit = draft.code
           } else {
-            const starter = q.starterCodes.find((s) => s.language === CODE_LANGUAGE)
+            const starter = q.starterCodes.find((s) => s.language === languageToSubmit)
             codeToSubmit = starter?.code || C_STARTER_CODE
           }
         }
 
         try {
-          const sub = await submitSolution(userId, q.id, language, codeToSubmit, true)
+          const sub = await submitSolution(userId, q.id, languageToSubmit, codeToSubmit, true)
           if (sub?.id) {
             const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000"
             fetch(`${baseUrl}/api/submissions/evaluate`, {
