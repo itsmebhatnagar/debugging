@@ -1,5 +1,7 @@
 import { randomUUID } from "node:crypto"
 import { spawn, type ChildProcessByStdio } from "node:child_process"
+import { realpathSync, statSync } from "node:fs"
+import { basename, delimiter, isAbsolute, resolve } from "node:path"
 import type { Readable, Writable } from "node:stream"
 import { normalizeSupportedLanguage, type SupportedLanguage } from "../../code-language"
 import { matchesExpectedOutput } from "../judging"
@@ -36,6 +38,8 @@ interface DockerCommandOptions {
   timeoutMs?: number
   maxOutputBytes?: number
 }
+
+class DockerExecutableResolutionError extends Error {}
 
 let activeExecutions = 0
 const executionQueue: Array<() => void> = []
@@ -96,7 +100,7 @@ async function executeInContainer(
       ? `/work/${entryPoint}.java`
       : language === "cpp" ? "/work/main.cpp" : "/work/main.c"
     const source = await runDocker(
-      ["exec", "-i", containerName, "/bin/sh", "-c", `cat > ${sourcePath}`],
+      ["exec", "-i", containerName, "/bin/sh", "-c", 'cat > "$1"', "sh", sourcePath],
       { input: request.code, timeoutMs: DOCKER_COMMAND_TIMEOUT_MS },
     )
     assertDockerSuccess(source, "source transfer")
@@ -323,6 +327,9 @@ async function ensureDockerAvailable(): Promise<void> {
     if (error instanceof Error && error.message.startsWith("Docker Engine reported an error:")) {
       throw error
     }
+    if (error instanceof DockerExecutableResolutionError || (error instanceof Error && error.message.startsWith("Docker CLI process error:"))) {
+      throw new Error(`Docker CLI is unavailable. ${error.message}`)
+    }
     throw new Error(
       `Docker Engine is unavailable. Start Docker Desktop and verify \`docker version\`. ${error instanceof Error ? error.message : ""}`.trim(),
     )
@@ -408,12 +415,14 @@ async function runDocker(
   return new Promise((resolve, reject) => {
     let child: ChildProcessByStdio<Writable, Readable, Readable>
     try {
-      child = spawn("docker", args, {
+      child = spawn(resolveDockerExecutable(), args, {
         windowsHide: true,
         stdio: ["pipe", "pipe", "pipe"] as const,
       })
     } catch (error) {
-      reject(new Error(`Could not start the Docker CLI: ${error instanceof Error ? error.message : "unknown error"}`))
+      reject(error instanceof DockerExecutableResolutionError
+        ? error
+        : new Error(`Docker CLI process error: ${error instanceof Error ? error.message : "unknown error"}`))
       return
     }
 
@@ -449,7 +458,7 @@ async function runDocker(
       if (settled) return
       settled = true
       clearTimeout(timer)
-      reject(new Error(`Docker CLI error: ${error.message}`))
+      reject(new Error(`Docker CLI process error: ${error.message}`))
     }
 
     child.on("error", fail)
@@ -469,6 +478,64 @@ async function runDocker(
     if (options.input === undefined) child.stdin.end()
     else child.stdin.end(options.input)
   })
+}
+
+function resolveDockerExecutable(): string {
+  const configuredPath = process.env.DOCKER_PATH?.trim()
+  if (configuredPath) {
+    return validateDockerExecutable(configuredPath, "DOCKER_PATH")
+  }
+
+  const executableName = process.platform === "win32" ? "docker.exe" : "docker"
+  const pathEntries = (process.env.PATH ?? "").split(delimiter).filter(Boolean)
+  for (const pathEntry of pathEntries) {
+    const candidate = resolve(pathEntry, executableName)
+    try {
+      return validateDockerExecutable(candidate, "PATH")
+    } catch {
+      continue
+    }
+  }
+
+  throw new DockerExecutableResolutionError(
+    `Docker CLI was not found in the backend process PATH. ` +
+    (process.platform === "win32"
+      ? "Set DOCKER_PATH to the absolute path of docker.exe."
+      : "Set DOCKER_PATH to the absolute path of the docker executable."),
+  )
+}
+
+function validateDockerExecutable(candidate: string, source: string): string {
+  if (!isAbsolute(candidate)) {
+    throw new DockerExecutableResolutionError(`${source} must be an absolute path to the Docker executable.`)
+  }
+
+  let resolvedPath: string
+  try {
+    resolvedPath = realpathSync(candidate)
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : "file does not exist"
+    throw new DockerExecutableResolutionError(`${source} does not point to an accessible Docker executable: ${detail}`)
+  }
+
+  const expectedName = process.platform === "win32" ? "docker.exe" : "docker"
+  if (basename(resolvedPath).toLowerCase() !== expectedName) {
+    throw new DockerExecutableResolutionError(`${source} must point to a file named ${expectedName}.`)
+  }
+
+  try {
+    if (!statSync(resolvedPath).isFile()) {
+      throw new DockerExecutableResolutionError(`${source} must point to a regular Docker executable file.`)
+    }
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith(`${source} must point to`)) {
+      throw error
+    }
+    const detail = error instanceof Error ? error.message : "file is not accessible"
+    throw new DockerExecutableResolutionError(`${source} does not point to an accessible Docker executable: ${detail}`)
+  }
+
+  return resolvedPath
 }
 
 function assertDockerSuccess(result: DockerCommandResult, operation: string): void {

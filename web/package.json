@@ -8,7 +8,7 @@
     "start": "npx next start",
     "lint": "npx eslint",
     "test:execution": "node --test tests/docker-execution.integration.cjs tests/judge0-execution.test.cjs tests/judging.test.cjs tests/score-calculation.test.cjs",
-    "test:docker": "node --test --test-concurrency=1 tests/docker-execution.integration.cjs",
+    "test:docker": "node --test --test-concurrency=1 tests/docker-execution.integration.cjs tests/run-code-docker.integration.cjs",
     "postinstall": "npx prisma generate"
   },
   "dependencies": {

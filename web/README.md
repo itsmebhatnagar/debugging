@@ -30,7 +30,7 @@ The default line comparator normalizes CR/LF, trims horizontal whitespace per li
 2. In Docker Desktop, enable the WSL 2 based engine under **Settings → General** if prompted, then wait until Docker Desktop reports that its engine is running. If Windows asks to enable virtualization or WSL, complete that setup and restart Windows.
 3. In PowerShell, verify `docker version` shows both Client and Server and `docker info --format '{{.OSType}}/{{.Architecture}}'` reports a Linux engine. This backend expects Linux containers.
 4. From PowerShell, pull/verify compiler images: `docker pull gcc:16.2` and `docker pull eclipse-temurin:25-jdk`.
-5. Run the Next.js backend on the Windows host with Docker CLI access (`npm run dev`). The backend performs an Engine health check for each execution and reports Docker/image/container setup failures; Docker Desktop must remain running.
+5. Run the Next.js backend on the Windows host with Docker CLI access (`npm run dev`). If the backend process cannot discover Docker through its inherited `PATH`, set `DOCKER_PATH` to the absolute executable path before starting it: `$env:DOCKER_PATH = (Get-Command docker.exe).Source`. The same setting can be placed in `.env.local`. The backend validates the configured path and performs an Engine health check for each execution; Docker Desktop must remain running.
 
 The application does not claim Docker is ready until its live integration tests have compiled and run the supported toolchains. In PowerShell, run:
 
