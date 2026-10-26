@@ -165,6 +165,8 @@ export async function createQuestionWithStarterCodes(roundId: string, formData: 
   const testExpected1 = (formData.get("testExpected1") as string) || ""
   const testInput2 = (formData.get("testInput2") as string) || ""
   const testExpected2 = (formData.get("testExpected2") as string) || ""
+  const testInput3 = (formData.get("testInput3") as string) || ""
+  const testExpected3 = (formData.get("testExpected3") as string) || ""
 
   if (!title || !description || isNaN(points)) {
     throw new Error("Title, description, and points are required")
@@ -212,6 +214,16 @@ export async function createQuestionWithStarterCodes(roundId: string, formData: 
         questionId: question.id,
         input: testInput2,
         expected: testExpected2,
+        isHidden: true
+      }
+    })
+  }
+  if (testExpected3.trim()) {
+    await prisma.testCase.create({
+      data: {
+        questionId: question.id,
+        input: testInput3,
+        expected: testExpected3,
         isHidden: true
       }
     })
