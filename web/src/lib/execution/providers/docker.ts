@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto"
 import { spawn, type ChildProcessByStdio } from "node:child_process"
-import { realpathSync, statSync } from "node:fs"
+import { accessSync, constants, realpathSync, statSync } from "node:fs"
 import { basename, delimiter, isAbsolute, resolve } from "node:path"
 import type { Readable, Writable } from "node:stream"
 import { normalizeSupportedLanguage, type SupportedLanguage } from "../../code-language"
@@ -34,6 +34,7 @@ interface DockerCommandResult {
 }
 
 interface DockerCommandOptions {
+  executable: string
   input?: string
   timeoutMs?: number
   maxOutputBytes?: number
@@ -52,10 +53,19 @@ export class DockerExecutionService implements ExecutionService {
     const language = normalizeSupportedLanguage(request.language)
 
     return withExecutionSlot(async () => {
-      await ensureDockerAvailable()
+      let executable: string
+      try {
+        executable = resolveDockerExecutable()
+      } catch (error) {
+        if (error instanceof DockerExecutableResolutionError) {
+          throw new Error(`Docker CLI is unavailable. ${error.message}`)
+        }
+        throw error
+      }
+      await ensureDockerAvailable(executable)
       const image = IMAGES[language]
-      await ensureImage(image)
-      return executeInContainer(request, language, image)
+      await ensureImage(image, executable)
+      return executeInContainer(request, language, image, executable)
     })
   }
 }
@@ -64,6 +74,7 @@ async function executeInContainer(
   request: ExecutionRequest,
   language: SupportedLanguage,
   image: string,
+  executable: string,
 ): Promise<ExecutionResult> {
   const containerName = `debugging-judge-${randomUUID()}`
 
@@ -89,10 +100,10 @@ async function executeInContainer(
       image,
       "sleep",
       "3600",
-    ], { timeoutMs: DOCKER_COMMAND_TIMEOUT_MS })
+    ], { executable, timeoutMs: DOCKER_COMMAND_TIMEOUT_MS })
     assertDockerSuccess(create, "container creation")
 
-    const start = await runDocker(["start", containerName], { timeoutMs: DOCKER_COMMAND_TIMEOUT_MS })
+    const start = await runDocker(["start", containerName], { executable, timeoutMs: DOCKER_COMMAND_TIMEOUT_MS })
     assertDockerSuccess(start, "container startup")
 
     const entryPoint = language === "java" ? findJavaEntryPoint(request.code) : null
@@ -101,18 +112,18 @@ async function executeInContainer(
       : language === "cpp" ? "/work/main.cpp" : "/work/main.c"
     const source = await runDocker(
       ["exec", "-i", containerName, "/bin/sh", "-c", 'cat > "$1"', "sh", sourcePath],
-      { input: request.code, timeoutMs: DOCKER_COMMAND_TIMEOUT_MS },
+      { executable, input: request.code, timeoutMs: DOCKER_COMMAND_TIMEOUT_MS },
     )
     assertDockerSuccess(source, "source transfer")
 
     const compileArgs = getCompileArguments(language, sourcePath)
     const compilation = await runDocker(
       ["exec", "-e", "TMPDIR=/work", containerName, ...compileArgs],
-      { timeoutMs: COMPILE_TIMEOUT_MS, maxOutputBytes: MAX_COMPILER_OUTPUT_BYTES },
+      { executable, timeoutMs: COMPILE_TIMEOUT_MS, maxOutputBytes: MAX_COMPILER_OUTPUT_BYTES },
     )
 
     if (compilation.timedOut || compilation.outputLimitExceeded) {
-      await stopContainer(containerName)
+      await stopContainer(containerName, executable)
       return makeResult({
         verdict: compilation.timedOut ? "Time Limit Exceeded" : "Output Limit Exceeded",
         statusId: compilation.timedOut ? 5 : 12,
@@ -122,7 +133,7 @@ async function executeInContainer(
 
     if (compilation.exitCode !== 0 && compilation.exitCode !== null) {
       assertNotDockerInfrastructureFailure(compilation, "compiler initialization")
-      const outOfMemory = await wasKilledForMemory(containerName)
+      const outOfMemory = await wasKilledForMemory(containerName, executable)
       return makeResult({
         verdict: outOfMemory ? "Memory Limit Exceeded" : "Compilation Error",
         statusId: outOfMemory ? 8 : 6,
@@ -131,13 +142,14 @@ async function executeInContainer(
     }
     assertDockerSuccess(compilation, "compilation")
 
-    const compiler = await getCompilerVersion(containerName, language, image)
+    const compiler = await getCompilerVersion(containerName, language, image, executable)
     const guestTimeout = `${EXECUTION_TIMEOUT_MS / 1000}s`
     const runArgs = language === "java"
       ? ["exec", "-i", containerName, "timeout", "--signal=KILL", "--kill-after=1s", guestTimeout, "java", "-Xmx128m", "-Xss1m", "-XX:ActiveProcessorCount=1", "-cp", "/work", entryPoint ?? "Main"]
       : ["exec", "-i", containerName, "timeout", "--signal=KILL", "--kill-after=1s", guestTimeout, "/work/program"]
     const executionStartedAt = Date.now()
     const execution = await runDocker(runArgs, {
+      executable,
       input: request.input,
       timeoutMs: EXECUTION_COMMAND_TIMEOUT_MS,
       maxOutputBytes: MAX_OUTPUT_BYTES,
@@ -149,7 +161,7 @@ async function executeInContainer(
     }
 
     if (execution.outputLimitExceeded) {
-      await stopContainer(containerName)
+      await stopContainer(containerName, executable)
       return makeResult({
         verdict: "Output Limit Exceeded",
         statusId: 12,
@@ -163,7 +175,7 @@ async function executeInContainer(
     }
 
     if (execution.exitCode === 124 || execution.exitCode === 137) {
-      const outOfMemory = await wasKilledForMemory(containerName)
+      const outOfMemory = await wasKilledForMemory(containerName, executable)
       return makeResult({
         verdict: outOfMemory ? "Memory Limit Exceeded" : "Time Limit Exceeded",
         statusId: outOfMemory ? 8 : 5,
@@ -178,7 +190,7 @@ async function executeInContainer(
 
     if (execution.exitCode !== 0 && execution.exitCode !== null) {
       assertNotDockerInfrastructureFailure(execution, "container execution")
-      const outOfMemory = await wasKilledForMemory(containerName)
+      const outOfMemory = await wasKilledForMemory(containerName, executable)
       return makeResult({
         verdict: outOfMemory ? "Memory Limit Exceeded" : "Runtime Error",
         statusId: outOfMemory ? 8 : 11,
@@ -204,7 +216,7 @@ async function executeInContainer(
       time: executionDuration,
     })
   } finally {
-    await removeContainer(containerName)
+    await removeContainer(containerName, executable)
   }
 }
 
@@ -252,11 +264,12 @@ async function getCompilerVersion(
   containerName: string,
   language: SupportedLanguage,
   image: string,
+  executable: string,
 ): Promise<{ name: string; version: string }> {
   const key = `${image}:${language}`
   let versionCheck = compilerVersions.get(key)
   if (!versionCheck) {
-    versionCheck = queryCompilerVersion(containerName, language)
+    versionCheck = queryCompilerVersion(containerName, language, executable)
     compilerVersions.set(key, versionCheck)
   }
 
@@ -271,12 +284,13 @@ async function getCompilerVersion(
 async function queryCompilerVersion(
   containerName: string,
   language: SupportedLanguage,
+  executable: string,
 ): Promise<{ name: string; version: string }> {
   const tool = language === "java" ? "javac" : language === "cpp" ? "g++" : "gcc"
   const args = language === "java"
     ? ["exec", containerName, "javac", "-version"]
     : ["exec", containerName, tool, "-dumpfullversion"]
-  const result = await runDocker(args, { timeoutMs: DOCKER_COMMAND_TIMEOUT_MS, maxOutputBytes: 1024 })
+  const result = await runDocker(args, { executable, timeoutMs: DOCKER_COMMAND_TIMEOUT_MS, maxOutputBytes: 1024 })
   assertDockerSuccess(result, "compiler version check")
   const versionOutput = `${result.stdout}\n${result.stderr}`
   const version = language === "java"
@@ -312,9 +326,10 @@ function validateRequest(request: ExecutionRequest): void {
   if (!request.code.trim()) throw new Error("Source code cannot be empty.")
 }
 
-async function ensureDockerAvailable(): Promise<void> {
+async function ensureDockerAvailable(executable: string): Promise<void> {
   try {
     const result = await runDocker(["version", "--format", "{{.Server.Version}}"], {
+      executable,
       timeoutMs: DOCKER_COMMAND_TIMEOUT_MS,
       maxOutputBytes: 1024,
     })
@@ -337,11 +352,12 @@ async function ensureDockerAvailable(): Promise<void> {
   throw new Error("Docker Engine is unavailable. Start Docker Desktop and verify `docker version`.")
 }
 
-async function ensureImage(image: string): Promise<void> {
+async function ensureImage(image: string, executable: string): Promise<void> {
   let imagePull = imagePulls.get(image)
   if (!imagePull) {
     imagePull = (async () => {
       const inspect = await runDocker(["image", "inspect", "--format", "{{.Id}}", image], {
+        executable,
         timeoutMs: DOCKER_COMMAND_TIMEOUT_MS,
         maxOutputBytes: 1024,
       })
@@ -356,6 +372,7 @@ async function ensureImage(image: string): Promise<void> {
       }
 
       const pull = await runDocker(["pull", image], {
+        executable,
         timeoutMs: 5 * 60_000,
         maxOutputBytes: 1_000_000,
       })
@@ -374,17 +391,18 @@ async function ensureImage(image: string): Promise<void> {
   }
 }
 
-async function wasKilledForMemory(containerName: string): Promise<boolean> {
+async function wasKilledForMemory(containerName: string, executable: string): Promise<boolean> {
   const result = await runDocker(
     ["inspect", "--format", "{{.State.OOMKilled}}", containerName],
-    { timeoutMs: DOCKER_COMMAND_TIMEOUT_MS, maxOutputBytes: 1024 },
+    { executable, timeoutMs: DOCKER_COMMAND_TIMEOUT_MS, maxOutputBytes: 1024 },
   )
   assertDockerSuccess(result, "memory-limit inspection")
   return result.exitCode === 0 && result.stdout.trim() === "true"
 }
 
-async function stopContainer(containerName: string): Promise<void> {
+async function stopContainer(containerName: string, executable: string): Promise<void> {
   const result = await runDocker(["kill", containerName], {
+    executable,
     timeoutMs: DOCKER_COMMAND_TIMEOUT_MS,
     maxOutputBytes: 1024,
   })
@@ -394,8 +412,9 @@ async function stopContainer(containerName: string): Promise<void> {
   }
 }
 
-async function removeContainer(containerName: string): Promise<void> {
+async function removeContainer(containerName: string, executable: string): Promise<void> {
   const result = await runDocker(["rm", "--force", containerName], {
+    executable,
     timeoutMs: DOCKER_COMMAND_TIMEOUT_MS,
     maxOutputBytes: 1024,
   })
@@ -407,7 +426,7 @@ async function removeContainer(containerName: string): Promise<void> {
 
 async function runDocker(
   args: string[],
-  options: DockerCommandOptions = {},
+  options: DockerCommandOptions,
 ): Promise<DockerCommandResult> {
   const timeoutMs = options.timeoutMs ?? DOCKER_COMMAND_TIMEOUT_MS
   const maxOutputBytes = options.maxOutputBytes ?? MAX_COMPILER_OUTPUT_BYTES
@@ -415,7 +434,7 @@ async function runDocker(
   return new Promise((resolve, reject) => {
     let child: ChildProcessByStdio<Writable, Readable, Readable>
     try {
-      child = spawn(resolveDockerExecutable(), args, {
+      child = spawn(options.executable, args, {
         windowsHide: true,
         stdio: ["pipe", "pipe", "pipe"] as const,
       })
@@ -481,13 +500,13 @@ async function runDocker(
 }
 
 function resolveDockerExecutable(): string {
-  const configuredPath = process.env.DOCKER_PATH?.trim()
+  const configuredPath = getEnvironmentValue("DOCKER_PATH")?.trim()
   if (configuredPath) {
     return validateDockerExecutable(configuredPath, "DOCKER_PATH")
   }
 
   const executableName = process.platform === "win32" ? "docker.exe" : "docker"
-  const pathEntries = (process.env.PATH ?? "").split(delimiter).filter(Boolean)
+  const pathEntries = (getEnvironmentValue("PATH") ?? "").split(delimiter).filter(Boolean)
   for (const pathEntry of pathEntries) {
     const candidate = resolve(pathEntry, executableName)
     try {
@@ -503,6 +522,11 @@ function resolveDockerExecutable(): string {
       ? "Set DOCKER_PATH to the absolute path of docker.exe."
       : "Set DOCKER_PATH to the absolute path of the docker executable."),
   )
+}
+
+function getEnvironmentValue(name: string): string | undefined {
+  const entry = Object.entries(process.env).find(([key]) => key.toLowerCase() === name.toLowerCase())
+  return entry?.[1]
 }
 
 function validateDockerExecutable(candidate: string, source: string): string {
@@ -527,6 +551,7 @@ function validateDockerExecutable(candidate: string, source: string): string {
     if (!statSync(resolvedPath).isFile()) {
       throw new DockerExecutableResolutionError(`${source} must point to a regular Docker executable file.`)
     }
+    accessSync(resolvedPath, constants.X_OK)
   } catch (error) {
     if (error instanceof Error && error.message.startsWith(`${source} must point to`)) {
       throw error
