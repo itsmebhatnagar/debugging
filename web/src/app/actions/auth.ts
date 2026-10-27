@@ -5,7 +5,6 @@ import { AuthError } from "next-auth"
 import bcrypt from "bcryptjs"
 import { prisma } from "@/lib/prisma"
 import { isAdminEmail } from "@/lib/admin-access"
-import { cookies } from "next/headers"
 
 const loginLimiter = new Map<string, { count: number; expiresAt: number }>()
 
@@ -43,13 +42,8 @@ export async function authenticate(
   let userRecord = null
 
   try {
-    userRecord = await prisma.user.findFirst({
-      where: {
-        OR: [
-          { email },
-          { email: { startsWith: email } },
-        ]
-      }
+    userRecord = await prisma.user.findUnique({
+      where: { email }
     })
     if (userRecord && userRecord.role === "ADMIN" && isAdminEmail(userRecord.email)) {
       isAdmin = true
@@ -59,30 +53,6 @@ export async function authenticate(
   }
 
   const redirectTo = isAdmin ? "/admin/dashboard" : "/dashboard"
-
-  // Set admin_token cookie if admin so that all admin sub-panels work seamlessly
-  if (isAdmin && userRecord) {
-    try {
-      const token = Buffer.from(
-        JSON.stringify({
-          id: userRecord.id,
-          email: userRecord.email,
-          role: userRecord.role,
-          issuedAt: Date.now(),
-        })
-      ).toString("base64")
-      const cookieStore = await cookies()
-      cookieStore.set("admin_token", token, {
-        httpOnly: false,
-        secure: process.env.NODE_ENV === "production",
-        path: "/",
-        sameSite: "lax",
-        maxAge: 60 * 60 * 24 * 7,
-      })
-    } catch (e) {
-      console.error("Error setting admin_token cookie:", e)
-    }
-  }
 
   try {
     await signIn("credentials", {

@@ -6,6 +6,7 @@ import { ParticipantsClient } from "./ParticipantsClient";
 import { deduplicateByUserDetails } from "@/lib/deduplicate";
 
 import { cookies } from "next/headers";
+import { readAdminToken } from "@/lib/admin-token";
 
 export const dynamic = "force-dynamic";
 
@@ -18,8 +19,8 @@ export default async function ParticipantsPage() {
     const adminToken = cookieStore.get("admin_token")?.value;
     if (adminToken) {
       try {
-        const decoded = JSON.parse(Buffer.from(adminToken, "base64").toString());
-        if (decoded?.role === "ADMIN") {
+        const decoded = await readAdminToken(adminToken);
+        if (decoded) {
           isAdmin = true;
         }
       } catch {}

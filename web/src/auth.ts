@@ -5,6 +5,8 @@ import bcrypt from "bcryptjs"
 import { prisma } from "@/lib/prisma"
 import { isAdminEmail } from "@/lib/admin-access"
 
+const ADMIN_AUTH_STATE_ID = "singleton"
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
   adapter: PrismaAdapter(prisma),
@@ -34,6 +36,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           const firebaseUser = data.users?.[0]
           
           if (!firebaseUser || !firebaseUser.email) return null
+          if (isAdminEmail(firebaseUser.email)) return null
           
           let user = await prisma.user.findUnique({
             where: { email: firebaseUser.email }
@@ -68,13 +71,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (!credentials?.email || !credentials?.password) return null
         const identifier = (credentials.email as string).trim().toLowerCase()
         
-        const user = await prisma.user.findFirst({
-          where: {
-            OR: [
-              { email: identifier },
-              { email: { startsWith: identifier } },
-            ]
-          }
+        const user = await prisma.user.findUnique({
+          where: { email: identifier }
         })
         
         if (!user || !user.password) return null
@@ -101,17 +99,39 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
+        const authenticatedUser = user as typeof user & {
+          mobile?: string | null
+          role?: string
+        }
         token.id = user.id
         token.email = user.email
         token.name = user.name
-        token.mobile = (user as any).mobile
-        token.role = (user as any).role === "ADMIN" && isAdminEmail(user.email)
-          ? "ADMIN"
-          : "USER"
-      } else if (token.email) {
-        token.role = token.role === "ADMIN" && isAdminEmail(token.email as string)
-          ? "ADMIN"
-          : (token.role || "USER")
+        token.mobile = authenticatedUser.mobile
+        if (authenticatedUser.role === "ADMIN" && isAdminEmail(user.email)) {
+          const adminSessionId = crypto.randomUUID()
+          await prisma.adminAuthState.upsert({
+            where: { id: ADMIN_AUTH_STATE_ID },
+            create: { id: ADMIN_AUTH_STATE_ID, activeSessionId: adminSessionId },
+            update: { activeSessionId: adminSessionId },
+          })
+          token.adminSessionId = adminSessionId
+          token.role = "ADMIN"
+        } else {
+          token.adminSessionId = undefined
+          token.role = "USER"
+        }
+      } else {
+        if (token.role === "ADMIN" && isAdminEmail(token.email) && token.adminSessionId) {
+          const state = await prisma.adminAuthState.findUnique({
+            where: { id: ADMIN_AUTH_STATE_ID },
+            select: { activeSessionId: true },
+          })
+          if (state?.activeSessionId === token.adminSessionId) {
+            return token
+          }
+        }
+        token.adminSessionId = undefined
+        token.role = "USER"
       }
       return token
     },

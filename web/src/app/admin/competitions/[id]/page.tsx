@@ -5,6 +5,7 @@ import { DeleteButton } from "@/components/DeleteButton"
 import { deleteCompetition } from "@/app/actions/admin"
 import { auth } from "@/auth"
 import { redirect } from "next/navigation"
+import { readAdminToken } from "@/lib/admin-token"
 
 export default async function AdminCompetitionDetailPage({
   params
@@ -20,8 +21,8 @@ export default async function AdminCompetitionDetailPage({
     const adminToken = cookieStore.get("admin_token")?.value
     if (adminToken) {
       try {
-        const decoded = JSON.parse(Buffer.from(adminToken, "base64").toString())
-        if (decoded?.role === "ADMIN") isAdmin = true
+        const decoded = await readAdminToken(adminToken)
+        if (decoded) isAdmin = true
       } catch {}
     }
   }

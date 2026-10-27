@@ -1,6 +1,7 @@
 import { auth } from "@/auth"
 import { redirect } from "next/navigation"
 import { cookies } from "next/headers"
+import { readAdminToken } from "@/lib/admin-token"
 
 export default async function AdminPage() {
   const session = await auth()
@@ -11,8 +12,8 @@ export default async function AdminPage() {
     const adminToken = cookieStore.get("admin_token")?.value
     if (adminToken) {
       try {
-        const decoded = JSON.parse(Buffer.from(adminToken, "base64").toString())
-        if (decoded?.role === "ADMIN") {
+        const decoded = await readAdminToken(adminToken)
+        if (decoded) {
           isAdmin = true
         }
       } catch {}

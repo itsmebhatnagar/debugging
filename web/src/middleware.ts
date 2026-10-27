@@ -1,13 +1,14 @@
 import { auth } from "@/auth"
 import { NextResponse } from "next/server"
 import { isAdminEmail } from "@/lib/admin-access"
+import { readAdminToken } from "@/lib/admin-token"
 
-export default auth((req) => {
+export default auth(async (req) => {
   const { nextUrl } = req
   let isLoggedIn = !!req.auth
   let userRole = req.auth?.user?.role
 
-  if (req.auth?.user?.email && isAdminEmail(req.auth.user.email)) {
+  if (req.auth?.user?.email && req.auth.user.role === "ADMIN" && isAdminEmail(req.auth.user.email)) {
     isLoggedIn = true
     userRole = "ADMIN"
   }
@@ -22,8 +23,8 @@ export default auth((req) => {
 
   if ((!isLoggedIn || userRole !== "ADMIN") && adminToken) {
     try {
-      const decoded = JSON.parse(Buffer.from(adminToken, "base64").toString())
-      if (decoded && (decoded.role === "ADMIN" || isAdminEmail(decoded.email))) {
+      const decoded = await readAdminToken(adminToken)
+      if (decoded) {
         isLoggedIn = true
         userRole = "ADMIN"
       }
@@ -33,9 +34,8 @@ export default auth((req) => {
   }
 
   const isApiAuthRoute = nextUrl.pathname.startsWith("/api/auth")
-  const isPublicRoute = ["/", "/login", "/register", "/admin/login"].includes(nextUrl.pathname)
+  const isPublicRoute = ["/", "/login", "/register", "/admin/login", "/resetpassword"].includes(nextUrl.pathname)
   const isAdminRoute = nextUrl.pathname.startsWith("/admin") && nextUrl.pathname !== "/admin/login"
-  const isUserRoute = nextUrl.pathname.startsWith("/dashboard")
 
   if (isApiAuthRoute) {
     return NextResponse.next()

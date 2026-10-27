@@ -16,6 +16,10 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+## Admin account
+
+The only configured admin email is `admin@debugging2026.com`. Set `DATABASE_URL` and `AUTH_SECRET` (or `NEXTAUTH_SECRET`) in the environment (or an untracked local `.env` file), then run `npx prisma db push`, `npx prisma migrate deploy`, and `npm run db:seed` from this directory. Set `ADMIN_PASSWORD` only when creating the admin account for the first time; later seeds preserve its existing password. The migration demotes any other admin-role users and enforces a single admin role in PostgreSQL. Admin logins invalidate all earlier admin sessions. At `/resetpassword`, the admin can change the password once by entering the current password; that route is then permanently sealed in the database. Keep passwords and authentication secrets in an untracked local environment file or your deployment's secret manager, not in source control.
+
 ## Code execution
 
 Only C, C++, and Java are supported. The backend uses the Docker Engine through the `docker` CLI and fixed compiler images (`gcc:16.2` for C/C++, `eclipse-temurin:25-jdk` for Java). Images are pulled on first use when absent. Every test case gets a fresh container; Java public class names are used as source filenames and launch classes.

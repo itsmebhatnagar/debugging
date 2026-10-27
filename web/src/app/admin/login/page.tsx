@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { signIn } from 'next-auth/react';
+import Link from 'next/link';
 
 export default function AdminLoginPage() {
   const [username, setUsername] = useState('');
@@ -11,8 +11,6 @@ export default function AdminLoginPage() {
   const [loading, setLoading] = useState(false);
   const [focused, setFocused] = useState<string | null>(null);
   const router = useRouter();
-  const navigate = (path: string) => router.push(path);
-
   useEffect(() => {
     if (error) {
       const timer = setTimeout(() => setError(''), 4000);
@@ -39,20 +37,14 @@ export default function AdminLoginPage() {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Login failed');
         localStorage.setItem('admin_token', data.token);
-        try {
-          await signIn('credentials', {
-            email: username,
-            password,
-            redirect: false,
-          });
-        } catch {}
-        window.location.href = '/admin/dashboard';
+        router.replace('/admin/dashboard');
         return; // Success, exit
-      } catch (err: any) {
+      } catch (err: unknown) {
         attempts++;
         // Do not retry if the server explicitly rejected the credentials
-        if (err.message !== 'Failed to fetch' && attempts >= 1) {
-          setError(err.message);
+        const isNetworkError = err instanceof TypeError && err.message === 'Failed to fetch';
+        if (!isNetworkError && attempts >= 1) {
+          setError(err instanceof Error ? err.message : 'Login failed');
           setLoading(false);
           return;
         }
@@ -214,7 +206,7 @@ export default function AdminLoginPage() {
               textTransform: 'uppercase' as const,
               margin: 0,
             }}>
-              Captain's Log
+              Captain&apos;s Log
             </p>
           </div>
 
@@ -486,6 +478,12 @@ export default function AdminLoginPage() {
               </span>
             </button>
           </form>
+          <Link
+            href="/resetpassword"
+            className="mt-4 block text-center text-xs text-[#8C6D46] underline hover:text-[#E4C76A]"
+          >
+            Reset admin password
+          </Link>
           </div>{/* close inner content group */}
         </div>
       </div>

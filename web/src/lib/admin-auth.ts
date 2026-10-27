@@ -2,8 +2,9 @@ import { auth } from "@/auth";
 import { cookies } from "next/headers";
 import { NextRequest } from "next/server";
 import { isAdminEmail } from "@/lib/admin-access";
-import { decode } from "next-auth/jwt";
+import { decode, type JWT } from "next-auth/jwt";
 import { prisma } from "@/lib/prisma";
+import { readAdminToken } from "@/lib/admin-token";
 
 export interface AdminUser {
   id: string;
@@ -29,11 +30,11 @@ export async function getAdminSession(req?: NextRequest | Request): Promise<Admi
   // 1. Try NextAuth session
   try {
     const session = await auth();
-    if (session?.user && (session.user.role === "ADMIN" || isAdminEmail(session.user.email))) {
+    if (session?.user && session.user.role === "ADMIN" && isAdminEmail(session.user.email)) {
       return {
         user: {
           id: session.user.id || "admin",
-          email: session.user.email || "admin@echona.com",
+          email: session.user.email || "admin@debugging2026.com",
           name: session.user.name || "Admin",
           role: "ADMIN",
         },
@@ -103,12 +104,12 @@ export async function getAdminSession(req?: NextRequest | Request): Promise<Admi
   // 4. Validate admin_token payload
   if (adminToken) {
     try {
-      const decoded = JSON.parse(Buffer.from(adminToken, "base64").toString());
-      if (decoded && (decoded.role === "ADMIN" || isAdminEmail(decoded.email))) {
+      const decoded = await readAdminToken(adminToken);
+      if (decoded) {
         return {
           user: {
             id: decoded.id || "admin",
-            email: decoded.email || "admin@echona.com",
+            email: decoded.email || "admin@debugging2026.com",
             name: decoded.name || "Admin",
             role: "ADMIN",
           },
@@ -122,10 +123,11 @@ export async function getAdminSession(req?: NextRequest | Request): Promise<Admi
   // 5. Try decoding NextAuth session token
   if (sessionToken) {
     try {
-      const secret = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || "echona-pirate-secret-key-super-secure-2026";
+      const secret = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET;
+      if (!secret) throw new Error("AUTH_SECRET or NEXTAUTH_SECRET must be set to validate admin sessions.");
       const saltsToTry = [sessionCookieName, "authjs.session-token", "__Secure-authjs.session-token", "next-auth.session-token", "__Secure-next-auth.session-token"];
       
-      let token: any = null;
+      let token: JWT | null = null;
       for (const salt of saltsToTry) {
         try {
           token = await decode({ token: sessionToken, secret, salt });
@@ -134,11 +136,11 @@ export async function getAdminSession(req?: NextRequest | Request): Promise<Admi
           // try next salt
         }
       }
-      if (token && (token.role === "ADMIN" || isAdminEmail(token.email as string))) {
+      if (token && token.role === "ADMIN" && isAdminEmail(token.email as string)) {
         return {
           user: {
             id: (token.id as string) || "admin",
-            email: (token.email as string) || "admin@echona.com",
+            email: (token.email as string) || "admin@debugging2026.com",
             name: (token.name as string) || "Admin",
             role: "ADMIN",
           },
@@ -151,7 +153,7 @@ export async function getAdminSession(req?: NextRequest | Request): Promise<Admi
           where: { email: token.email as string },
           select: { id: true, email: true, name: true, role: true }
         });
-        if (dbUser && (dbUser.role === "ADMIN" || isAdminEmail(dbUser.email))) {
+        if (dbUser && dbUser.role === "ADMIN" && isAdminEmail(dbUser.email)) {
           return {
             user: {
               id: dbUser.id,

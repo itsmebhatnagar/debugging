@@ -5,6 +5,7 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import { auth } from "@/auth"
 import { redirect } from "next/navigation"
+import { readAdminToken } from "@/lib/admin-token"
 
 export default async function AdminLeaderboardPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
@@ -16,8 +17,8 @@ export default async function AdminLeaderboardPage({ params }: { params: Promise
     const adminToken = cookieStore.get("admin_token")?.value
     if (adminToken) {
       try {
-        const decoded = JSON.parse(Buffer.from(adminToken, "base64").toString())
-        if (decoded?.role === "ADMIN") isAdmin = true
+        const decoded = await readAdminToken(adminToken)
+        if (decoded) isAdmin = true
       } catch {}
     }
   }

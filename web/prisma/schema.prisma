@@ -33,6 +33,12 @@ model User {
   events          CompetitionEvent[]
 }
 
+model AdminAuthState {
+  id                  String  @id
+  activeSessionId     String?
+  passwordResetSealed Boolean @default(false)
+}
+
 model Account {
   id                String  @id @default(cuid())
   userId            String

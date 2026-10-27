@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
+const ADMIN_EMAIL = 'admin@debugging2026.com'
 
 async function main() {
   console.log('Seeding database...')
@@ -9,27 +10,43 @@ async function main() {
   await prisma.user.updateMany({
     where: {
       role: 'ADMIN',
-      email: { not: 'itsmebhatnagar.29@gmail.com' },
+      email: { not: ADMIN_EMAIL },
     },
     data: { role: 'USER' },
   })
 
-  const adminPass = await bcrypt.hash('adminsecret', 10)
+  const existingAdmin = await prisma.user.findUnique({
+    where: { email: ADMIN_EMAIL },
+    select: { id: true, password: true, role: true },
+  })
+  const adminPassword = process.env.ADMIN_PASSWORD
+  const needsAdminPassword = !existingAdmin || existingAdmin.role !== 'ADMIN' || !existingAdmin.password
+  if (needsAdminPassword && !adminPassword) {
+    throw new Error('ADMIN_PASSWORD must be set when creating the admin account.')
+  }
+
+  const adminPass = adminPassword ? await bcrypt.hash(adminPassword, 10) : null
   const admin = await prisma.user.upsert({
-    where: { email: 'itsmebhatnagar.29@gmail.com' },
+    where: { email: ADMIN_EMAIL },
     update: {
-      password: adminPass,
       role: 'ADMIN',
-      name: 'Harshil Bhatnagar',
+      name: 'Admin',
+      ...(needsAdminPassword ? { password: adminPass } : {}),
     },
     create: {
-      email: 'itsmebhatnagar.29@gmail.com',
+      email: ADMIN_EMAIL,
       password: adminPass,
-      name: 'Harshil Bhatnagar',
+      name: 'Admin',
       role: 'ADMIN',
     },
   })
   console.log(`Created admin user: ${admin.email}`)
+
+  await prisma.adminAuthState.upsert({
+    where: { id: 'singleton' },
+    update: {},
+    create: { id: 'singleton' },
+  })
 
   // Create a Sample Competition
   const comp = await prisma.competition.upsert({

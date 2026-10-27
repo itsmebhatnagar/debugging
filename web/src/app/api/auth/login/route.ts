@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { isAdminEmail } from "@/lib/admin-access";
+import { createAdminToken } from "@/lib/admin-token";
 
 export async function POST(req: NextRequest) {
   try {
@@ -15,14 +17,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Find user by email or matching prefix
-    const user = await prisma.user.findFirst({
-      where: {
-        OR: [
-          { email: identifier },
-          { email: { startsWith: identifier } },
-        ],
-      },
+    if (!isAdminEmail(identifier)) {
+      return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email: identifier },
     });
 
     if (!user || !user.password) {
@@ -34,21 +34,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
     }
 
-    if (user.role !== "ADMIN") {
+    if (user.role !== "ADMIN" || !isAdminEmail(user.email)) {
       return NextResponse.json(
         { error: "Access denied: Captain's Quarters (Admin) access only!" },
         { status: 403 }
       );
     }
 
-    const token = Buffer.from(
-      JSON.stringify({
-        id: user.id,
-        email: user.email,
-        role: user.role,
-        issuedAt: Date.now(),
-      })
-    ).toString("base64");
+    const token = await createAdminToken(user);
 
     const response = NextResponse.json({
       success: true,
@@ -70,7 +63,8 @@ export async function POST(req: NextRequest) {
     });
 
     return response;
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message || "Authentication error" }, { status: 500 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Authentication error";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
