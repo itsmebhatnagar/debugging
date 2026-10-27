@@ -12,7 +12,7 @@ export class LocalVMExecutionService implements ExecutionService {
     let lang = rawLang;
     if (lang === 'c++') lang = 'cpp';
     if (lang === 'nodejs' || lang === 'js') lang = 'javascript';
-    if (lang === 'py') lang = 'python';
+    if (lang === 'py' || lang === 'python3') lang = 'python';
 
     let result: { stdout: string, stderr: string, compileOutput?: string | null, time: number } = {
       stdout: "",
@@ -49,16 +49,20 @@ export class LocalVMExecutionService implements ExecutionService {
     const cleanActual = (result.stdout || "").trim().replace(/\r\n/g, "\n");
     
     const isCompileError = !!(result.compileOutput || (result.stderr && result.stderr.includes("(Compilation Error)")));
-    const passed = !isCompileError && (cleanExpected === "" ? (!result.stderr || result.stderr.trim() === "") : (cleanActual === cleanExpected));
+    const isTimeout = !!(result.stderr && result.stderr.includes("Time Limit Exceeded"));
+    const passed = !isCompileError && !isTimeout && (cleanExpected === "" ? (!result.stderr || result.stderr.trim() === "") : (cleanActual === cleanExpected));
+
+    const timeInSeconds = Number(((result.time > 50 ? result.time / 1000 : result.time) || 0).toFixed(3));
 
     return {
       stdout: result.stdout || null,
       stderr: result.stderr || null,
       compileOutput: result.compileOutput || null,
-      time: result.time,
+      time: timeInSeconds,
       memory: 0,
-      statusId: isCompileError ? 6 : (passed ? 3 : 4), // 6 = Compilation Error, 3 = Accepted, 4 = Wrong Answer
-      passed
+      statusId: isCompileError ? 6 : (isTimeout ? 5 : (passed ? 3 : 4)), // 6 = Compilation Error, 5 = TLE, 3 = Accepted, 4 = Wrong Answer
+      passed,
+      compilerVersion: lang === "c" ? "GCC" : lang === "cpp" ? "G++" : lang === "java" ? "OpenJDK" : lang.toUpperCase()
     };
   }
 
@@ -78,6 +82,9 @@ export class LocalVMExecutionService implements ExecutionService {
         execSync(`gcc -O2 "${srcFile}" -o "${exeFile}"`, { stdio: 'pipe', timeout: 8000 });
       } catch (compileErr: any) {
         const errorText = (compileErr.stderr?.toString() || compileErr.stdout?.toString() || compileErr.message || "").trim();
+        if (compileErr.code === 'ENOENT' || errorText.includes('not recognized') || errorText.includes('not found')) {
+          return this.executePiston('c', code, input);
+        }
         return {
           stdout: "",
           stderr: errorText + "\n[Compilation Error: GCC]",
@@ -89,23 +96,28 @@ export class LocalVMExecutionService implements ExecutionService {
       // Execute compiled binary
       return await new Promise((resolve) => {
         const child = exec(`"${exeFile}"`, { timeout: 4000, maxBuffer: 1024 * 1024 * 5 }, (err, stdout, stderr) => {
+          let errText = stderr?.toString() || "";
+          if (err && err.killed) {
+            errText = "Time Limit Exceeded (4.0s timeout)";
+          } else if (err && !errText) {
+            errText = err.message;
+          }
           resolve({
             stdout: stdout?.toString() || "",
-            stderr: stderr?.toString() || (err && !err.killed ? err.message : ""),
+            stderr: errText,
             compileOutput: null,
             time: performance.now() - start
           });
         });
 
         if (input && child.stdin) {
-          child.stdin.write(input + "\n");
+          child.stdin.write(input.endsWith("\n") ? input : input + "\n");
           child.stdin.end();
         } else if (child.stdin) {
           child.stdin.end();
         }
       });
     } catch (e: any) {
-      // If gcc command not found locally, route to Piston compiler
       if (e.code === 'ENOENT' || e.message?.includes('not recognized') || e.message?.includes('not found')) {
         return this.executePiston('c', code, input);
       }
@@ -127,11 +139,14 @@ export class LocalVMExecutionService implements ExecutionService {
     try {
       fs.writeFileSync(srcFile, code, 'utf8');
 
-      // Compile with g++ (supports C++20 / C++17)
+      // Compile with g++
       try {
         execSync(`g++ -O2 "${srcFile}" -o "${exeFile}"`, { stdio: 'pipe', timeout: 8000 });
       } catch (compileErr: any) {
         const errorText = (compileErr.stderr?.toString() || compileErr.stdout?.toString() || compileErr.message || "").trim();
+        if (compileErr.code === 'ENOENT' || errorText.includes('not recognized') || errorText.includes('not found')) {
+          return this.executePiston('c++', code, input);
+        }
         return {
           stdout: "",
           stderr: errorText + "\n[Compilation Error: G++]",
@@ -143,16 +158,22 @@ export class LocalVMExecutionService implements ExecutionService {
       // Execute binary
       return await new Promise((resolve) => {
         const child = exec(`"${exeFile}"`, { timeout: 4000, maxBuffer: 1024 * 1024 * 5 }, (err, stdout, stderr) => {
+          let errText = stderr?.toString() || "";
+          if (err && err.killed) {
+            errText = "Time Limit Exceeded (4.0s timeout)";
+          } else if (err && !errText) {
+            errText = err.message;
+          }
           resolve({
             stdout: stdout?.toString() || "",
-            stderr: stderr?.toString() || (err && !err.killed ? err.message : ""),
+            stderr: errText,
             compileOutput: null,
             time: performance.now() - start
           });
         });
 
         if (input && child.stdin) {
-          child.stdin.write(input + "\n");
+          child.stdin.write(input.endsWith("\n") ? input : input + "\n");
           child.stdin.end();
         } else if (child.stdin) {
           child.stdin.end();
@@ -178,10 +199,13 @@ export class LocalVMExecutionService implements ExecutionService {
     try {
       if (!fs.existsSync(runDir)) fs.mkdirSync(runDir, { recursive: true });
 
+      // Strip package statement if participant copied it from an external IDE
+      const cleanCode = code.replace(/^\s*package\s+[^;]+;\s*/m, "");
+
       // Determine the main / public class name
       let className = "Main";
-      const publicClassMatch = code.match(/public\s+class\s+([A-Za-z0-9_]+)/);
-      const anyClassMatch = code.match(/class\s+([A-Za-z0-9_]+)/);
+      const publicClassMatch = cleanCode.match(/public\s+class\s+([A-Za-z0-9_]+)/);
+      const anyClassMatch = cleanCode.match(/class\s+([A-Za-z0-9_]+)/);
       if (publicClassMatch) {
         className = publicClassMatch[1];
       } else if (anyClassMatch) {
@@ -189,13 +213,16 @@ export class LocalVMExecutionService implements ExecutionService {
       }
 
       const srcFile = path.join(runDir, `${className}.java`);
-      fs.writeFileSync(srcFile, code, 'utf8');
+      fs.writeFileSync(srcFile, cleanCode, 'utf8');
 
       // Compile with javac
       try {
         execSync(`javac -encoding UTF-8 "${srcFile}"`, { stdio: 'pipe', timeout: 8000 });
       } catch (compileErr: any) {
         const errorText = (compileErr.stderr?.toString() || compileErr.stdout?.toString() || compileErr.message || "").trim();
+        if (compileErr.code === 'ENOENT' || errorText.includes('not recognized') || errorText.includes('not found')) {
+          return this.executePiston('java', code, input);
+        }
         return {
           stdout: "",
           stderr: errorText + "\n[Compilation Error: OpenJDK javac]",
@@ -207,16 +234,22 @@ export class LocalVMExecutionService implements ExecutionService {
       // Execute with java
       return await new Promise((resolve) => {
         const child = exec(`java -Xmx256m -cp "${runDir}" ${className}`, { timeout: 4000, maxBuffer: 1024 * 1024 * 5 }, (err, stdout, stderr) => {
+          let errText = stderr?.toString() || "";
+          if (err && err.killed) {
+            errText = "Time Limit Exceeded (4.0s timeout)";
+          } else if (err && !errText) {
+            errText = err.message;
+          }
           resolve({
             stdout: stdout?.toString() || "",
-            stderr: stderr?.toString() || (err && !err.killed ? err.message : ""),
+            stderr: errText,
             compileOutput: null,
             time: performance.now() - start
           });
         });
 
         if (input && child.stdin) {
-          child.stdin.write(input + "\n");
+          child.stdin.write(input.endsWith("\n") ? input : input + "\n");
           child.stdin.end();
         } else if (child.stdin) {
           child.stdin.end();
@@ -280,15 +313,21 @@ export class LocalVMExecutionService implements ExecutionService {
       return await new Promise((resolve) => {
         const pyCmd = process.platform === 'win32' ? 'python' : 'python3';
         const child = exec(`${pyCmd} "${file}"`, { timeout: 4000 }, (err, stdout, stderr) => {
+          let errText = stderr?.toString() || "";
+          if (err && err.killed) {
+            errText = "Time Limit Exceeded (4.0s timeout)";
+          } else if (err && !errText) {
+            errText = err.message;
+          }
           resolve({
             stdout: stdout?.toString() || "",
-            stderr: stderr?.toString() || (err && !err.killed ? err.message : ""),
+            stderr: errText,
             time: performance.now() - start
           });
         });
 
         if (input && child.stdin) {
-          child.stdin.write(input + "\n");
+          child.stdin.write(input.endsWith("\n") ? input : input + "\n");
           child.stdin.end();
         } else if (child.stdin) {
           child.stdin.end();
@@ -314,6 +353,7 @@ export class LocalVMExecutionService implements ExecutionService {
       const res = await fetch('https://emkc.org/api/v2/piston/execute', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: AbortSignal.timeout(10000),
         body: JSON.stringify({
           language: lang,
           version: '*',

@@ -3,11 +3,12 @@ import { prisma } from "@/lib/prisma"
 import { getExecutionService } from "./execution"
 import { broadcastEvent } from "./realtime"
 import { analyzeSubmission, runAICompetitionEvaluation } from "./ai-debugger"
-import { assertSupportedLanguage, C_STARTER_CODE, CODE_LANGUAGE } from "./code-language"
+import { assertSupportedLanguage, C_STARTER_CODE, CODE_LANGUAGE, normalizeLanguage } from "./code-language"
 import { ExecutionResult } from "./execution/types"
 
 function executionOutputLines(result: ExecutionResult): string[] {
-  const output: string[] = [`Compiler: GCC ${result.compilerVersion || "version unavailable"}`]
+  const output: string[] = []
+  if (result.compilerVersion) output.push(`Compiler: ${result.compilerVersion}`)
 
   if (result.compileOutput) output.push(`Compiler output:\n${result.compileOutput.trimEnd()}`)
   if (result.stdout) output.push(`Program output:\n${result.stdout.trimEnd()}`)
@@ -17,10 +18,15 @@ function executionOutputLines(result: ExecutionResult): string[] {
 }
 
 function formatExecutionResult(result: ExecutionResult): string {
-  return [
-    `${result.passed ? "PASSED" : "FAILED"}: ${result.passed ? "Program ran successfully." : "Compilation or execution failed."}`,
-    ...executionOutputLines(result),
-  ].join("\n")
+  const statusMsg = result.passed
+    ? "PASSED: Program ran successfully."
+    : result.compileOutput
+      ? "FAILED: Compilation error."
+      : result.statusId === 5
+        ? "FAILED: Time Limit Exceeded."
+        : "FAILED: Execution failed or wrong output."
+
+  return [statusMsg, ...executionOutputLines(result)].join("\n")
 }
 
 /**
@@ -192,7 +198,7 @@ export async function requestCompile(
   code: string
 ) {
   assertSupportedLanguage(language)
-  language = CODE_LANGUAGE
+  language = normalizeLanguage(language)
 
   // 1. Fetch question and round
   const question = await prisma.question.findUnique({
@@ -344,7 +350,7 @@ export async function submitSolution(
   isAutoSubmit: boolean = false
 ) {
   assertSupportedLanguage(language)
-  language = CODE_LANGUAGE
+  language = normalizeLanguage(language)
 
   const question = await prisma.question.findUnique({
     where: { id: questionId },
@@ -512,7 +518,7 @@ export async function saveDraftCode(
   code: string
 ) {
   assertSupportedLanguage(language)
-  language = CODE_LANGUAGE
+  language = normalizeLanguage(language)
 
   return await prisma.draftCode.upsert({
     where: {
@@ -591,9 +597,10 @@ export async function endCompetition(competitionId: string) {
       const key = `${p.userId}_${q.id}`
       if (!submittedKeySet.has(key)) {
         const draft = draftMap.get(key)
-        const codeToSubmit = draft?.language === CODE_LANGUAGE ? draft.code : C_STARTER_CODE
+        const draftLang = draft?.language ? normalizeLanguage(draft.language) : CODE_LANGUAGE
+        const codeToSubmit = draft?.code || C_STARTER_CODE
         missingTasks.push(() =>
-          submitSolution(p.userId, q.id, CODE_LANGUAGE, codeToSubmit, true).catch(e =>
+          submitSolution(p.userId, q.id, draftLang, codeToSubmit, true).catch(e =>
             console.error(`Error auto-submitting for user ${p.userId} question ${q.id}:`, e)
           )
         )

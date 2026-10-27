@@ -1,7 +1,6 @@
 import { ExecutionService } from "./types"
-import { Judge0ExecutionService } from "./providers/judge0"
+import { LocalVMExecutionService } from "./providers/local-vm"
 
 export function getExecutionService(): ExecutionService {
-  return new Judge0ExecutionService()
+  return new LocalVMExecutionService()
 }
-  

@@ -1,4 +1,4 @@
-import { assertSupportedLanguage } from "../../code-language"
+import { assertSupportedLanguage, normalizeLanguage } from "../../code-language"
 import { ExecutionRequest, ExecutionResult, ExecutionService } from "../types"
 
 interface Judge0Language {
@@ -24,8 +24,9 @@ export class Judge0ExecutionService implements ExecutionService {
 
   async execute(request: ExecutionRequest): Promise<ExecutionResult> {
     assertSupportedLanguage(request.language)
+    const norm = normalizeLanguage(request.language)
 
-    const compiler = await this.getLatestCCompiler()
+    const compiler = await this.getCompiler(norm)
     const response = await fetch(`${this.apiUrl}/submissions?wait=true`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -63,7 +64,7 @@ export class Judge0ExecutionService implements ExecutionService {
     }
   }
 
-  private async getLatestCCompiler(): Promise<{ id: number; version: string }> {
+  private async getCompiler(language: string): Promise<{ id: number; version: string }> {
     const response = await fetch(`${this.apiUrl}/languages`, {
       signal: AbortSignal.timeout(10_000),
       cache: "no-store",
@@ -75,17 +76,39 @@ export class Judge0ExecutionService implements ExecutionService {
     }
 
     const languages = (await response.json()) as Judge0Language[]
+    
+    let regex: RegExp
+    if (language === "cpp") {
+      regex = /^C\+\+ \((?:GCC|G\+\+) ([^)]+)\)$/i
+    } else if (language === "java") {
+      regex = /^Java \((?:OpenJDK|JDK) ([^)]+)\)$/i
+    } else if (language === "python") {
+      regex = /^Python \(3\.?([^)]*)\)$/i
+    } else if (language === "javascript") {
+      regex = /^JavaScript \(Node\.js ([^)]+)\)$/i
+    } else {
+      regex = /^C \(GCC ([^)]+)\)$/i
+    }
+
     const compilers = languages
-      .map((language) => {
-        const match = language.name.match(/^C \(GCC ([^)]+)\)$/i)
-        return match ? { id: language.id, version: match[1] } : null
+      .map((l) => {
+        const match = l.name.match(regex)
+        return match ? { id: l.id, version: match[1] || l.name } : null
       })
       .filter((compiler): compiler is { id: number; version: string } => compiler !== null)
       .sort((left, right) => compareVersions(right.version, left.version))
 
     const latest = compilers[0]
     if (!latest) {
-      throw new Error("The configured Judge0 instance does not offer a GCC C compiler.")
+      // Fallback to well-known Judge0 language IDs if regex match fails
+      const fallbackMap: Record<string, { id: number; version: string }> = {
+        c: { id: 50, version: "GCC 9.2.0" },
+        cpp: { id: 54, version: "G++ 9.2.0" },
+        java: { id: 62, version: "OpenJDK 13.0.1" },
+        python: { id: 71, version: "Python 3.8.1" },
+        javascript: { id: 63, version: "Node.js 12.14.0" }
+      }
+      return fallbackMap[language] || { id: 50, version: "GCC" }
     }
 
     return latest

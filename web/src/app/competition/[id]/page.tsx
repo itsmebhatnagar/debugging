@@ -293,7 +293,7 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
     if (draftSaveTimeoutRef.current) clearTimeout(draftSaveTimeoutRef.current)
     const pendingDraft = pendingDraftRef.current
     if (pendingDraft) {
-      void saveDraft(pendingDraft.questionId, CODE_LANGUAGE, pendingDraft.code).catch((error) => {
+      void saveDraft(pendingDraft.questionId, language, pendingDraft.code).catch((error) => {
         console.error("Final draft save failed:", error)
       })
     }
