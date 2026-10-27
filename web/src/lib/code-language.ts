@@ -1,45 +1,32 @@
-export const SUPPORTED_LANGUAGES = [
-  "c",
-  "cpp",
-  "java",
-  "python",
-  "javascript",
-] as const
+export const CODE_LANGUAGE = "c"
+export const SUPPORTED_LANGUAGES = ["c", "cpp", "java"] as const
 
 export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number]
 
-export const CODE_LANGUAGE = "c"
+const LANGUAGE_ALIASES: Record<string, SupportedLanguage> = {
+  "c++": "cpp",
+}
+
+export function isSupportedLanguage(language: string): language is SupportedLanguage {
+  const normalized = (language || "").trim().toLowerCase()
+  const resolved = LANGUAGE_ALIASES[normalized] || (normalized as SupportedLanguage)
+  return SUPPORTED_LANGUAGES.includes(resolved as SupportedLanguage)
+}
 
 export const C_STARTER_CODE = `#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
 int main(void) {
-    char input[4096];
-    if (fgets(input, sizeof(input), stdin)) {
-        input[strcspn(input, "\\r\\n")] = 0;
-        // Process problem and print output
-        printf("%s\\n", input);
-    }
+    // Read input, process the problem, and print the result.
     return 0;
 }
 `
 
 export const CPP_STARTER_CODE = `#include <iostream>
-#include <string>
-#include <vector>
-#include <algorithm>
 
 using namespace std;
 
 int main() {
-    ios_base::sync_with_stdio(false);
-    cin.tie(NULL);
-    string line;
-    if (getline(cin, line)) {
-        // Process problem and print output
-        cout << line << "\\n";
-    }
+    // Read input, process the problem, and print the result.
     return 0;
 }
 `
@@ -48,31 +35,33 @@ export const JAVA_STARTER_CODE = `import java.util.*;
 import java.io.*;
 
 public class Main {
-    public static void main(String[] args) throws Exception {
-        BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
-        String line = reader.readLine();
-        if (line != null) {
-            // Process problem and print output
-            System.out.println(line);
-        }
+    public static void main(String[] args) {
+        // Read input, process the problem, and print the result.
     }
 }
 `
 
-export function normalizeLanguage(language: string): string {
-  const norm = (language || "").toLowerCase().trim()
-  if (norm === "c++" || norm === "cpp") return "cpp"
-  if (norm === "c") return "c"
-  if (norm === "java") return "java"
-  if (norm === "python" || norm === "py" || norm === "python3") return "python"
-  if (norm === "javascript" || norm === "js" || norm === "nodejs") return "javascript"
-  return norm || "c"
+export function assertSupportedLanguage(language: string): void {
+  normalizeSupportedLanguage(language)
 }
 
-export function assertSupportedLanguage(language: string): void {
-  const norm = normalizeLanguage(language)
-  const valid = ["c", "cpp", "java", "python", "javascript"]
-  if (!valid.includes(norm)) {
-    throw new Error(`Unsupported language: '${language}'. Supported compilers: C (GCC), C++ (G++), Java (OpenJDK), Python, and JavaScript.`)
+export function normalizeSupportedLanguage(language: string): SupportedLanguage {
+  const normalizedLanguage = (language || "").trim().toLowerCase()
+  const aliasedLanguage = Object.prototype.hasOwnProperty.call(LANGUAGE_ALIASES, normalizedLanguage)
+    ? LANGUAGE_ALIASES[normalizedLanguage]
+    : undefined
+  if (aliasedLanguage) return aliasedLanguage
+
+  const supportedLanguage = SUPPORTED_LANGUAGES.find((candidate) => candidate === normalizedLanguage)
+  if (supportedLanguage) return supportedLanguage
+
+  throw new Error(`Unsupported language: ${language}. Supported languages are C, C++, and Java.`)
+}
+
+export function normalizeLanguage(language: string): string {
+  try {
+    return normalizeSupportedLanguage(language)
+  } catch {
+    return (language || "").toLowerCase().trim() || "c"
   }
 }

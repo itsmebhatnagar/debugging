@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAdminSession } from "@/lib/admin-auth";
 import { deduplicateByUserDetails } from "@/lib/deduplicate";
+import { totalBestQuestionScore } from "@/lib/score-calculation";
 
 export async function GET(
   req: NextRequest,
@@ -20,7 +21,15 @@ export async function GET(
         competition: {
           include: {
             participants: {
-              include: { user: true },
+              include: {
+                user: true,
+                scores: {
+                  select: {
+                    pointsEarned: true,
+                    submission: { select: { questionId: true } }
+                  }
+                }
+              },
               orderBy: { score: "desc" }
             }
           }
@@ -34,7 +43,10 @@ export async function GET(
     const formatted = participants.map((p, idx) => ({
       id: p.id,
       rank: idx + 1,
-      totalScore: p.score,
+      totalScore: totalBestQuestionScore(p.scores.map((score) => ({
+        questionId: score.submission.questionId,
+        pointsEarned: score.pointsEarned,
+      }))),
       qualificationStatus: p.status,
       participant: {
         id: p.userId,

@@ -104,7 +104,7 @@ export default function NewQuestionPage({ params }: { params: Promise<{ id: stri
 
               <div>
                 <label className="block text-xs font-garamond text-[#cbd5e1] mb-1">
-                  C++ (G++ 20) Starter Code:
+                  C++ (G++) Starter Code:
                 </label>
                 <textarea
                   className="w-full rounded-lg border border-[#8b7355]/40 bg-[#070b14] p-3 text-xs font-garamond text-[#cbd5e1] focus:border-[#ffd700] focus:outline-none"
@@ -116,7 +116,7 @@ export default function NewQuestionPage({ params }: { params: Promise<{ id: stri
 
               <div>
                 <label className="block text-xs font-garamond text-[#cbd5e1] mb-1">
-                  Java (OpenJDK 22) Starter Code:
+                  Java (OpenJDK) Starter Code:
                 </label>
                 <textarea
                   className="w-full rounded-lg border border-[#8b7355]/40 bg-[#070b14] p-3 text-xs font-garamond text-[#cbd5e1] focus:border-[#ffd700] focus:outline-none"
@@ -126,29 +126,6 @@ export default function NewQuestionPage({ params }: { params: Promise<{ id: stri
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-garamond text-[#cbd5e1] mb-1">
-                  Python Starter Code:
-                </label>
-                <textarea
-                  className="w-full rounded-lg border border-[#8b7355]/40 bg-[#070b14] p-3 text-xs font-garamond text-[#cbd5e1] focus:border-[#ffd700] focus:outline-none"
-                  name="pyStarter"
-                  rows={4}
-                  defaultValue={`import sys\n\ndef solve():\n    raw_input = sys.stdin.read().strip()\n    # Write your solution here\n    print(raw_input)\n\nif __name__ == "__main__":\n    solve()`}
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-garamond text-[#cbd5e1] mb-1">
-                  JavaScript Starter Code:
-                </label>
-                <textarea
-                  className="w-full rounded-lg border border-[#8b7355]/40 bg-[#070b14] p-3 text-xs font-garamond text-[#cbd5e1] focus:border-[#ffd700] focus:outline-none"
-                  name="jsStarter"
-                  rows={4}
-                  defaultValue={`const fs = require('fs');\n\nfunction solve(input) {\n  // Write your code here\n  return input;\n}\n\nconst input = fs.readFileSync(0, 'utf-8').trim();\nconsole.log(solve(input));`}
-                />
-              </div>
             </div>
           </div>
 

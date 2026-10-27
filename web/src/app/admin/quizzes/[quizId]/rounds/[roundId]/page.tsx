@@ -13,6 +13,47 @@ import { TreasureMap } from '@/components/icons/TreasureMap';
 import { Anchor } from '@/components/icons/Anchor';
 import { CrewEmblem } from '@/components/icons/CrewEmblem';
 
+const DEFAULT_C = `#include <stdio.h>
+#include <string.h>
+
+int main() {
+    char input[4096];
+    if (fgets(input, sizeof(input), stdin)) {
+        input[strcspn(input, "\\r\\n")] = 0;
+        // Write your solution here
+        printf("%s\\n", input);
+    }
+    return 0;
+}`;
+
+const DEFAULT_CPP = `#include <iostream>
+#include <string>
+
+using namespace std;
+
+int main() {
+    string line;
+    if (getline(cin, line)) {
+        // Write your solution here
+        cout << line << "\\n";
+    }
+    return 0;
+}`;
+
+const DEFAULT_JAVA = `import java.util.*;
+import java.io.*;
+
+public class Main {
+    public static void main(String[] args) throws Exception {
+        BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+        String line = reader.readLine();
+        if (line != null) {
+            // Write your solution here
+            System.out.println(line);
+        }
+    }
+}`;
+
 export default function RoundManagerPage() {
   const { quizId, roundId } = useParams();
   const [round, setRound] = useState<any>(null);
@@ -26,8 +67,18 @@ export default function RoundManagerPage() {
 
   const [showQuestionForm, setShowQuestionForm] = useState(false);
   const [newQuestion, setNewQuestion] = useState({
-    text: '', marks: '', negativeMarks: '', explanation: '',
-    options: [{ text: '', isCorrect: true }, { text: '', isCorrect: false }, { text: '', isCorrect: false }, { text: '', isCorrect: false }]
+    title: '',
+    description: '',
+    points: '100',
+    cStarter: DEFAULT_C,
+    cppStarter: DEFAULT_CPP,
+    javaStarter: DEFAULT_JAVA,
+    testInput1: '',
+    testExpected1: '',
+    testInput2: '',
+    testExpected2: '',
+    testInput3: '',
+    testExpected3: '',
   });
 
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
@@ -69,20 +120,37 @@ export default function RoundManagerPage() {
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
-          text: newQuestion.text,
-          marks: newQuestion.marks !== '' ? parseFloat(newQuestion.marks) : null,
-          negativeMarks: newQuestion.negativeMarks !== '' ? parseFloat(newQuestion.negativeMarks) : null,
-          explanation: newQuestion.explanation,
-          options: newQuestion.options.filter(o => o.text.trim() !== '')
+          title: newQuestion.title,
+          description: newQuestion.description,
+          points: newQuestion.points !== '' ? parseFloat(newQuestion.points) : 100,
+          cStarter: newQuestion.cStarter,
+          cppStarter: newQuestion.cppStarter,
+          javaStarter: newQuestion.javaStarter,
+          testInput1: newQuestion.testInput1,
+          testExpected1: newQuestion.testExpected1,
+          testInput2: newQuestion.testInput2,
+          testExpected2: newQuestion.testExpected2,
+          testInput3: newQuestion.testInput3,
+          testExpected3: newQuestion.testExpected3,
         })
       });
       if (res.ok) {
         setShowQuestionForm(false);
         setNewQuestion({
-          text: '', marks: '', negativeMarks: '', explanation: '',
-          options: [{ text: '', isCorrect: true }, { text: '', isCorrect: false }, { text: '', isCorrect: false }, { text: '', isCorrect: false }]
+          title: '',
+          description: '',
+          points: '100',
+          cStarter: DEFAULT_C,
+          cppStarter: DEFAULT_CPP,
+          javaStarter: DEFAULT_JAVA,
+          testInput1: '',
+          testExpected1: '',
+          testInput2: '',
+          testExpected2: '',
+          testInput3: '',
+          testExpected3: '',
         });
-        showToast('success', 'QUESTION CHARTED', 'The question has been added to this stage.');
+        showToast('success', 'QUESTION CHARTED', 'The coding challenge has been added to this stage.');
         fetchData();
       } else {
         showToast('error', 'ERROR', 'Could not add question.');
@@ -95,7 +163,7 @@ export default function RoundManagerPage() {
   };
 
   const handleDeleteConfirmed = async () => {
-    if(!deleteConfirm) return;
+    if (!deleteConfirm) return;
     try {
       await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/quizzes/questions/${deleteConfirm}`, { method: 'DELETE', credentials: 'include' });
       showToast('success', 'QUESTION REMOVED', 'The question has been struck from the record.');
@@ -105,15 +173,6 @@ export default function RoundManagerPage() {
     } finally {
       setDeleteConfirm(null);
     }
-  };
-
-  const handleOptionChange = (index: number, field: string, value: any) => {
-    const opts = [...newQuestion.options];
-    (opts[index] as any)[field] = value;
-    if (field === 'isCorrect' && value === true) {
-      opts.forEach((o, i) => { if (i !== index) o.isCorrect = false; });
-    }
-    setNewQuestion({ ...newQuestion, options: opts });
   };
 
   const exportResults = () => {
@@ -246,60 +305,152 @@ export default function RoundManagerPage() {
               </div>
             </div>
 
-            {/* Add Question Form */}
+            {/* ── Add Question Form (Coding Challenge) ── */}
             {showQuestionForm && (
               <div className="mb-8 p-[1px] bg-gradient-to-b from-[#8B5E34] to-[#2B1710] rounded-sm">
                 <div className="bg-[#17100C] p-6 relative overflow-hidden">
-                  <form onSubmit={handleCreateQuestion} className="relative z-10 grid grid-cols-2 gap-6">
-                    <div className="col-span-2">
-                      <div className="flex flex-col">
-                        <label className="text-[#8B5E34] text-[10px] font-bold uppercase tracking-[0.2em] mb-2 pl-1">QUESTION TEXT</label>
-                        <div className="relative">
+                  <div className="mb-5 pb-4 border-b border-[#8B5E34]/30">
+                    <p className="text-[#C7A04A] text-[10px] font-bold tracking-[0.2em] uppercase mb-1">New Coding Challenge</p>
+                    <p className="text-[#8B5E34] text-xs">Starter codes will be distributed to all sailors. Test cases are used to judge submissions.</p>
+                  </div>
+                  <form onSubmit={handleCreateQuestion} className="relative z-10 space-y-6">
+
+                    {/* Title & Points */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div className="sm:col-span-2">
+                        <EchonaInput
+                          label="PROBLEM TITLE"
+                          required
+                          value={newQuestion.title}
+                          onChange={(e: any) => setNewQuestion({ ...newQuestion, title: e.target.value })}
+                          placeholder="e.g. Navigating the Bermuda Triangle"
+                        />
+                      </div>
+                      <EchonaInput
+                        label="BOUNTY POINTS"
+                        type="number"
+                        required
+                        value={newQuestion.points}
+                        onChange={(e: any) => setNewQuestion({ ...newQuestion, points: e.target.value })}
+                        placeholder="100"
+                      />
+                    </div>
+
+                    {/* Description */}
+                    <div className="flex flex-col">
+                      <label className="text-[#8B5E34] text-[10px] font-bold uppercase tracking-[0.2em] mb-2 pl-1">PROBLEM DESCRIPTION</label>
+                      <textarea
+                        required
+                        value={newQuestion.description}
+                        onChange={(e) => setNewQuestion({ ...newQuestion, description: e.target.value })}
+                        className="w-full bg-[#17100C] border border-[#8B5E34] rounded-sm px-4 py-3 text-[#F4E7C7] text-sm focus:outline-none focus:border-[#C7A04A] transition-all placeholder:text-[#E7D19A]/30 shadow-inner min-h-[100px]"
+                        placeholder="Describe the challenge, inputs, outputs, and constraints..."
+                      />
+                    </div>
+
+                    {/* Starter Codes */}
+                    <div className="border-t border-[#8B5E34]/30 pt-5">
+                      <p className="text-[#C7A04A] text-[10px] font-bold tracking-[0.2em] uppercase mb-3">⚔ STARTER CODES (Distributed to All Sailors)</p>
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-[#8B5E34] text-[10px] font-bold uppercase tracking-[0.2em] mb-1.5">C (GCC)</label>
                           <textarea
-                            required
-                            value={newQuestion.text}
-                            onChange={(e) => setNewQuestion({...newQuestion, text: e.target.value})}
-                            className="w-full bg-[#17100C] border border-[#8B5E34] rounded-sm px-4 py-3 text-[#F4E7C7] text-sm focus:outline-none focus:border-[#C7A04A] transition-all placeholder:text-[#E7D19A]/30 shadow-inner min-h-[80px]"
-                            placeholder="Enter the challenge..."
+                            value={newQuestion.cStarter}
+                            onChange={(e) => setNewQuestion({ ...newQuestion, cStarter: e.target.value })}
+                            className="w-full bg-[#080706] border border-[#8B5E34]/40 rounded-sm px-3 py-2.5 text-xs font-mono text-[#cbd5e1] focus:outline-none focus:border-[#C7A04A] transition-all"
+                            rows={5}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[#8B5E34] text-[10px] font-bold uppercase tracking-[0.2em] mb-1.5">C++ (G++)</label>
+                          <textarea
+                            value={newQuestion.cppStarter}
+                            onChange={(e) => setNewQuestion({ ...newQuestion, cppStarter: e.target.value })}
+                            className="w-full bg-[#080706] border border-[#8B5E34]/40 rounded-sm px-3 py-2.5 text-xs font-mono text-[#cbd5e1] focus:outline-none focus:border-[#C7A04A] transition-all"
+                            rows={5}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[#8B5E34] text-[10px] font-bold uppercase tracking-[0.2em] mb-1.5">JAVA (OpenJDK)</label>
+                          <textarea
+                            value={newQuestion.javaStarter}
+                            onChange={(e) => setNewQuestion({ ...newQuestion, javaStarter: e.target.value })}
+                            className="w-full bg-[#080706] border border-[#8B5E34]/40 rounded-sm px-3 py-2.5 text-xs font-mono text-[#cbd5e1] focus:outline-none focus:border-[#C7A04A] transition-all"
+                            rows={5}
                           />
                         </div>
                       </div>
                     </div>
-                    
-                    <EchonaInput label="MARKS (+) [Optional]" type="number" step="0.5" value={newQuestion.marks} placeholder={`Default: ${round?.marksPerCorrect || 1}`} onChange={(e: any) => setNewQuestion({...newQuestion, marks: e.target.value})} />
-                    <EchonaInput label="NEGATIVE MARKS (-) [Optional]" type="number" step="0.5" value={newQuestion.negativeMarks} placeholder={`Default: ${round?.marksPerWrong || 0}`} onChange={(e: any) => setNewQuestion({...newQuestion, negativeMarks: e.target.value})} />
 
-                    <div className="col-span-2">
-                      <label className="text-[#8B5E34] text-[10px] font-bold uppercase tracking-[0.2em] mb-3 block pl-1">OPTIONS (SELECT CORRECT ANSWER)</label>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {newQuestion.options.map((opt, i) => (
-                          <div key={i} className={`flex items-center gap-3 p-2 border rounded-sm transition-colors ${opt.isCorrect ? 'border-[#10B981] bg-[#10B981]/10' : 'border-[#8B5E34]/50 bg-[#080706]'}`}>
-                            <div className="relative flex items-center justify-center">
-                              <input 
-                                type="radio" 
-                                name="correctOpt" 
-                                checked={opt.isCorrect} 
-                                onChange={() => handleOptionChange(i, 'isCorrect', true)} 
-                                className="w-5 h-5 opacity-0 absolute cursor-pointer"
-                              />
-                              <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${opt.isCorrect ? 'border-[#10B981]' : 'border-[#8B5E34]'}`}>
-                                {opt.isCorrect && <div className="w-2 h-2 rounded-full bg-[#10B981]" />}
-                              </div>
-                            </div>
-                            <input 
-                              type="text" 
-                              placeholder={`Option ${i+1}`} 
-                              value={opt.text} 
-                              onChange={e => handleOptionChange(i, 'text', e.target.value)} 
-                              className="flex-1 bg-transparent border-none text-[#F4E7C7] text-sm focus:outline-none placeholder:text-[#8B5E34]/50" 
+                    {/* Test Cases */}
+                    <div className="border-t border-[#8B5E34]/30 pt-5">
+                      <p className="text-[#C7A04A] text-[10px] font-bold tracking-[0.2em] uppercase mb-3">🎯 TEST VECTORS (Public &amp; Hidden)</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {/* Test Case 1 - Public */}
+                        <div className="rounded-sm border border-[#8B5E34]/30 bg-[#080706] p-4">
+                          <div className="text-[10px] font-bold text-[#10B981] mb-3 tracking-wider uppercase">Test Case 1 (Public)</div>
+                          <input
+                            type="text"
+                            value={newQuestion.testInput1}
+                            onChange={(e) => setNewQuestion({ ...newQuestion, testInput1: e.target.value })}
+                            placeholder="Input (e.g. 1 2 3)"
+                            className="w-full rounded-sm border border-[#8B5E34]/40 bg-[#17100C] px-3 py-1.5 text-xs text-[#cbd5e1] mb-2 focus:outline-none focus:border-[#C7A04A] font-mono"
+                          />
+                          <input
+                            type="text"
+                            value={newQuestion.testExpected1}
+                            onChange={(e) => setNewQuestion({ ...newQuestion, testExpected1: e.target.value })}
+                            placeholder="Expected Output (e.g. 3)"
+                            className="w-full rounded-sm border border-[#8B5E34]/40 bg-[#17100C] px-3 py-1.5 text-xs text-[#C7A04A] focus:outline-none focus:border-[#C7A04A] font-mono"
+                          />
+                        </div>
+
+                        {/* Test Case 2 - Hidden */}
+                        <div className="rounded-sm border border-[#8B5E34]/30 bg-[#080706] p-4">
+                          <div className="text-[10px] font-bold text-[#E2C36A] mb-3 tracking-wider uppercase">Test Case 2 (Hidden)</div>
+                          <input
+                            type="text"
+                            value={newQuestion.testInput2}
+                            onChange={(e) => setNewQuestion({ ...newQuestion, testInput2: e.target.value })}
+                            placeholder="Hidden Input (e.g. 10 50 20)"
+                            className="w-full rounded-sm border border-[#8B5E34]/40 bg-[#17100C] px-3 py-1.5 text-xs text-[#cbd5e1] mb-2 focus:outline-none focus:border-[#C7A04A] font-mono"
+                          />
+                          <input
+                            type="text"
+                            value={newQuestion.testExpected2}
+                            onChange={(e) => setNewQuestion({ ...newQuestion, testExpected2: e.target.value })}
+                            placeholder="Expected Output (e.g. 50)"
+                            className="w-full rounded-sm border border-[#8B5E34]/40 bg-[#17100C] px-3 py-1.5 text-xs text-[#C7A04A] focus:outline-none focus:border-[#C7A04A] font-mono"
+                          />
+                        </div>
+
+                        {/* Test Case 3 - Hidden */}
+                        <div className="rounded-sm border border-[#8B5E34]/30 bg-[#080706] p-4 sm:col-span-2">
+                          <div className="text-[10px] font-bold text-[#E2C36A] mb-3 tracking-wider uppercase">Test Case 3 (Hidden)</div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <input
+                              type="text"
+                              value={newQuestion.testInput3}
+                              onChange={(e) => setNewQuestion({ ...newQuestion, testInput3: e.target.value })}
+                              placeholder="Hidden Input"
+                              className="w-full rounded-sm border border-[#8B5E34]/40 bg-[#17100C] px-3 py-1.5 text-xs text-[#cbd5e1] focus:outline-none focus:border-[#C7A04A] font-mono"
+                            />
+                            <input
+                              type="text"
+                              value={newQuestion.testExpected3}
+                              onChange={(e) => setNewQuestion({ ...newQuestion, testExpected3: e.target.value })}
+                              placeholder="Expected Output"
+                              className="w-full rounded-sm border border-[#8B5E34]/40 bg-[#17100C] px-3 py-1.5 text-xs text-[#C7A04A] focus:outline-none focus:border-[#C7A04A] font-mono"
                             />
                           </div>
-                        ))}
+                        </div>
                       </div>
                     </div>
 
-                    <div className="col-span-2 flex justify-end pt-4 border-t border-[#8B5E34]/30">
-                      <EchonaButton type="submit">SAVE QUESTION</EchonaButton>
+                    <div className="flex justify-end pt-4 border-t border-[#8B5E34]/30">
+                      <EchonaButton type="submit" disabled={isSubmitting}>
+                        {isSubmitting ? 'UPLOADING...' : 'UPLOAD TO FLEET'}
+                      </EchonaButton>
                     </div>
                   </form>
                 </div>
@@ -355,13 +506,12 @@ export default function RoundManagerPage() {
                             </div>
                           ))}
                         </div>
-                      ) : q.options && q.options.length > 0 ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-12 relative z-10">
-                          {q.options.map((opt: any) => (
-                            <div key={opt.id} className={`p-3 rounded-sm text-sm border flex items-center justify-between ${opt.isCorrect ? 'bg-[#10B981]/10 border-[#10B981]/40 text-[#10B981] font-semibold' : 'bg-[#17100C]/50 border-[#8B5E34]/20 text-[#E7D19A]/70'}`}>
-                              <span>{opt.text}</span>
-                              {opt.isCorrect && <span className="font-pirate text-lg leading-none">✓</span>}
-                            </div>
+                      ) : q.starterCodes && q.starterCodes.length > 0 ? (
+                        <div className="flex gap-2 pl-12 relative z-10">
+                          {q.starterCodes.map((sc: any) => (
+                            <span key={sc.id} className="px-2 py-0.5 rounded text-[10px] font-bold tracking-widest bg-[#2B1710] border border-[#8B5E34]/40 text-[#8B5E34] uppercase">
+                              {sc.language.toUpperCase()}
+                            </span>
                           ))}
                         </div>
                       ) : null}
@@ -456,4 +606,4 @@ export default function RoundManagerPage() {
       )}
     </div>
   );
-};
+}

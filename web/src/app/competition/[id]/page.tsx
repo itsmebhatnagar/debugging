@@ -7,7 +7,6 @@ import ReactMarkdown from "react-markdown"
 import { compileCode, submitFinalCode, saveDraft, startRoundNow, joinActiveRound, recordDisqualification, autoSubmitRound } from "@/app/actions/participant"
 import Link from "next/link"
 import { Spotlight } from "@/components/ui/spotlight"
-import { C_STARTER_CODE, CODE_LANGUAGE } from "@/lib/code-language"
 import { Rivet } from "@/components/icons/Rivet"
 import {
   Anchor,
@@ -52,7 +51,7 @@ function getDefaultStarterCode(lang: string, title?: string): string {
   if (norm === "c") {
     return `// Echona 2K26 — Pirate Code Championship
 // Challenge: ${title || "Pirate Trial"}
-// Compiler: GCC 14+ (C17 / C23)
+// Compiler: latest GCC available in Judge0
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -72,7 +71,7 @@ int main() {
   if (norm === "cpp") {
     return `// Echona 2K26 — Pirate Code Championship
 // Challenge: ${title || "Pirate Trial"}
-// Compiler: G++ 14+ (C++20 / C++23)
+// Compiler: latest G++ available in Judge0
 
 #include <iostream>
 #include <string>
@@ -96,7 +95,7 @@ int main() {
   if (norm === "java") {
     return `// Echona 2K26 — Pirate Code Championship
 // Challenge: ${title || "Pirate Trial"}
-// Compiler: OpenJDK 22+ (Java 22)
+// Compiler: latest OpenJDK available in Judge0
 
 import java.util.*;
 import java.io.*;
@@ -113,34 +112,7 @@ public class Main {
 }
 `
   }
-  if (norm === "python") {
-    return `# Echona 2K26 — Pirate Code Championship
-# Challenge: ${title || "Pirate Trial"}
-# Python 3.12+
-import sys
-
-def solve():
-    raw_input = sys.stdin.read().strip()
-    # Write your solution here
-    print(raw_input)
-
-if __name__ == "__main__":
-    solve()
-`
-  }
-  return `// Echona 2K26 — Pirate Code Championship
-// Challenge: ${title || "Pirate Trial"}
-// JavaScript (Node.js)
-const fs = require('fs');
-
-function solve(input) {
-  // Write your code here
-  return input;
-}
-
-const input = fs.readFileSync(0, 'utf-8').trim();
-console.log(solve(input));
-`
+  return ""
 }
 
 function getQuestionStarterCode(q: QuestionData | undefined, lang: string): string {
@@ -190,7 +162,7 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
   const [securityToast, setSecurityToast] = useState<string | null>(null)
   const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const draftSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const pendingDraftRef = useRef<{ questionId: string; code: string } | null>(null)
+  const pendingDraftRef = useRef<{ questionId: string; language: string; code: string } | null>(null)
   const isAutoSubmittingRound = useRef(false)
   const editorRef = useRef<any>(null)
   const [hasEnteredFullscreenOnce, setHasEnteredFullscreenOnce] = useState(false)
@@ -264,9 +236,14 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
             })
             const draft = data.userState.drafts?.[q.id]
             if (draft?.code) {
-              newCodes[q.id] = draft.code
               if (draft.language) {
                 newCodes[`${q.id}_${draft.language.toLowerCase()}`] = draft.code
+              }
+              if (draft.language?.toLowerCase() === language.toLowerCase()) {
+                newCodes[q.id] = draft.code
+              } else {
+                const starter = getQuestionStarterCode(q, language)
+                newCodes[`${q.id}_${language.toLowerCase()}`] ??= starter
               }
             } else {
               const starter = getQuestionStarterCode(q, language)
@@ -293,7 +270,7 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
     if (draftSaveTimeoutRef.current) clearTimeout(draftSaveTimeoutRef.current)
     const pendingDraft = pendingDraftRef.current
     if (pendingDraft) {
-      void saveDraft(pendingDraft.questionId, language, pendingDraft.code).catch((error) => {
+      void saveDraft(pendingDraft.questionId, pendingDraft.language, pendingDraft.code).catch((error) => {
         console.error("Final draft save failed:", error)
       })
     }
@@ -865,12 +842,13 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
       [langKey]: updated,
       [currentQuestion.id]: updated
     }))
-    pendingDraftRef.current = { questionId: currentQuestion.id, code: updated }
+    pendingDraftRef.current = { questionId: currentQuestion.id, language, code: updated }
     if (draftSaveTimeoutRef.current) clearTimeout(draftSaveTimeoutRef.current)
     draftSaveTimeoutRef.current = setTimeout(() => {
       draftSaveTimeoutRef.current = null
       void saveDraft(currentQuestion.id, language, updated).then((result) => {
         if (result.success && pendingDraftRef.current?.questionId === currentQuestion.id &&
+          pendingDraftRef.current.language === language &&
           pendingDraftRef.current.code === updated) {
           pendingDraftRef.current = null
         } else if (!result.success) {
@@ -919,7 +897,9 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
       setIsSubmitting(false)
       if (res.success && res.submission) {
         setSubmissions((prev) => ({ ...prev, [currentQuestion.id]: res.submission.status }))
-        setOutput(`[SUCCESS] SUBMISSION RECORDED!\nStatus: ${res.submission.status}\nYour scroll has been received by the Admiral.\n\n(AI is analyzing your code in the background for effort and logic points)`)
+        setOutput(
+          `[SUBMISSION RECORDED]\nVerdict: ${res.submission.verdict}\n${res.submission.executionSummary}\n\n(AI code review runs separately and does not alter the verdict or score.)`
+        )
         
         // Fire background AI analysis asynchronously (fire and forget)
         fetch('/api/submissions/evaluate', {
@@ -1821,10 +1801,8 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
                     className="bg-[#1a1714] text-[#d4af37] text-xs font-cinzel font-bold uppercase tracking-wider outline-none cursor-pointer border border-[#d4af37]/30 rounded px-2 py-0.5 hover:border-[#d4af37]/60 transition-colors"
                   >
                     <option value="c" className="bg-[#1a1714] text-[#f4ede0]">C (GCC)</option>
-                    <option value="cpp" className="bg-[#1a1714] text-[#f4ede0]">C++ (G++ 20)</option>
-                    <option value="java" className="bg-[#1a1714] text-[#f4ede0]">Java (OpenJDK 22)</option>
-                    <option value="python" className="bg-[#1a1714] text-[#f4ede0]">Python 3</option>
-                    <option value="javascript" className="bg-[#1a1714] text-[#f4ede0]">JavaScript (Node.js)</option>
+                    <option value="cpp" className="bg-[#1a1714] text-[#f4ede0]">C++ (G++)</option>
+                    <option value="java" className="bg-[#1a1714] text-[#f4ede0]">Java (OpenJDK)</option>
                   </select>
 
                   <button
@@ -1850,7 +1828,7 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
                 <Editor
                   height="100%"
                   theme="vs-dark"
-                  language={language === "cpp" ? "cpp" : language === "c" ? "c" : language === "java" ? "java" : language === "python" ? "python" : "javascript"}
+                  language={language}
                   value={currentCode}
                   onChange={handleCodeChange}
                   onMount={handleEditorMount}

@@ -3,7 +3,9 @@
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
 import { requestCompile, submitSolution, saveDraftCode } from "@/lib/competition-engine"
-import { C_STARTER_CODE, CODE_LANGUAGE } from "@/lib/code-language"
+import { C_STARTER_CODE, isSupportedLanguage, normalizeSupportedLanguage } from "@/lib/code-language"
+
+const inFlightLocks = new Set<string>()
 
 export async function compileCode(questionId: string, language: string, code: string) {
   const session = await auth()
@@ -11,16 +13,24 @@ export async function compileCode(questionId: string, language: string, code: st
     return { success: false, error: "Unauthorized: Please log in first." }
   }
 
+  const lockKey = `compile_${session.user.id}_${questionId}`
+  if (inFlightLocks.has(lockKey)) {
+    return { success: false, error: "A compilation request is already in progress. Please wait for it to finish." }
+  }
+
+  inFlightLocks.add(lockKey)
   try {
     const attempt = await requestCompile(session.user.id, questionId, language, code)
     return { success: true, attempt }
   } catch (error: any) {
-    const isExceeded = error.message.includes("ATTEMPT LIMIT EXHAUSTED")
+    const isExceeded = error.message?.includes("ATTEMPT LIMIT EXHAUSTED")
     return {
       success: false,
-      error: error.message,
+      error: error.message || "Compilation failed.",
       autoSubmitted: isExceeded
     }
+  } finally {
+    inFlightLocks.delete(lockKey)
   }
 }
 
@@ -30,11 +40,19 @@ export async function submitFinalCode(questionId: string, language: string, code
     return { success: false, error: "Unauthorized: Please log in first." }
   }
 
+  const lockKey = `submit_${session.user.id}_${questionId}`
+  if (inFlightLocks.has(lockKey)) {
+    return { success: false, error: "A submission is already being evaluated. Please wait." }
+  }
+
+  inFlightLocks.add(lockKey)
   try {
     const submission = await submitSolution(session.user.id, questionId, language, code, false)
     return { success: true, submission }
   } catch (error: any) {
-    return { success: false, error: error.message }
+    return { success: false, error: error.message || "Submission failed." }
+  } finally {
+    inFlightLocks.delete(lockKey)
   }
 }
 
@@ -275,18 +293,23 @@ export async function autoSubmitRound(
       .filter((q) => !submittedQIds.has(q.id))
       .map(async (q) => {
         let codeToSubmit = codes[q.id]
+        let languageToSubmit = normalizeSupportedLanguage(language)
+        const draft = draftMap.get(q.id)
+        if (draft && isSupportedLanguage(draft.language) && codeToSubmit === draft.code) {
+          languageToSubmit = draft.language
+        }
         if (!codeToSubmit || !codeToSubmit.trim()) {
-          const draft = draftMap.get(q.id)
-          if (draft?.language === CODE_LANGUAGE) {
+          if (draft && isSupportedLanguage(draft.language)) {
+            languageToSubmit = draft.language
             codeToSubmit = draft.code
           } else {
-            const starter = q.starterCodes.find((s) => s.language === CODE_LANGUAGE)
+            const starter = q.starterCodes.find((s) => s.language === languageToSubmit)
             codeToSubmit = starter?.code || C_STARTER_CODE
           }
         }
 
         try {
-          const sub = await submitSolution(userId, q.id, language, codeToSubmit, true)
+          const sub = await submitSolution(userId, q.id, languageToSubmit, codeToSubmit, true)
           if (sub?.id) {
             const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000"
             fetch(`${baseUrl}/api/submissions/evaluate`, {

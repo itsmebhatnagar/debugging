@@ -13,8 +13,9 @@ import {
 } from "@/lib/competition-engine"
 import { seedPirateChampionship } from "@/lib/seed-championship"
 import { runAICompetitionEvaluation } from "@/lib/ai-debugger"
-import { C_STARTER_CODE, CODE_LANGUAGE } from "@/lib/code-language"
+import { normalizeSupportedLanguage } from "@/lib/code-language"
 import { getAdminSession } from "@/lib/admin-auth"
+import { totalBestQuestionScore } from "@/lib/score-calculation"
 
 async function checkAdmin() {
   const session = await getAdminSession()
@@ -157,8 +158,6 @@ export async function createQuestionWithStarterCodes(roundId: string, formData: 
   const title = (formData.get("title") as string)?.trim()
   const description = (formData.get("description") as string)?.trim()
   const points = parseInt(formData.get("points") as string, 10)
-  const jsStarter = (formData.get("jsStarter") as string) || ""
-  const pyStarter = (formData.get("pyStarter") as string) || ""
   const cppStarter = (formData.get("cppStarter") as string) || ""
   const cStarter = (formData.get("cStarter") as string) || ""
   const javaStarter = (formData.get("javaStarter") as string) || ""
@@ -167,6 +166,8 @@ export async function createQuestionWithStarterCodes(roundId: string, formData: 
   const testExpected1 = (formData.get("testExpected1") as string) || ""
   const testInput2 = (formData.get("testInput2") as string) || ""
   const testExpected2 = (formData.get("testExpected2") as string) || ""
+  const testInput3 = (formData.get("testInput3") as string) || ""
+  const testExpected3 = (formData.get("testExpected3") as string) || ""
 
   if (!title || !description || isNaN(points)) {
     throw new Error("Title, description, and points are required")
@@ -197,17 +198,6 @@ export async function createQuestionWithStarterCodes(roundId: string, formData: 
       data: { questionId: question.id, language: "java", code: javaStarter }
     })
   }
-  if (pyStarter.trim()) {
-    await prisma.starterCode.create({
-      data: { questionId: question.id, language: "python", code: pyStarter }
-    })
-  }
-  if (jsStarter.trim()) {
-    await prisma.starterCode.create({
-      data: { questionId: question.id, language: "javascript", code: jsStarter }
-    })
-  }
-
   // Test cases
   if (testExpected1.trim()) {
     await prisma.testCase.create({
@@ -229,6 +219,16 @@ export async function createQuestionWithStarterCodes(roundId: string, formData: 
       }
     })
   }
+  if (testExpected3.trim()) {
+    await prisma.testCase.create({
+      data: {
+        questionId: question.id,
+        input: testInput3,
+        expected: testExpected3,
+        isHidden: true
+      }
+    })
+  }
 
   revalidatePath(`/admin/rounds/${roundId}`)
   redirect(`/admin/rounds/${roundId}`)
@@ -240,8 +240,6 @@ export async function updateQuestionWithStarterCodes(questionId: string, formDat
   const title = (formData.get("title") as string)?.trim()
   const description = (formData.get("description") as string)?.trim()
   const points = parseInt(formData.get("points") as string, 10)
-  const jsStarter = (formData.get("jsStarter") as string) || ""
-  const pyStarter = (formData.get("pyStarter") as string) || ""
   const cppStarter = (formData.get("cppStarter") as string) || ""
   const cStarter = (formData.get("cStarter") as string) || ""
   const javaStarter = (formData.get("javaStarter") as string) || ""
@@ -286,17 +284,6 @@ export async function updateQuestionWithStarterCodes(questionId: string, formDat
       data: { questionId: question.id, language: "java", code: javaStarter }
     })
   }
-  if (pyStarter.trim()) {
-    await prisma.starterCode.create({
-      data: { questionId: question.id, language: "python", code: pyStarter }
-    })
-  }
-  if (jsStarter.trim()) {
-    await prisma.starterCode.create({
-      data: { questionId: question.id, language: "javascript", code: jsStarter }
-    })
-  }
-
   // Re-create Test cases
   if (testExpected1.trim()) {
     await prisma.testCase.create({
@@ -334,17 +321,18 @@ export async function updateQuestionWithStarterCodes(questionId: string, formDat
 
 export async function uploadStarterCode(questionId: string, language: string, code: string) {
   await checkAdmin()
+  const supportedLanguage = normalizeSupportedLanguage(language)
   return await prisma.starterCode.upsert({
     where: {
       questionId_language: {
         questionId,
-        language
+        language: supportedLanguage
       }
     },
     update: { code },
     create: {
       questionId,
-      language,
+      language: supportedLanguage,
       code
     }
   })
@@ -666,14 +654,22 @@ export async function resetRoundAdmin(roundId: string) {
     where: { competitionId: round.competitionId },
     select: {
       id: true,
-      scores: { select: { pointsEarned: true } }
+      scores: {
+        select: {
+          pointsEarned: true,
+          submission: { select: { questionId: true } }
+        }
+      }
     }
   })
   await Promise.all(participants.map(participant =>
     prisma.competitionParticipant.update({
       where: { id: participant.id },
       data: {
-        score: participant.scores.reduce((total, score) => total + score.pointsEarned, 0)
+        score: totalBestQuestionScore(participant.scores.map((score) => ({
+          questionId: score.submission.questionId,
+          pointsEarned: score.pointsEarned,
+        })))
       }
     })
   ))

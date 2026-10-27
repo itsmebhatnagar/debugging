@@ -83,41 +83,70 @@ export async function POST(
       }
     });
 
-    // If options / test cases supplied
+    // Starter codes: C, C++, Java
+    const defaultC = `#include <stdio.h>\n#include <string.h>\n\nint main() {\n    char input[4096];\n    if (fgets(input, sizeof(input), stdin)) {\n        input[strcspn(input, "\\r\\n")] = 0;\n        // Write your solution here\n        printf("%s\\n", input);\n    }\n    return 0;\n}\n`;
+    const defaultCpp = `#include <iostream>\n#include <string>\n\nusing namespace std;\n\nint main() {\n    string line;\n    if (getline(cin, line)) {\n        // Write your solution here\n        cout << line << "\\n";\n    }\n    return 0;\n}\n`;
+    const defaultJava = `import java.util.*;\nimport java.io.*;\n\npublic class Main {\n    public static void main(String[] args) throws Exception {\n        BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));\n        String line = reader.readLine();\n        if (line != null) {\n            // Write your solution here\n            System.out.println(line);\n        }\n    }\n}\n`;
+
+    const cStarter = typeof body.cStarter === "string" && body.cStarter.trim() ? body.cStarter : defaultC;
+    const cppStarter = typeof body.cppStarter === "string" && body.cppStarter.trim() ? body.cppStarter : defaultCpp;
+    const javaStarter = typeof body.javaStarter === "string" && body.javaStarter.trim() ? body.javaStarter : defaultJava;
+
+    await prisma.starterCode.createMany({
+      data: [
+        { questionId: question.id, language: "c", code: cStarter },
+        { questionId: question.id, language: "cpp", code: cppStarter },
+        { questionId: question.id, language: "java", code: javaStarter },
+      ],
+      skipDuplicates: true
+    });
+
+    // Test cases: support testCases array or testInput1/2/3 vectors
     if (Array.isArray(body.testCases) && body.testCases.length > 0) {
       for (const tc of body.testCases) {
-        await prisma.testCase.create({
-          data: {
-            questionId: question.id,
-            input: tc.input || "",
-            expected: tc.expected || "",
-            isHidden: Boolean(tc.isHidden)
-          }
-        });
-      }
-    } else if (Array.isArray(body.options) && body.options.length > 0) {
-      for (const opt of body.options) {
-        if (opt.text && opt.text.trim()) {
+        if (tc.expected || tc.input) {
           await prisma.testCase.create({
             data: {
               questionId: question.id,
-              input: opt.text,
-              expected: opt.isCorrect ? "CORRECT" : "INCORRECT",
-              isHidden: false
+              input: tc.input || "",
+              expected: tc.expected || "",
+              isHidden: Boolean(tc.isHidden)
             }
           });
         }
       }
-    }
-
-    // Default starter code
-    await prisma.starterCode.create({
-      data: {
-        questionId: question.id,
-        language: "c",
-        code: `#include <stdio.h>\n\nint main() {\n    // Write your code here\n    return 0;\n}\n`
+    } else {
+      if (body.testExpected1 !== undefined && String(body.testExpected1).trim()) {
+        await prisma.testCase.create({
+          data: {
+            questionId: question.id,
+            input: body.testInput1 || "",
+            expected: String(body.testExpected1).trim(),
+            isHidden: false
+          }
+        });
       }
-    });
+      if (body.testExpected2 !== undefined && String(body.testExpected2).trim()) {
+        await prisma.testCase.create({
+          data: {
+            questionId: question.id,
+            input: body.testInput2 || "",
+            expected: String(body.testExpected2).trim(),
+            isHidden: true
+          }
+        });
+      }
+      if (body.testExpected3 !== undefined && String(body.testExpected3).trim()) {
+        await prisma.testCase.create({
+          data: {
+            questionId: question.id,
+            input: body.testInput3 || "",
+            expected: String(body.testExpected3).trim(),
+            isHidden: true
+          }
+        });
+      }
+    }
 
     return NextResponse.json(question, { status: 201 });
   } catch (error: any) {
