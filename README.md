@@ -1,6 +1,6 @@
 ...## 📖 About The Project
 
-This repository serves as a collection of debugging exercises, bug fixes, and troubleshooting scripts. Whether it's resolving frontend UI glitches, fixing logic errors in scripts, or tracking down backend performance issues, this space documents the problem-solving process.
+This repository serves as a collection of debugging exercises, bug fixes, and troubleshooting scripts. Whether it's resolving frontend UI glitches, fixing logic errors in scripts, or tracking down backend performance issues, this space documents the problem-solving process...
 
 ### 🎯 Key Objectives
 *   Document common coding errors and their solutions.
