@@ -61,31 +61,34 @@ export default function LiveControlPage() {
     }
   }, []);
 
-  const fetchQuizzes = () => {
-    const token = getCookie('admin_token');
-    const headers: Record<string, string> = {};
-    if (token) headers['Authorization'] = `Bearer ${token}`;
+  const fetchQuizzes = async () => {
+    try {
+      const token = getCookie('admin_token');
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
 
-    fetch('/api/quizzes', { credentials: 'include', headers })
-      .then(res => res.json())
-      .then(data => {
-        const list = Array.isArray(data) ? data : [];
-        setQuizzes(list);
-        if (list.length > 0) {
-          setActiveQuizId(prev => {
-            if (prev && list.some((q: any) => q.id === prev)) {
-              return prev;
-            }
-            const active = list.find((q: any) => q.status === 'ACTIVE' || q.status === 'PAUSED' || q.status === 'WAITING');
-            return active ? active.id : list[0].id;
-          });
-        } else {
-          setActiveQuizId(null);
-        }
-      })
-      .catch(() => {
-        showToast('error', 'SERVER OFFLINE', 'Could not establish contact with headquarters.');
-      });
+      const res = await fetch('/api/quizzes', { credentials: 'include', headers });
+      if (!res.ok) {
+        console.warn(`Failed to fetch quizzes: HTTP ${res.status}`);
+        return;
+      }
+      const data = await res.json();
+      const list = Array.isArray(data) ? data : [];
+      setQuizzes(list);
+      if (list.length > 0) {
+        setActiveQuizId(prev => {
+          if (prev && list.some((q: any) => q.id === prev)) {
+            return prev;
+          }
+          const active = list.find((q: any) => q.status === 'ACTIVE' || q.status === 'COUNTDOWN' || q.status === 'WAITING' || q.status === 'PAUSED');
+          return active ? active.id : list[0].id;
+        });
+      } else {
+        setActiveQuizId(null);
+      }
+    } catch {
+      showToast('error', 'SERVER OFFLINE', 'Could not establish contact with headquarters.');
+    }
   };
 
   useEffect(() => {
@@ -106,6 +109,10 @@ export default function LiveControlPage() {
 
     newSocket.on('connect', () => {
       setConnectionStatus('CONNECTED');
+      newSocket.emit('join_admin');
+      if (activeQuizId) {
+        newSocket.emit('join_competition', activeQuizId);
+      }
       if (realtimeOutageLogged.current) {
         addLog('Command link restored.', 'success');
         showToast('success', 'LINK RESTORED', 'Command deck reconnected to the real-time server.');
@@ -132,23 +139,72 @@ export default function LiveControlPage() {
         addLog(`Realtime service unavailable at ${realtimeUrl} (${err.message}). Retrying...`, 'warning');
         realtimeOutageLogged.current = true;
       }
-      if (err.message === 'Invalid token' || err.message === 'No token') {
-        // Token is invalid, clear it
-        localStorage.removeItem('admin_token');
-      }
     });
 
     newSocket.io.on('reconnect_attempt', () => {
       setConnectionStatus('RECONNECTING');
     });
 
+    newSocket.on('round_started', (data: any) => {
+      addLog(`Voyage stage started: Round ${data.roundOrder} (${data.roundName})`, 'success');
+      showToast('success', 'STAGE STARTED', `Round ${data.roundOrder} (${data.roundName}) is now live.`);
+      fetchQuizzes();
+      if (data?.roundId) requestStats(data.roundId);
+    });
+
+    newSocket.on('round_ended', (data: any) => {
+      addLog(`Voyage stage concluded: ${data.roundName || 'Stage'}`, 'warning');
+      showToast('warning', 'STAGE ENDED', `${data.roundName || 'Stage'} has concluded.`);
+      fetchQuizzes();
+      if (data?.roundId) requestStats(data.roundId);
+    });
+
+    newSocket.on('test_starting', (data: any) => {
+      addLog(`Expedition countdown initiated: ${data.countdownSeconds || 60}s remaining`, 'info');
+      showToast('info', 'COUNTDOWN INITIATED', `Battle begins in ${data.countdownSeconds || 60} seconds!`);
+      fetchQuizzes();
+    });
+
+    newSocket.on('test_ended', (data: any) => {
+      addLog(`Expedition closed: ${data.message || 'All tests submitted.'}`, 'warning');
+      showToast('warning', 'EXPEDITION ENDED', 'All tests have been automatically submitted.');
+      fetchQuizzes();
+    });
+
+    newSocket.on('submission_created', (data: any) => {
+      addLog(`Submission received: Verdict ${data.verdict || data.status} (Points: ${data.pointsEarned ?? 0})`, 'info');
+      quizzes.find(q => q.id === activeQuizId)?.rounds?.forEach((r: any) => requestStats(r.id));
+    });
+
+    newSocket.on('leaderboard_updated', () => {
+      quizzes.find(q => q.id === activeQuizId)?.rounds?.forEach((r: any) => requestStats(r.id));
+    });
+
+    newSocket.on('participant_disqualified', (data: any) => {
+      addLog(`⚠️ Disqualification: ${data.userName || data.userEmail || data.userId} (${data.reason || 'Rules violation'})`, 'error');
+      showToast('error', 'DISQUALIFICATION', `${data.userName || 'Sailor'} disqualified: ${data.reason || 'Rules violation'}`);
+      quizzes.find(q => q.id === activeQuizId)?.rounds?.forEach((r: any) => requestStats(r.id));
+    });
+
+    newSocket.on('competition_reset', () => {
+      addLog('Expedition successfully reset.', 'info');
+      fetchQuizzes();
+    });
+
+    newSocket.on('round_reset', (data: any) => {
+      addLog(`Stage reset: ${data?.roundName || data?.roundId}`, 'info');
+      fetchQuizzes();
+    });
+
     newSocket.on('round:updated', (round) => {
       addLog(`Voyage stage updated: ${round.status}`, 'info');
-      fetchQuizzes(); // Refresh to get latest round statuses
+      fetchQuizzes();
     });
 
     newSocket.on('round:stats', (stats) => {
-      setLiveStats(prev => ({ ...prev, [stats.roundId]: stats }));
+      if (stats?.roundId) {
+        setLiveStats(prev => ({ ...prev, [stats.roundId]: stats }));
+      }
     });
 
     setSocket(newSocket);
@@ -157,6 +213,13 @@ export default function LiveControlPage() {
       newSocket.disconnect();
     };
   }, []);
+
+  useEffect(() => {
+    if (socket && activeQuizId) {
+      socket.emit('join_competition', activeQuizId);
+      socket.emit('join_admin');
+    }
+  }, [socket, activeQuizId]);
 
   const handleAction = async () => {
     if (!confirmAction) return;
@@ -250,8 +313,27 @@ export default function LiveControlPage() {
     setTimeout(fetchQuizzes, 600);
   };
 
-  const requestStats = (roundId: string) => {
-    socket?.emit('round:stats', { roundId });
+  const requestStats = async (roundId: string) => {
+    if (!roundId) return;
+    try {
+      const token = getCookie('admin_token');
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const res = await fetch(`/api/quizzes/rounds/${roundId}/stats`, {
+        credentials: 'include',
+        headers
+      });
+      if (res.ok) {
+        const stats = await res.json();
+        if (stats && stats.roundId) {
+          setLiveStats(prev => ({ ...prev, [roundId]: stats }));
+          socket?.emit('round:stats', { roundId, stats });
+        }
+      }
+    } catch {
+      socket?.emit('round:stats', { roundId });
+    }
   };
 
   // Auto-fetch stats periodically
