@@ -4,6 +4,7 @@ import React, { useRef, useState } from 'react';
 import * as XLSX from 'xlsx';
 import { EchonaModal, EchonaButton, EchonaLoader } from '../ui/EchonaUI';
 import { QuillMap } from '../icons/QuillMap';
+import { Anchor } from '../icons/Anchor';
 
 interface BulkImportModalProps {
   onClose: () => void;
@@ -32,6 +33,10 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ onClose, onImp
         const wsname = wb.SheetNames[0];
         const ws = wb.Sheets[wsname];
         const data = XLSX.utils.sheet_to_json(ws);
+
+        if (data.length === 0) {
+          throw new Error("The uploaded sheet is empty. Please provide question data rows.");
+        }
 
         if (importType === 'participants') {
           await importParticipants(data);
@@ -81,28 +86,33 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ onClose, onImp
   };
 
   const importQuestions = async (data: any[]) => {
-    const questions = data.map(row => {
-      const options = [];
-      const correctIdx = parseInt(row.correctOption || row.CorrectOption || '1');
-      
-      if (row.option1 || row.Option1) options.push({ text: row.option1 || row.Option1, isCorrect: correctIdx === 1 });
-      if (row.option2 || row.Option2) options.push({ text: row.option2 || row.Option2, isCorrect: correctIdx === 2 });
-      if (row.option3 || row.Option3) options.push({ text: row.option3 || row.Option3, isCorrect: correctIdx === 3 });
-      if (row.option4 || row.Option4) options.push({ text: row.option4 || row.Option4, isCorrect: correctIdx === 4 });
+    const questions = data.map((row: any, idx: number) => {
+      const title = (row.title || row.Title || row.name || row.Name || row.question || row.Question || row.text || row.Text || '').trim();
+      const description = (row.description || row.Description || row.desc || row.Desc || row.problem || row.Problem || '').trim();
+      const points = parseFloat(row.points || row.Points || row.marks || row.Marks || '100');
+
+      if (!title) {
+        throw new Error(`Row ${idx + 2}: 'title' is required.`);
+      }
+      if (!description) {
+        throw new Error(`Row ${idx + 2} ("${title}"): 'description' is required.`);
+      }
 
       return {
-        text: row.text || row.Question || row.text,
-        type: row.type || row.Type || 'MCQ',
-        marks: parseFloat(row.marks || row.Marks || '1'),
-        negativeMarks: parseFloat(row.negativeMarks || row.NegativeMarks || '0'),
-        explanation: row.explanation || row.Explanation || '',
-        options
+        title,
+        description,
+        points: isNaN(points) ? 100 : Math.round(points),
+        testInput1: String(row.testInput1 ?? row.TestInput1 ?? row.input1 ?? row.Input1 ?? ''),
+        testExpected1: String(row.testExpected1 ?? row.TestExpected1 ?? row.expected1 ?? row.Expected1 ?? row.output1 ?? '').trim(),
+        testInput2: String(row.testInput2 ?? row.TestInput2 ?? row.input2 ?? row.Input2 ?? ''),
+        testExpected2: String(row.testExpected2 ?? row.TestExpected2 ?? row.expected2 ?? row.Expected2 ?? row.output2 ?? '').trim(),
+        testInput3: String(row.testInput3 ?? row.TestInput3 ?? row.input3 ?? row.Input3 ?? ''),
+        testExpected3: String(row.testExpected3 ?? row.TestExpected3 ?? row.expected3 ?? row.Expected3 ?? row.output3 ?? '').trim(),
+        cStarter: typeof row.cStarter === 'string' ? row.cStarter : (typeof row.CStarter === 'string' ? row.CStarter : ''),
+        cppStarter: typeof row.cppStarter === 'string' ? row.cppStarter : (typeof row.CppStarter === 'string' ? row.CppStarter : ''),
+        javaStarter: typeof row.javaStarter === 'string' ? row.javaStarter : (typeof row.JavaStarter === 'string' ? row.JavaStarter : ''),
       };
     });
-
-    if (questions.some(q => !q.text)) {
-      throw new Error("Missing required field: Question text is missing for one or more entries.");
-    }
 
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/quizzes/rounds/${targetId}/questions/bulk`, {
       method: 'POST',
@@ -120,6 +130,97 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ onClose, onImp
     onImportComplete();
   };
 
+  const handleDownloadSample = () => {
+    if (importType === 'participants') {
+      const sampleParticipants = [
+        {
+          username: 'sailor01',
+          password: 'secretpassword',
+          name: 'Jack Sparrow',
+          college: 'Seven Seas Academy',
+          email: 'jack@echona.com',
+          phone: '9876543210'
+        },
+        {
+          username: 'sailor02',
+          password: 'secretpassword',
+          name: 'Will Turner',
+          college: 'Port Royal Institute',
+          email: 'will@echona.com',
+          phone: '9876543211'
+        }
+      ];
+      const ws = XLSX.utils.json_to_sheet(sampleParticipants);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Participants');
+      XLSX.writeFile(wb, 'sample_participants_manifest.xlsx');
+    } else {
+      const sampleQuestions = [
+        {
+          title: 'Sum of Two Treasures',
+          description: 'The pirate crew found two treasure chests. Read two integers A and B from standard input separated by a space, and print their sum to standard output.',
+          points: 100,
+          testInput1: '5 7',
+          testExpected1: '12',
+          testInput2: '100 250',
+          testExpected2: '350',
+          testInput3: '-15 45',
+          testExpected3: '30',
+          cStarter: '',
+          cppStarter: '',
+          javaStarter: ''
+        },
+        {
+          title: 'Reverse the Secret Map Code',
+          description: 'To decipher the pirate coordinates, reverse the given string. Read a single line string from standard input and print the reversed string.',
+          points: 150,
+          testInput1: 'echona',
+          testExpected1: 'anohce',
+          testInput2: 'blackpearl',
+          testExpected2: 'lraepkcalb',
+          testInput3: 'ahoy sailor',
+          testExpected3: 'rolias yoha',
+          cStarter: '',
+          cppStarter: '',
+          javaStarter: ''
+        },
+        {
+          title: 'Max Cannon Power',
+          description: 'Given N integers representing cannon power levels, find and output the maximum power value. The first line contains N. The second line contains N space-separated integers.',
+          points: 200,
+          testInput1: '5\n10 45 20 80 30',
+          testExpected1: '80',
+          testInput2: '4\n-5 -10 -2 -50',
+          testExpected2: '-2',
+          testInput3: '6\n100 900 300 900 500 200',
+          testExpected3: '900',
+          cStarter: '',
+          cppStarter: '',
+          javaStarter: ''
+        }
+      ];
+
+      const ws = XLSX.utils.json_to_sheet(sampleQuestions);
+      ws['!cols'] = [
+        { wch: 28 }, // title
+        { wch: 55 }, // description
+        { wch: 10 }, // points
+        { wch: 18 }, // testInput1
+        { wch: 18 }, // testExpected1
+        { wch: 18 }, // testInput2
+        { wch: 18 }, // testExpected2
+        { wch: 18 }, // testInput3
+        { wch: 18 }, // testExpected3
+        { wch: 20 }, // cStarter
+        { wch: 20 }, // cppStarter
+        { wch: 20 }, // javaStarter
+      ];
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Questions');
+      XLSX.writeFile(wb, 'sample_questions_manifest.xlsx');
+    }
+  };
+
   const title = importType === 'participants' ? 'IMPORT CREW MANIFEST' : 'IMPORT QUESTIONS MANIFEST';
 
   return (
@@ -127,7 +228,7 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ onClose, onImp
       {loading ? (
         <EchonaLoader text="READING MANIFEST..." />
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-5">
           <p className="text-[#2B1710] font-semibold text-sm tracking-wide">
             Present your Excel (.xlsx) manifest to be charted into the log.
           </p>
@@ -135,19 +236,23 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ onClose, onImp
           {error && (
             <div className="bg-[#741714] border border-[#5A1712] p-4 shadow-inner">
               <h4 className="text-[#F4E7C7] text-[10px] font-bold tracking-[0.2em] uppercase mb-1 flex items-center gap-2">
-                <span className="text-xl">âš </span> MANIFEST COULD NOT BE CHARTED
+                <span className="text-xl">⚠️</span> MANIFEST COULD NOT BE CHARTED
               </h4>
               <p className="text-[#E7D19A] text-sm">{error}</p>
             </div>
           )}
 
+          {/* Upload Dropzone */}
           <div 
             onClick={() => fileInput.current?.click()}
-            className="border-2 border-dashed border-[#8B5E34] hover:border-[#C7A04A] bg-[#E7D19A]/50 hover:bg-[#E7D19A]/80 p-10 text-center transition-colors cursor-pointer group"
+            className="border-2 border-dashed border-[#8B5E34] hover:border-[#C7A04A] bg-[#E7D19A]/50 hover:bg-[#E7D19A]/80 p-8 text-center transition-colors cursor-pointer group rounded-sm"
           >
-            <QuillMap className="w-12 h-12 text-[#8B5E34] mx-auto mb-4 group-hover:text-[#C7A04A] transition-colors" />
-            <span className="text-[#2B1710] font-bold uppercase tracking-widest text-xs">
+            <QuillMap className="w-10 h-10 text-[#8B5E34] mx-auto mb-3 group-hover:text-[#C7A04A] transition-colors" />
+            <span className="text-[#2B1710] font-bold uppercase tracking-widest text-xs block mb-1">
               Click to select manifest file
+            </span>
+            <span className="text-[#8B5E34] text-[11px] block">
+              Supports .xlsx, .xls, .csv spreadsheets
             </span>
             <input 
               type="file" 
@@ -158,17 +263,53 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({ onClose, onImp
             />
           </div>
 
-          <div className="bg-[#17100C]/10 p-4 border border-[#8B5E34]/20">
-            <p className="text-[#8B5E34] text-[10px] font-bold tracking-[0.2em] uppercase mb-2">Required Format Details</p>
-            <p className="text-[#2B1710] text-xs font-semibold">
-              {importType === 'participants' 
-                ? 'Expected Columns: username, password, name, college, email, phone'
-                : 'Expected Columns: text, marks, negativeMarks, option1, option2, option3, option4, correctOption (1-4)'
-              }
-            </p>
+          {/* Format & Download Sample Box */}
+          <div className="bg-[#17100C]/10 p-4 border border-[#8B5E34]/30 rounded-sm space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-[#8B5E34]/20">
+              <p className="text-[#8B5E34] text-[10px] font-bold tracking-[0.2em] uppercase">
+                Required Format Details
+              </p>
+              
+              <button
+                type="button"
+                onClick={handleDownloadSample}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-sm bg-[#2B1710] border border-[#C7A04A] text-[#F4E7C7] hover:bg-[#C7A04A] hover:text-[#17100C] text-[10px] font-bold tracking-wider uppercase transition-all shadow-sm"
+              >
+                <span>📥</span> DOWNLOAD SAMPLE EXCEL
+              </button>
+            </div>
+
+            {importType === 'participants' ? (
+              <p className="text-[#2B1710] text-xs font-semibold leading-relaxed">
+                Expected Columns: <span className="font-mono text-[#8B5E34]">username, password, name, college, email, phone</span>
+              </p>
+            ) : (
+              <div className="space-y-1.5 text-xs text-[#2B1710]">
+                <p className="font-semibold">
+                  <span className="text-[#741714] font-bold uppercase text-[10px] tracking-wider block mb-0.5">Mandatory Columns:</span>
+                  <span className="font-mono text-[#8B5E34] text-[11px] bg-[#E7D19A]/40 px-1.5 py-0.5 rounded">title</span>,{" "}
+                  <span className="font-mono text-[#8B5E34] text-[11px] bg-[#E7D19A]/40 px-1.5 py-0.5 rounded">description</span>,{" "}
+                  <span className="font-mono text-[#8B5E34] text-[11px] bg-[#E7D19A]/40 px-1.5 py-0.5 rounded">points</span>,{" "}
+                  <span className="font-mono text-[#8B5E34] text-[11px] bg-[#E7D19A]/40 px-1.5 py-0.5 rounded">testInput1</span>,{" "}
+                  <span className="font-mono text-[#8B5E34] text-[11px] bg-[#E7D19A]/40 px-1.5 py-0.5 rounded">testExpected1</span>
+                </p>
+                <p className="text-[11px] text-[#8B5E34] pt-1">
+                  <span className="font-bold uppercase text-[9px] tracking-wider block text-[#8B5E34]">Optional Vectors & Starters:</span>
+                  <span className="font-mono">testInput2, testExpected2, testInput3, testExpected3, cStarter, cppStarter, javaStarter</span>
+                </p>
+              </div>
+            )}
           </div>
 
-          <div className="flex justify-end gap-4 pt-4 border-t border-[#8B5E34]/30">
+          <div className="flex justify-between items-center pt-3 border-t border-[#8B5E34]/30">
+            <button
+              type="button"
+              onClick={handleDownloadSample}
+              className="text-[#8B5E34] hover:text-[#C7A04A] text-xs font-bold tracking-wider uppercase underline underline-offset-4 transition-colors"
+            >
+              ⤓ Get Sample Sheet
+            </button>
+
             <EchonaButton variant="ghost" onClick={onClose} className="!text-[#8B5E34] hover:!text-[#2B1710]">
               CANCEL
             </EchonaButton>
