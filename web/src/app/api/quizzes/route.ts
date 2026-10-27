@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAdminSession } from "@/lib/admin-auth";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: NextRequest) {
   try {
     const session = await getAdminSession(req);
@@ -24,7 +26,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(competitions);
   } catch (error: any) {
     console.error("GET /api/quizzes error:", error);
-    return NextResponse.json([], { status: 200 });
+    return NextResponse.json({ error: error.message || "Internal server error" }, { status: 500 });
   }
 }
 

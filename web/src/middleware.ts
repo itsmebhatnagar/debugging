@@ -1,10 +1,16 @@
 import { auth } from "@/auth"
 import { NextResponse } from "next/server"
+import { isAdminEmail } from "@/lib/admin-access"
 
 export default auth((req) => {
   const { nextUrl } = req
   let isLoggedIn = !!req.auth
   let userRole = req.auth?.user?.role
+
+  if (req.auth?.user?.email && isAdminEmail(req.auth.user.email)) {
+    isLoggedIn = true
+    userRole = "ADMIN"
+  }
 
   let adminToken = req.cookies.get("admin_token")?.value
   if (!adminToken) {
@@ -14,10 +20,10 @@ export default auth((req) => {
     }
   }
 
-  if (!isLoggedIn && adminToken) {
+  if ((!isLoggedIn || userRole !== "ADMIN") && adminToken) {
     try {
       const decoded = JSON.parse(Buffer.from(adminToken, "base64").toString())
-      if (decoded && decoded.role === "ADMIN") {
+      if (decoded && (decoded.role === "ADMIN" || isAdminEmail(decoded.email))) {
         isLoggedIn = true
         userRole = "ADMIN"
       }

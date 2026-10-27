@@ -46,6 +46,7 @@ export async function getAdminSession(req?: NextRequest | Request): Promise<Admi
   // 2. Extract tokens from request headers/cookies
   let adminToken: string | undefined;
   let sessionToken: string | undefined;
+  let sessionCookieName = "authjs.session-token";
 
   if (req) {
     const authHeader = req.headers.get("authorization");
@@ -56,8 +57,20 @@ export async function getAdminSession(req?: NextRequest | Request): Promise<Admi
     if ("cookies" in req) {
       const nextReq = req as NextRequest;
       if (!adminToken) adminToken = nextReq.cookies.get("admin_token")?.value;
-      sessionToken = nextReq.cookies.get("authjs.session-token")?.value ||
-                     nextReq.cookies.get("__Secure-authjs.session-token")?.value;
+      const candidateNames = [
+        "authjs.session-token",
+        "__Secure-authjs.session-token",
+        "next-auth.session-token",
+        "__Secure-next-auth.session-token"
+      ];
+      for (const name of candidateNames) {
+        const val = nextReq.cookies.get(name)?.value;
+        if (val) {
+          sessionToken = val;
+          sessionCookieName = name;
+          break;
+        }
+      }
     }
   }
 
@@ -67,8 +80,20 @@ export async function getAdminSession(req?: NextRequest | Request): Promise<Admi
       const cookieStore = await cookies();
       if (!adminToken) adminToken = cookieStore.get("admin_token")?.value;
       if (!sessionToken) {
-        sessionToken = cookieStore.get("authjs.session-token")?.value ||
-                       cookieStore.get("__Secure-authjs.session-token")?.value;
+        const candidateNames = [
+          "authjs.session-token",
+          "__Secure-authjs.session-token",
+          "next-auth.session-token",
+          "__Secure-next-auth.session-token"
+        ];
+        for (const name of candidateNames) {
+          const val = cookieStore.get(name)?.value;
+          if (val) {
+            sessionToken = val;
+            sessionCookieName = name;
+            break;
+          }
+        }
       }
     } catch {
       // cookies() may throw outside Next server render / action context
@@ -97,9 +122,18 @@ export async function getAdminSession(req?: NextRequest | Request): Promise<Admi
   // 5. Try decoding NextAuth session token
   if (sessionToken) {
     try {
-      const secret = process.env.NEXTAUTH_SECRET || "echona-pirate-secret-key-super-secure-2026";
-      const salt = sessionToken.includes("__Secure-") ? "__Secure-authjs.session-token" : "authjs.session-token";
-      const token = await decode({ token: sessionToken, secret, salt });
+      const secret = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || "echona-pirate-secret-key-super-secure-2026";
+      const saltsToTry = [sessionCookieName, "authjs.session-token", "__Secure-authjs.session-token", "next-auth.session-token", "__Secure-next-auth.session-token"];
+      
+      let token: any = null;
+      for (const salt of saltsToTry) {
+        try {
+          token = await decode({ token: sessionToken, secret, salt });
+          if (token) break;
+        } catch {
+          // try next salt
+        }
+      }
       if (token && (token.role === "ADMIN" || isAdminEmail(token.email as string))) {
         return {
           user: {
