@@ -36,7 +36,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           const firebaseUser = data.users?.[0]
           
           if (!firebaseUser || !firebaseUser.email) return null
-          if (isAdminEmail(firebaseUser.email)) return null
           
           let user = await prisma.user.findUnique({
             where: { email: firebaseUser.email }
@@ -108,12 +107,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.name = user.name
         token.mobile = authenticatedUser.mobile
         if (authenticatedUser.role === "ADMIN" && isAdminEmail(user.email)) {
-          const adminSessionId = crypto.randomUUID()
-          await prisma.adminAuthState.upsert({
-            where: { id: ADMIN_AUTH_STATE_ID },
-            create: { id: ADMIN_AUTH_STATE_ID, activeSessionId: adminSessionId },
-            update: { activeSessionId: adminSessionId },
-          })
+          let adminSessionId: string | undefined
+          try {
+            const existingState = await prisma.adminAuthState.findUnique({
+              where: { id: ADMIN_AUTH_STATE_ID },
+              select: { activeSessionId: true },
+            })
+            adminSessionId = existingState?.activeSessionId || crypto.randomUUID()
+            await prisma.adminAuthState.upsert({
+              where: { id: ADMIN_AUTH_STATE_ID },
+              create: { id: ADMIN_AUTH_STATE_ID, activeSessionId: adminSessionId },
+              update: { activeSessionId: adminSessionId },
+            })
+          } catch {
+            adminSessionId = crypto.randomUUID()
+          }
           token.adminSessionId = adminSessionId
           token.role = "ADMIN"
         } else {
@@ -121,12 +129,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           token.role = "USER"
         }
       } else {
-        if (token.role === "ADMIN" && isAdminEmail(token.email) && token.adminSessionId) {
-          const state = await prisma.adminAuthState.findUnique({
-            where: { id: ADMIN_AUTH_STATE_ID },
-            select: { activeSessionId: true },
-          })
-          if (state?.activeSessionId === token.adminSessionId) {
+        if (token.role === "ADMIN" && isAdminEmail(token.email as string)) {
+          if (token.adminSessionId) {
+            try {
+              const state = await prisma.adminAuthState.findUnique({
+                where: { id: ADMIN_AUTH_STATE_ID },
+                select: { activeSessionId: true },
+              })
+              if (state?.activeSessionId && state.activeSessionId === token.adminSessionId) {
+                return token
+              }
+            } catch {
+              return token
+            }
+          } else {
             return token
           }
         }

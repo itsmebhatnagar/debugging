@@ -34,7 +34,7 @@ export async function getAdminSession(req?: NextRequest | Request): Promise<Admi
       return {
         user: {
           id: session.user.id || "admin",
-          email: session.user.email || "admin@debugging2026.com",
+          email: session.user.email || "itsmebhatnagar.29@gmail.com",
           name: session.user.name || "Admin",
           role: "ADMIN",
         },
@@ -109,7 +109,7 @@ export async function getAdminSession(req?: NextRequest | Request): Promise<Admi
         return {
           user: {
             id: decoded.id || "admin",
-            email: decoded.email || "admin@debugging2026.com",
+            email: decoded.email || "itsmebhatnagar.29@gmail.com",
             name: decoded.name || "Admin",
             role: "ADMIN",
           },
@@ -140,7 +140,7 @@ export async function getAdminSession(req?: NextRequest | Request): Promise<Admi
         return {
           user: {
             id: (token.id as string) || "admin",
-            email: (token.email as string) || "admin@debugging2026.com",
+            email: (token.email as string) || "itsmebhatnagar.29@gmail.com",
             name: (token.name as string) || "Admin",
             role: "ADMIN",
           },

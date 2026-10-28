@@ -8,7 +8,7 @@ export default auth(async (req) => {
   let isLoggedIn = !!req.auth
   let userRole = req.auth?.user?.role
 
-  if (req.auth?.user?.email && req.auth.user.role === "ADMIN" && isAdminEmail(req.auth.user.email)) {
+  if (req.auth?.user?.email && isAdminEmail(req.auth.user.email)) {
     isLoggedIn = true
     userRole = "ADMIN"
   }
@@ -63,7 +63,7 @@ export default auth(async (req) => {
 
   // Prevent logged-in users from accessing login/register pages
   if (isLoggedIn && (nextUrl.pathname === "/login" || nextUrl.pathname === "/register" || nextUrl.pathname === "/admin/login")) {
-    const redirectUrl = userRole === "ADMIN" ? "/admin" : "/dashboard"
+    const redirectUrl = userRole === "ADMIN" ? "/admin/dashboard" : "/dashboard"
     return NextResponse.redirect(new URL(redirectUrl, nextUrl))
   }
 

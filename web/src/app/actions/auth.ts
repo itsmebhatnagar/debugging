@@ -5,6 +5,8 @@ import { AuthError } from "next-auth"
 import bcrypt from "bcryptjs"
 import { prisma } from "@/lib/prisma"
 import { isAdminEmail } from "@/lib/admin-access"
+import { createAdminToken } from "@/lib/admin-token"
+import { cookies } from "next/headers"
 
 const loginLimiter = new Map<string, { count: number; expiresAt: number }>()
 
@@ -20,7 +22,7 @@ export async function authenticate(
   // Rate Limiting
   const now = Date.now()
   const limitWindow = 15 * 60 * 1000 // 15 minutes
-  const maxAttempts = 10
+  const maxAttempts = 15
 
   let limitRecord = loginLimiter.get(email)
   if (limitRecord) {
@@ -53,6 +55,23 @@ export async function authenticate(
   }
 
   const redirectTo = isAdmin ? "/admin/dashboard" : "/dashboard"
+
+  // Set admin_token cookie if admin so that all admin sub-panels work seamlessly
+  if (isAdmin && userRecord) {
+    try {
+      const token = await createAdminToken(userRecord)
+      const cookieStore = await cookies()
+      cookieStore.set("admin_token", token, {
+        httpOnly: false,
+        secure: process.env.NODE_ENV === "production",
+        path: "/",
+        sameSite: "lax",
+        maxAge: 60 * 60 * 24 * 7,
+      })
+    } catch (e) {
+      console.error("Error setting admin_token cookie:", e)
+    }
+  }
 
   try {
     await signIn("credentials", {

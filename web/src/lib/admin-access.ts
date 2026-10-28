@@ -1,5 +1,13 @@
-export const ADMIN_EMAIL = "admin@debugging2026.com"
+const ADMIN_EMAILS = new Set([
+  "itsmebhatnagar.29@gmail.com",
+  "admin@debugging2026.com",
+  "admin@echona.com",
+])
+
+export const ADMIN_EMAIL = "itsmebhatnagar.29@gmail.com"
 
 export function isAdminEmail(email: string | null | undefined): boolean {
-  return email !== null && email !== undefined && email.trim().toLowerCase() === ADMIN_EMAIL
+  if (!email) return false
+  const normalized = email.trim().toLowerCase()
+  return ADMIN_EMAILS.has(normalized)
 }
