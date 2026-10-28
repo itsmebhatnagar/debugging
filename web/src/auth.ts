@@ -69,10 +69,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null
         const identifier = (credentials.email as string).trim().toLowerCase()
+        console.log("[Auth.ts] authorize called with identifier:", identifier)
         
         const user = await prisma.user.findUnique({
           where: { email: identifier }
         })
+        console.log("[Auth.ts] user found in DB:", !!user, "hasPassword:", !!user?.password)
         
         if (!user || !user.password) return null
 
@@ -80,6 +82,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           credentials.password as string,
           user.password
         )
+        console.log("[Auth.ts] passwordsMatch:", passwordsMatch)
 
         if (passwordsMatch) {
           // Return user object including role and mobile

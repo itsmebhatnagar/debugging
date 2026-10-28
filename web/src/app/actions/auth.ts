@@ -14,7 +14,9 @@ export async function authenticate(
   prevState: string | undefined,
   formData: FormData,
 ) {
+  console.log("[Authenticate] START");
   const email = (formData.get("email") as string)?.trim().toLowerCase()
+  console.log("[Authenticate] email:", email);
   if (!email) return "Email is required."
   const password = formData.get("password") as string
   if (!password) return "Password is required."
@@ -44,22 +46,27 @@ export async function authenticate(
   let userRecord = null
 
   try {
+    console.log("[Authenticate] Looking up user in DB...");
     userRecord = await prisma.user.findUnique({
       where: { email }
     })
+    console.log("[Authenticate] User record found:", !!userRecord);
     if (userRecord && userRecord.role === "ADMIN" && isAdminEmail(userRecord.email)) {
       isAdmin = true
     }
   } catch (err) {
-    console.error("User lookup error during authenticate:", err)
+    console.error("[Authenticate] User lookup error during authenticate:", err)
   }
 
   const redirectTo = isAdmin ? "/admin/dashboard" : "/dashboard"
+  console.log("[Authenticate] isAdmin:", isAdmin, "redirectTo:", redirectTo);
 
   // Set admin_token cookie if admin so that all admin sub-panels work seamlessly
   if (isAdmin && userRecord) {
     try {
+      console.log("[Authenticate] Creating admin token...");
       const token = await createAdminToken(userRecord)
+      console.log("[Authenticate] Setting admin_token cookie...");
       const cookieStore = await cookies()
       cookieStore.set("admin_token", token, {
         httpOnly: false,
@@ -68,18 +75,22 @@ export async function authenticate(
         sameSite: "lax",
         maxAge: 60 * 60 * 24 * 7,
       })
+      console.log("[Authenticate] Cookie set successfully.");
     } catch (e) {
-      console.error("Error setting admin_token cookie:", e)
+      console.error("[Authenticate] Error setting admin_token cookie:", e)
     }
   }
 
   try {
+    console.log("[Authenticate] Calling signIn('credentials')...");
     await signIn("credentials", {
       email,
       password,
       redirectTo,
     })
+    console.log("[Authenticate] signIn returned successfully.");
   } catch (error) {
+    console.error("[Authenticate] signIn caught error:", error);
     if (error instanceof AuthError) {
       switch (error.type) {
         case "CredentialsSignin":

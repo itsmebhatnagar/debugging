@@ -1,25 +1,50 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
-import { useActionState } from "react"
-import { authenticate } from "@/app/actions/auth"
+import React, { useState } from "react"
 import Link from "next/link"
 
 export default function LoginPage() {
-  const [errorMessage, dispatch, isPending] = useActionState(authenticate, undefined)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [focused, setFocused] = useState<string | null>(null)
   const [toastError, setToastError] = useState("")
+  const [isPending, setIsPending] = useState(false)
 
-  useEffect(() => {
-    if (errorMessage) {
-      setToastError(errorMessage)
-      const timer = setTimeout(() => setToastError(""), 4500)
-      return () => clearTimeout(timer)
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (isPending) return
+    setIsPending(true)
+    setToastError("")
+
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ email: email.trim(), password }),
+      })
+
+      const data = await res.json()
+      if (!res.ok) {
+        setToastError(data.error || "Invalid email or password.")
+        setTimeout(() => setToastError(""), 4500)
+        setIsPending(false)
+        return
+      }
+
+      if (data.token) {
+        localStorage.setItem("admin_token", data.token)
+        document.cookie = "admin_token=" + data.token + "; path=/; max-age=604800; SameSite=Lax"
+      }
+
+      window.location.href = data.redirectTo || (data.role === "ADMIN" ? "/admin/dashboard" : "/dashboard")
+    } catch {
+      setToastError("Network error. Please try again.")
+      setTimeout(() => setToastError(""), 4500)
+      setIsPending(false)
     }
-  }, [errorMessage])
+  }
 
   return (
     <div className="fixed inset-0 flex items-center justify-center overflow-hidden" style={{ background: "#040302" }}>
@@ -167,7 +192,7 @@ export default function LoginPage() {
             </div>
 
             {/* FORM */}
-            <form action={dispatch} className="w-full flex flex-col relative" style={{ gap: "16px" }}>
+            <form onSubmit={handleSubmit} className="w-full flex flex-col relative" style={{ gap: "16px" }}>
 
               {/* CREW EMAIL / ID */}
               <div>
