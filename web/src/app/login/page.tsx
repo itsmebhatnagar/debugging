@@ -49,7 +49,12 @@ export default function LoginPage() {
 
       if (data.token) {
         localStorage.setItem("admin_token", data.token)
-        document.cookie = "admin_token=" + data.token + "; path=/; max-age=604800; SameSite=Lax"
+        const isHttps = typeof window !== "undefined" && window.location.protocol === "https:"
+        document.cookie =
+          "admin_token=" +
+          data.token +
+          "; path=/; max-age=604800; SameSite=Lax" +
+          (isHttps ? "; Secure" : "")
       }
 
       window.location.href = data.redirectTo || (data.role === "ADMIN" ? "/admin/dashboard" : "/dashboard")

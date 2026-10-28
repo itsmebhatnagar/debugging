@@ -121,16 +121,13 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // 2. Set NextAuth session cookie for both user and admin
+    // 2. Set NextAuth session cookie for both user and admin with matching salts
     try {
       const secret =
         process.env.AUTH_SECRET ||
         process.env.NEXTAUTH_SECRET ||
         "echona-pirate-secret-key-super-secure-2026";
       const isProduction = process.env.NODE_ENV === "production";
-      const cookieName = isProduction
-        ? "__Secure-authjs.session-token"
-        : "authjs.session-token";
 
       const jwtPayload = {
         id: user.id,
@@ -142,14 +139,15 @@ export async function POST(req: NextRequest) {
         sub: user.id,
       };
 
-      const sessionToken = await encode({
+      // 2a. Standard session token encoded with "authjs.session-token" salt
+      const plainSessionToken = await encode({
         token: jwtPayload,
         secret,
-        salt: cookieName,
+        salt: "authjs.session-token",
         maxAge: 30 * 24 * 60 * 60,
       });
 
-      response.cookies.set(cookieName, sessionToken, {
+      response.cookies.set("authjs.session-token", plainSessionToken, {
         httpOnly: true,
         secure: isProduction,
         path: "/",
@@ -157,8 +155,16 @@ export async function POST(req: NextRequest) {
         maxAge: 30 * 24 * 60 * 60,
       });
 
+      // 2b. Secure session token encoded with "__Secure-authjs.session-token" salt
       if (isProduction) {
-        response.cookies.set("authjs.session-token", sessionToken, {
+        const secureSessionToken = await encode({
+          token: jwtPayload,
+          secret,
+          salt: "__Secure-authjs.session-token",
+          maxAge: 30 * 24 * 60 * 60,
+        });
+
+        response.cookies.set("__Secure-authjs.session-token", secureSessionToken, {
           httpOnly: true,
           secure: true,
           path: "/",
