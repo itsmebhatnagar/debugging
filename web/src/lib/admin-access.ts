@@ -1,6 +1,7 @@
 const ADMIN_EMAILS = new Set([
   "itsmebhatnagar.29@gmail.com",
   "admin@debugging2026.com",
+  "echona@debugging2026.com",
   "admin@echona.com",
 ])
 
