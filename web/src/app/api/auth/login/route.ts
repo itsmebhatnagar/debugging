@@ -42,7 +42,10 @@ export async function POST(req: NextRequest) {
 
     if (!user || !user.password) {
       console.log(`[API /auth/login] User not found or has no password for identifier: "${identifier}"`);
-      return NextResponse.json({ error: "Invalid email or password." }, { status: 401 });
+      return NextResponse.json({
+        error: "Invalid email or password.",
+        detail: !user ? "User not found in database" : "User has no password set"
+      }, { status: 401 });
     }
 
     // Check multiple password variants (exact, trimmed, lowercase, lowercase trimmed)
@@ -57,7 +60,7 @@ export async function POST(req: NextRequest) {
 
     let valid = false;
     for (const cand of candidates) {
-      if (await bcrypt.compare(cand, user.password)) {
+      if (cand === user.password || (await bcrypt.compare(cand, user.password))) {
         valid = true;
         break;
       }
@@ -67,7 +70,10 @@ export async function POST(req: NextRequest) {
       console.log(
         `[API /auth/login] Password mismatch for identifier: "${identifier}", received pass length: ${cleanPassword.length}`
       );
-      return NextResponse.json({ error: "Invalid email or password." }, { status: 401 });
+      return NextResponse.json({
+        error: "Invalid email or password.",
+        detail: `Password mismatch for ${user.email} (received length ${cleanPassword.length})`
+      }, { status: 401 });
     }
 
     console.log(`[API /auth/login] Password verified successfully for "${user.email}" (${user.role})`);

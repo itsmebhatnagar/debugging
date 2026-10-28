@@ -40,9 +40,9 @@ export default function LoginPage() {
 
       const data = await res.json()
       if (!res.ok) {
-        console.warn("[Login] Auth response failed:", data.error)
-        setToastError(data.error || "Invalid email or password.")
-        setTimeout(() => setToastError(""), 4500)
+        console.warn("[Login] Auth response failed:", data.error, data.detail || "")
+        setToastError(data.detail ? `${data.error} [${data.detail}]` : (data.error || "Invalid email or password."))
+        setTimeout(() => setToastError(""), 5000)
         setIsPending(false)
         return
       }
