@@ -11,22 +11,36 @@ export default function LoginPage() {
   const [toastError, setToastError] = useState("")
   const [isPending, setIsPending] = useState(false)
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (isPending) return
     setIsPending(true)
     setToastError("")
+
+    const form = e.currentTarget
+    const emailEl = form.elements.namedItem("email") as HTMLInputElement | null
+    const passEl = form.elements.namedItem("password") as HTMLInputElement | null
+
+    const submittedEmail = (emailEl?.value || email || "")
+      .replace(/[\u200B-\u200D\uFEFF]/g, "")
+      .trim()
+    const submittedPassword = (passEl?.value || password || "")
+      .replace(/[\u200B-\u200D\uFEFF]/g, "")
+      .trim()
+
+    console.log("[Login] Submitting login for:", submittedEmail, "passLength:", submittedPassword.length)
 
     try {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ email: email.trim(), password }),
+        body: JSON.stringify({ email: submittedEmail, password: submittedPassword }),
       })
 
       const data = await res.json()
       if (!res.ok) {
+        console.warn("[Login] Auth response failed:", data.error)
         setToastError(data.error || "Invalid email or password.")
         setTimeout(() => setToastError(""), 4500)
         setIsPending(false)
@@ -39,7 +53,8 @@ export default function LoginPage() {
       }
 
       window.location.href = data.redirectTo || (data.role === "ADMIN" ? "/admin/dashboard" : "/dashboard")
-    } catch {
+    } catch (err) {
+      console.error("[Login] Network/auth error:", err)
       setToastError("Network error. Please try again.")
       setTimeout(() => setToastError(""), 4500)
       setIsPending(false)
@@ -48,6 +63,16 @@ export default function LoginPage() {
 
   return (
     <div className="fixed inset-0 flex items-center justify-center overflow-hidden" style={{ background: "#040302" }}>
+      <style>{`
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover, 
+        input:-webkit-autofill:focus, 
+        input:-webkit-autofill:active {
+          -webkit-box-shadow: 0 0 0 1000px #1E120A inset !important;
+          -webkit-text-fill-color: #F4E6C2 !important;
+          transition: background-color 5000s ease-in-out 0s;
+        }
+      `}</style>
       {/* ── Global Error Toast ── */}
       <div 
         className={`fixed top-8 left-1/2 -translate-x-1/2 z-50 transition-all duration-500 pointer-events-none flex items-center gap-3 ${toastError ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-8"}`}

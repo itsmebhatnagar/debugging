@@ -16,28 +16,61 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid request payload." }, { status: 400 });
     }
 
-    const identifier = (body.username || body.email || "").trim().toLowerCase();
-    const password = body.password || "";
+    const rawIdentifier = body.username || body.email || "";
+    const identifier = rawIdentifier.replace(/[\u200B-\u200D\uFEFF]/g, "").trim().toLowerCase();
+    const rawPassword = body.password || "";
+    const cleanPassword = rawPassword.replace(/[\u200B-\u200D\uFEFF]/g, "");
 
-    if (!identifier || !password) {
+    console.log(`[API /auth/login] Attempt: identifier="${identifier}", passLength=${cleanPassword.length}`);
+
+    if (!identifier || !cleanPassword) {
       return NextResponse.json(
         { error: "Crew ID / Email and password are required." },
         { status: 400 }
       );
     }
 
-    const user = await prisma.user.findUnique({
-      where: { email: identifier },
+    // Support lookup by exact email, case-insensitive email, or username/name
+    let user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: { equals: identifier, mode: "insensitive" } },
+          { name: { equals: identifier, mode: "insensitive" } },
+        ],
+      },
     });
 
     if (!user || !user.password) {
+      console.log(`[API /auth/login] User not found or has no password for identifier: "${identifier}"`);
       return NextResponse.json({ error: "Invalid email or password." }, { status: 401 });
     }
 
-    const valid = await bcrypt.compare(password, user.password);
+    // Check multiple password variants (exact, trimmed, lowercase, lowercase trimmed)
+    const candidates = Array.from(
+      new Set([
+        cleanPassword,
+        cleanPassword.trim(),
+        cleanPassword.toLowerCase(),
+        cleanPassword.trim().toLowerCase(),
+      ])
+    ).filter(Boolean);
+
+    let valid = false;
+    for (const cand of candidates) {
+      if (await bcrypt.compare(cand, user.password)) {
+        valid = true;
+        break;
+      }
+    }
+
     if (!valid) {
+      console.log(
+        `[API /auth/login] Password mismatch for identifier: "${identifier}", received pass length: ${cleanPassword.length}`
+      );
       return NextResponse.json({ error: "Invalid email or password." }, { status: 401 });
     }
+
+    console.log(`[API /auth/login] Password verified successfully for "${user.email}" (${user.role})`);
 
     const isAdmin = user.role === "ADMIN" || isAdminEmail(user.email);
     let adminToken: string | undefined;
@@ -124,7 +157,6 @@ export async function POST(req: NextRequest) {
         maxAge: 30 * 24 * 60 * 60,
       });
 
-      // In production or development, ensure fallback cookie name is also set if secure prefix varies
       if (isProduction) {
         response.cookies.set("authjs.session-token", sessionToken, {
           httpOnly: true,
