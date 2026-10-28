@@ -12,7 +12,7 @@ ON CONFLICT ("id") DO NOTHING;
 UPDATE "User"
 SET "role" = 'USER'
 WHERE "role" = 'ADMIN'
-  AND "email" <> 'admin@debugging2026.com';
+  AND "email" <> 'debugging@echona.com';
 
 CREATE UNIQUE INDEX IF NOT EXISTS "User_single_admin_role_key"
 ON "User" ("role")

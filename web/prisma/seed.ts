@@ -2,7 +2,7 @@ import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
-const ADMIN_EMAIL = 'admin@debugging2026.com'
+const ADMIN_EMAIL = 'debugging@echona.com'
 
 async function main() {
   console.log('Seeding database...')
