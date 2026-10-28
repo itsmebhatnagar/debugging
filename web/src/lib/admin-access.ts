@@ -1,11 +1,10 @@
 const ADMIN_EMAILS = new Set([
-  "itsmebhatnagar.29@gmail.com",
+  "debugging@echona.com",
   "admin@debugging2026.com",
-  "echona@debugging2026.com",
   "admin@echona.com",
 ])
 
-export const ADMIN_EMAIL = "itsmebhatnagar.29@gmail.com"
+export const ADMIN_EMAIL = "debugging@echona.com"
 
 export function isAdminEmail(email: string | null | undefined): boolean {
   if (!email) return false
