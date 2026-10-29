@@ -8,6 +8,8 @@ import { compileCode, submitFinalCode, saveDraft, startRoundNow, joinActiveRound
 import Link from "next/link"
 import { Spotlight } from "@/components/ui/spotlight"
 import { Rivet } from "@/components/icons/Rivet"
+import { CompassRose } from "@/components/icons/CompassRose"
+import { ShipWheel } from "@/components/icons/ShipWheel"
 import {
   Anchor,
   Compass,
@@ -1529,188 +1531,305 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
         </div>
       )}
 
-      {/* ── FULLSCREEN OVERLAY ───────────────────────────────────── */}
+      {/* ── FULLSCREEN & SECURITY LOCKOUT OVERLAY (PIRATE THEME) ─── */}
       {needsFullscreen && (!isFullscreen || fullscreenExited) && (
         <div
-          className="fixed inset-0 z-[9999] flex flex-col items-center justify-center p-3 sm:p-6 text-center overflow-hidden"
+          className="fixed inset-0 z-[9999] flex flex-col items-center justify-center p-3 sm:p-6 text-center overflow-hidden select-none"
           style={{
             background: fullscreenExited
-              ? "radial-gradient(ellipse at center, rgba(30,5,5,0.96) 0%, rgba(10,0,0,0.98) 70%)"
-              : "radial-gradient(ellipse at center, rgba(12,18,32,0.95) 0%, rgba(5,8,16,0.98) 70%)",
-            backdropFilter: "blur(20px)",
+              ? "radial-gradient(ellipse at center, rgba(42,8,8,0.97) 0%, rgba(10,2,2,0.99) 75%)"
+              : "radial-gradient(ellipse at center, rgba(28,16,11,0.96) 0%, rgba(8,5,3,0.99) 75%)",
+            backdropFilter: "blur(24px)",
           }}
         >
-          {/* Ambient orb */}
+          {/* Subtle Pirate Map / World Background Texture */}
+          <div
+            className="absolute inset-0 pointer-events-none opacity-20"
+            style={{
+              backgroundImage: 'url("/login-bg.png")',
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+              mixBlendMode: fullscreenExited ? "color-dodge" : "overlay",
+              filter: fullscreenExited ? "contrast(140%) sepia(80%) hue-rotate(320deg)" : "contrast(120%) sepia(40%)",
+            }}
+          />
+
+          {/* Vignette Layer */}
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background: "radial-gradient(ellipse 65% 65% at 50% 50%, transparent 0%, rgba(0,0,0,0.65) 60%, rgba(0,0,0,0.95) 100%)",
+            }}
+          />
+
+          {/* Glowing Ambient Atmospheric Halo */}
           <div
             className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] rounded-full"
             style={{
               background: fullscreenExited
-                ? "radial-gradient(circle, rgba(239,68,68,0.12) 0%, transparent 70%)"
-                : "radial-gradient(circle, rgba(212,175,55,0.1) 0%, transparent 70%)",
-              animation: "orbPulse 3s ease-in-out infinite",
+                ? "radial-gradient(circle, rgba(220,38,38,0.18) 0%, rgba(127,29,29,0.06) 50%, transparent 70%)"
+                : "radial-gradient(circle, rgba(212,175,55,0.16) 0%, rgba(161,122,30,0.05) 50%, transparent 70%)",
+              animation: "orbPulse 3.5s ease-in-out infinite",
             }}
           />
 
-          {/* Tactical Coordinates Header */}
-          <div className="relative z-10 mb-2.5 lg:mb-2 flex items-center gap-2 text-[10px] font-cinzel font-bold tracking-[0.3em] uppercase">
-            <span className={`w-1.5 h-1.5 rounded-full ${fullscreenExited ? "bg-red-400" : "bg-[#d4af37]"}`} />
-            <span className={fullscreenExited ? "text-red-400/80" : "text-[#d4af37]/80"}>
+          {/* Top Banner Ribbon */}
+          <div className="relative z-10 mb-3 flex items-center justify-center gap-2.5 sm:gap-3 text-[10px] sm:text-[11px] font-cinzel font-black tracking-[0.3em] uppercase">
+            <span className={`w-2 h-2 rounded-full ${fullscreenExited ? "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)]" : "bg-[#d4af37] shadow-[0_0_8px_rgba(212,175,55,0.8)]"} animate-pulse`} />
+            <CompassRose className={`w-3.5 h-3.5 ${fullscreenExited ? "text-red-400" : "text-[#d4af37]"}`} />
+            <span className={fullscreenExited ? "text-red-300 drop-shadow-[0_1px_4px_rgba(0,0,0,0.9)]" : "text-[#f4ede0] drop-shadow-[0_1px_4px_rgba(0,0,0,0.9)]"}>
               {fullscreenExited ? "ADMIRALTY COURT MARTIAL · CODE OF THE HIGH SEAS" : "BATTLE PROTOCOL · SECURE ARENA ENTRY"}
             </span>
-            <span className={`w-1.5 h-1.5 rounded-full ${fullscreenExited ? "bg-red-400" : "bg-[#d4af37]"}`} />
+            <CompassRose className={`w-3.5 h-3.5 ${fullscreenExited ? "text-red-400" : "text-[#d4af37]"}`} />
+            <span className={`w-2 h-2 rounded-full ${fullscreenExited ? "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)]" : "bg-[#d4af37] shadow-[0_0_8px_rgba(212,175,55,0.8)]"} animate-pulse`} />
           </div>
 
           <div className="relative z-10 w-full max-w-xl animate-treasure-in max-h-[96vh] lg:max-h-[92vh] flex flex-col">
             {fullscreenExited ? (
-              /* ── PERMANENT LOCKOUT SCREEN ── */
-              <div className="relative w-full overflow-hidden rounded-[2.5rem] bg-gradient-to-b from-red-500/40 via-[#d4af37]/20 to-red-500/35 p-[1px] shadow-[0_25px_80px_rgba(0,0,0,0.9),0_0_50px_rgba(239,68,68,0.15)] flex flex-col min-h-0">
-                <Spotlight className="from-red-500/30 via-[#d4af37]/20 to-transparent blur-3xl opacity-35" size={450} />
+              /* ── PERMANENT LOCKOUT SCREEN (PIRATE COURT MARTIAL) ── */
+              <div
+                className="relative w-full rounded-[2rem] p-[2px] shadow-[0_30px_90px_rgba(0,0,0,0.95),0_0_50px_rgba(239,68,68,0.25)] flex flex-col min-h-0"
+                style={{
+                  background: "linear-gradient(180deg, rgba(239,68,68,0.85) 0%, rgba(127,29,29,0.3) 35%, rgba(185,28,28,0.65) 100%)",
+                }}
+              >
+                <Spotlight className="from-red-500/40 via-red-900/30 to-transparent blur-3xl opacity-35" size={500} />
 
-                <div className="relative w-full rounded-[2.5rem] bg-[#120a0a]/94 backdrop-blur-2xl p-5 sm:p-7 lg:p-5 border border-red-500/20 flex flex-col items-center text-center overflow-y-auto scrollbar-none">
-                  {/* Corner brackets */}
-                  <span className="pointer-events-none absolute top-4 left-4 w-3.5 h-3.5 border-t-2 border-l-2 border-red-500/60" />
-                  <span className="pointer-events-none absolute top-4 right-4 w-3.5 h-3.5 border-t-2 border-r-2 border-red-500/60" />
-                  <span className="pointer-events-none absolute bottom-4 left-4 w-3.5 h-3.5 border-b-2 border-l-2 border-red-500/60" />
-                  <span className="pointer-events-none absolute bottom-4 right-4 w-3.5 h-3.5 border-b-2 border-r-2 border-red-500/60" />
+                <div
+                  className="relative w-full rounded-[2rem] p-5 sm:p-7 border border-red-500/40 flex flex-col items-center text-center overflow-y-auto scrollbar-none"
+                  style={{
+                    background: "linear-gradient(180deg, #240909 0%, #130404 60%, #0a0202 100%)",
+                    boxShadow: "inset 0 2px 10px rgba(255,100,100,0.1), inset 0 0 50px rgba(0,0,0,0.9)",
+                  }}
+                >
+                  {/* Ornate Blood-Iron Corner Rivets */}
+                  <Rivet className="absolute top-4 left-4 w-3 h-3 text-red-400 opacity-80" />
+                  <Rivet className="absolute top-4 right-4 w-3 h-3 text-red-400 opacity-80" />
+                  <Rivet className="absolute bottom-4 left-4 w-3 h-3 text-red-400 opacity-80" />
+                  <Rivet className="absolute bottom-4 right-4 w-3 h-3 text-red-400 opacity-80" />
 
-                  {/* Skull Crest Medallion */}
-                  <div className="relative mb-3 lg:mb-2.5 flex items-center justify-center">
+                  {/* Corner Filigree Brackets */}
+                  <span className="pointer-events-none absolute top-3 left-3 w-5 h-5 border-t-2 border-l-2 border-red-500/70 rounded-tl-sm" />
+                  <span className="pointer-events-none absolute top-3 right-3 w-5 h-5 border-t-2 border-r-2 border-red-500/70 rounded-tr-sm" />
+                  <span className="pointer-events-none absolute bottom-3 left-3 w-5 h-5 border-b-2 border-l-2 border-red-500/70 rounded-bl-sm" />
+                  <span className="pointer-events-none absolute bottom-3 right-3 w-5 h-5 border-b-2 border-r-2 border-red-500/70 rounded-br-sm" />
+
+                  {/* Jolly Roger Skull Medallion */}
+                  <div className="relative mb-3 flex items-center justify-center">
                     <div className="absolute inset-0 rounded-full animate-ping opacity-25 bg-red-500" />
-                    <div className="absolute -inset-2.5 rounded-full border border-dashed border-red-500/40 animate-[spin_40s_linear_infinite]" />
-                    <div className="absolute -inset-1 rounded-full border border-red-500/30" />
+                    <div className="absolute -inset-3 rounded-full border border-dashed border-red-500/40 animate-[spin_30s_linear_infinite]" />
+                    <div className="absolute -inset-1.5 rounded-full border border-red-500/40" />
 
                     <div
-                      className="relative flex h-16 w-16 lg:h-16 lg:w-16 items-center justify-center rounded-2xl shadow-[0_0_35px_rgba(239,68,68,0.3)] border-2 border-red-500/60"
+                      className="relative flex h-16 w-16 items-center justify-center rounded-2xl shadow-[0_0_35px_rgba(239,68,68,0.45)] border-2 border-red-500"
                       style={{
-                        background: "radial-gradient(circle at 30% 30%, #260808 0%, #0d0202 75%)",
+                        background: "radial-gradient(circle at 35% 35%, #4a0f0f 0%, #150303 75%)",
                       }}
                     >
-                      <Skull className="w-8 h-8 lg:w-9 lg:h-9 text-red-400 drop-shadow-[0_2px_12px_rgba(239,68,68,0.7)]" strokeWidth={1.75} />
+                      <Skull className="w-10 h-10 text-red-400 drop-shadow-[0_0_15px_rgba(239,68,68,0.9)] animate-pulse" strokeWidth={1.8} />
                     </div>
                   </div>
 
                   {/* Status Pill */}
-                  <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full border border-red-500/50 bg-red-950/50 text-red-400 mb-2.5 font-cinzel text-[11px] font-bold tracking-[0.2em] uppercase">
+                  <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-red-500/60 bg-red-950/70 text-red-300 mb-2 font-cinzel text-[10px] font-bold tracking-[0.25em] uppercase shadow-[0_0_12px_rgba(239,68,68,0.3)]">
                     <AlertTriangle className="w-3.5 h-3.5 text-red-400 animate-pulse" />
-                    DISQUALIFIED FROM THIS ROUND
+                    <span>MUTINY CONDEMNED · ROUND DISQUALIFICATION</span>
                   </div>
 
                   {/* Headline */}
-                  <h1 className="font-cinzel text-2xl sm:text-3xl lg:text-2xl font-black text-[#fdf6e2] uppercase tracking-[0.08em] drop-shadow-[0_4px_24px_rgba(0,0,0,0.9)]">
-                    {dqReason === "TAB_SWITCH" ? "MUTINY DETECTED!" : "DISQUALIFIED"}
+                  <h1
+                    className="font-cinzel text-2xl sm:text-3xl font-black uppercase tracking-[0.1em] mb-1"
+                    style={{
+                      background: "linear-gradient(180deg, #FFAEAE 0%, #EF4444 50%, #991B1B 100%)",
+                      WebkitBackgroundClip: "text",
+                      WebkitTextFillColor: "transparent",
+                      filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.9))",
+                    }}
+                  >
+                    {dqReason === "TAB_SWITCH" ? "MUTINY DETECTED!" : "WALK THE PLANK!"}
                   </h1>
 
-                  {/* Subtle Ornamental Crimson Divider */}
-                  <div className="flex items-center justify-center gap-3 my-2 w-full max-w-xs opacity-75">
-                    <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-red-500 to-red-500/40" />
-                    <div className="w-1.5 h-1.5 rotate-45 border border-red-500 bg-red-500/40" />
-                    <div className="h-[1px] flex-1 bg-gradient-to-l from-transparent via-red-500 to-red-500/40" />
+                  {/* Crimson Nautical Divider */}
+                  <div className="flex items-center justify-center gap-3 my-2 w-full max-w-sm opacity-85">
+                    <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-red-500 to-red-500/60" />
+                    <Skull className="w-3.5 h-3.5 text-red-400" />
+                    <div className="h-[1px] flex-1 bg-gradient-to-l from-transparent via-red-500 to-red-500/60" />
                   </div>
 
-                  <p className="font-garamond text-xs sm:text-sm lg:text-xs text-[#c8b887] leading-relaxed max-w-lg mx-auto">
+                  <p className="font-garamond text-xs sm:text-sm text-[#e8c6c6] leading-relaxed max-w-lg mx-auto">
                     {dqReason === "TAB_SWITCH"
-                      ? "You switched tabs or minimized the arena window during an active battle."
-                      : "You exited fullscreen during an active battle."}{" "}
-                    All questions in this round have been{" "}
-                    <strong className="text-red-400 font-bold">automatically submitted</strong> to the High Admiral. You cannot attempt any more questions in this round.
+                      ? "Mutiny logged! You abandoned ship focus and strayed to other charts (switched tabs or minimized window)."
+                      : dqReason === "WINDOW_BLUR"
+                      ? "Lost the helm! Focus was diverted away from the battle arena during active combat."
+                      : "You deserted Fullscreen mode amidst active naval combat."}{" "}
+                    By maritime martial law, all answer scrolls in this trial have been{" "}
+                    <strong className="text-red-400 font-bold underline decoration-red-500/50">automatically seized and sealed</strong>. You cannot submit further answers for this round.
                   </p>
 
-                  {/* Status Dossier Card */}
-                  <div className="w-full rounded-xl border border-red-500/30 bg-[#1e0a0a]/80 backdrop-blur-md p-3 lg:p-2.5 text-center mt-3 shadow-[inset_0_1px_0_rgba(239,68,68,0.15)]">
-                    <Anchor className="w-5 h-5 text-red-400 mx-auto mb-1 opacity-80" />
-                    <p className="text-[11px] lg:text-[10px] font-cinzel font-bold text-red-400 tracking-[0.2em] uppercase">
-                      {autoSubmitDone ? "ALL QUESTIONS AUTO-SUBMITTED" : "TRANSMITTING SCROLLS TO ADMIRAL..."}
+                  {/* Sealed Scrolls Registry Card */}
+                  <div className="w-full rounded-2xl border border-red-500/40 bg-[#1c0808]/85 backdrop-blur-md p-3.5 sm:p-4 text-center my-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_4px_20px_rgba(0,0,0,0.5)]">
+                    <Anchor className="w-5 h-5 text-red-400 mx-auto mb-1 opacity-90 drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]" />
+                    <p className="text-[11px] sm:text-xs font-cinzel font-bold text-red-300 tracking-[0.2em] uppercase">
+                      {autoSubmitDone ? "SCROLLS SEALED & LOGGED IN FLEET REGISTRY" : "TRANSMITTING SCROLLS TO HIGH ADMIRAL..."}
                     </p>
-                    <p className="text-[11px] font-garamond text-[#a09483] mt-0.5 leading-relaxed">
+                    <p className="text-[11px] sm:text-xs font-garamond text-[#c4a8a8] mt-1 leading-relaxed">
                       {autoSubmitDone
-                        ? "All your answer scrolls have been sealed and logged in the Fleet Registry. Wait for the round to end."
-                        : "Dispatching your answer scrolls to the Admiral's flagship..."}
+                        ? "Your existing code has been formally sealed in the Admiralty Archives. Stand by until the round concludes."
+                        : "Sealing your parchment and dispatching to the Admiral's flagship..."}
                     </p>
                   </div>
 
                   {/* Action Navigation Buttons */}
-                  <div className="mt-3.5 flex flex-wrap justify-center gap-2.5 w-full">
+                  <div className="flex flex-col sm:flex-row items-center justify-center gap-2.5 w-full">
                     <Link
                       href="/standings"
-                      className="border border-[#d4af37]/60 bg-[#d4af37]/15 hover:bg-[#d4af37]/25 font-cinzel tracking-widest text-[#d4af37] rounded-xl px-5 py-2 text-[11px] uppercase font-bold transition-all shadow-[0_0_20px_rgba(212,175,55,0.1)]"
+                      className="group relative flex items-center justify-center gap-2 border-2 border-[#d4af37] bg-gradient-to-b from-[#2d1b0f] to-[#170e08] hover:from-[#3d2414] hover:to-[#221309] font-cinzel tracking-[0.2em] text-[#f4ede0] rounded-xl px-5 py-2.5 text-[11px] uppercase font-black transition-all shadow-[0_0_20px_rgba(212,175,55,0.25)] w-full sm:w-auto"
                     >
-                      VIEW BOUNTY BOARD
+                      <Trophy className="w-3.5 h-3.5 text-[#d4af37]" />
+                      <span>VIEW BOUNTY BOARD</span>
                     </Link>
                     <Link
                       href="/dashboard"
-                      className="border border-white/10 hover:border-[#d4af37]/30 bg-black/40 hover:bg-black/60 font-cinzel tracking-widest text-[#8e8271] hover:text-[#f4ede0] rounded-xl px-5 py-2 text-[11px] uppercase font-bold transition-all"
+                      className="group relative flex items-center justify-center gap-2 border border-[#d4af37]/40 bg-black/60 hover:bg-[#1a0f0a] font-cinzel tracking-[0.2em] text-[#c4b59b] hover:text-[#f4ede0] rounded-xl px-5 py-2.5 text-[11px] uppercase font-bold transition-all w-full sm:w-auto"
                     >
-                      RETURN TO HARBOR
+                      <ShipWheel className="w-3.5 h-3.5 text-[#c4b59b] group-hover:text-[#d4af37] transition-colors" />
+                      <span>RETURN TO HARBOR</span>
                     </Link>
                   </div>
 
-                  <p className="text-[9px] font-cinzel text-[#695e50] tracking-widest uppercase mt-2.5">
-                    THE ROUND CONTINUES FOR OTHER PIRATES · RESULTS WILL BE SHOWN AT SESSION CLOSE
+                  <p className="text-[9px] font-cinzel text-[#8f6e6e] tracking-widest uppercase mt-2.5">
+                    THE TRIAL CONTINUES FOR REMAINING FLEET · FINAL STANDINGS SHALL BE DECLARED AT CLOSE
                   </p>
                 </div>
               </div>
             ) : (
-              /* ── INITIAL FULLSCREEN REQUEST ── */
-              <div className="relative w-full overflow-hidden rounded-[2.5rem] bg-gradient-to-b from-[#d4af37]/35 via-[#d4af37]/15 to-[#d4af37]/30 p-[1px] shadow-[0_25px_80px_rgba(0,0,0,0.85)] flex flex-col min-h-0">
-                <Spotlight className="from-[#f4ede0] via-[#d4af37] to-transparent blur-3xl opacity-35" size={450} />
+              /* ── INITIAL FULLSCREEN REQUEST (PIRATE CAPTAIN DECREE) ── */
+              <div
+                className="relative w-full rounded-[2rem] p-[2px] shadow-[0_30px_90px_rgba(0,0,0,0.95),0_0_40px_rgba(212,175,55,0.2)] flex flex-col min-h-0"
+                style={{
+                  background: "linear-gradient(180deg, rgba(212,175,55,0.85) 0%, rgba(139,90,43,0.35) 35%, rgba(212,175,55,0.65) 100%)",
+                }}
+              >
+                <Spotlight className="from-[#f4ede0] via-[#d4af37] to-transparent blur-3xl opacity-30" size={500} />
 
-                <div className="relative w-full rounded-[2.5rem] bg-[#121620]/92 backdrop-blur-2xl p-5 sm:p-7 lg:p-5 border border-[#d4af37]/15 flex flex-col items-center text-center overflow-y-auto scrollbar-none">
-                  {/* Corner brackets */}
-                  <span className="pointer-events-none absolute top-4 left-4 w-3.5 h-3.5 border-t-2 border-l-2 border-[#d4af37]/50" />
-                  <span className="pointer-events-none absolute top-4 right-4 w-3.5 h-3.5 border-t-2 border-r-2 border-[#d4af37]/50" />
-                  <span className="pointer-events-none absolute bottom-4 left-4 w-3.5 h-3.5 border-b-2 border-l-2 border-[#d4af37]/50" />
-                  <span className="pointer-events-none absolute bottom-4 right-4 w-3.5 h-3.5 border-b-2 border-r-2 border-[#d4af37]/50" />
+                <div
+                  className="relative w-full rounded-[2rem] p-5 sm:p-7 border border-[#d4af37]/35 flex flex-col items-center text-center overflow-y-auto scrollbar-none"
+                  style={{
+                    background: "linear-gradient(180deg, #1c110b 0%, #100805 60%, #0a0503 100%)",
+                    boxShadow: "inset 0 2px 10px rgba(255,220,150,0.08), inset 0 0 40px rgba(0,0,0,0.85)",
+                  }}
+                >
+                  {/* Ornate Brass Corner Rivets */}
+                  <Rivet className="absolute top-4 left-4 w-3 h-3 text-[#d4af37] opacity-80" />
+                  <Rivet className="absolute top-4 right-4 w-3 h-3 text-[#d4af37] opacity-80" />
+                  <Rivet className="absolute bottom-4 left-4 w-3 h-3 text-[#d4af37] opacity-80" />
+                  <Rivet className="absolute bottom-4 right-4 w-3 h-3 text-[#d4af37] opacity-80" />
 
-                  {/* Ship Crest Medallion */}
-                  <div className="relative mb-3 lg:mb-2.5 flex items-center justify-center">
+                  {/* Corner Filigree Brackets */}
+                  <span className="pointer-events-none absolute top-3 left-3 w-5 h-5 border-t-2 border-l-2 border-[#d4af37]/70 rounded-tl-sm" />
+                  <span className="pointer-events-none absolute top-3 right-3 w-5 h-5 border-t-2 border-r-2 border-[#d4af37]/70 rounded-tr-sm" />
+                  <span className="pointer-events-none absolute bottom-3 left-3 w-5 h-5 border-b-2 border-l-2 border-[#d4af37]/70 rounded-bl-sm" />
+                  <span className="pointer-events-none absolute bottom-3 right-3 w-5 h-5 border-b-2 border-r-2 border-[#d4af37]/70 rounded-br-sm" />
+
+                  {/* Ship Helm Medallion */}
+                  <div className="relative mb-3 flex items-center justify-center">
                     <div className="absolute inset-0 rounded-full animate-ping opacity-20 bg-[#d4af37]" />
-                    <div className="absolute -inset-2.5 rounded-full border border-dashed border-[#d4af37]/30 animate-[spin_40s_linear_infinite]" />
-                    <div className="absolute -inset-1 rounded-full border border-[#d4af37]/20" />
+                    <div className="absolute -inset-3 rounded-full border border-dashed border-[#d4af37]/40 animate-[spin_40s_linear_infinite]" />
+                    <div className="absolute -inset-1.5 rounded-full border border-[#d4af37]/30" />
 
                     <div
-                      className="relative flex h-16 w-16 lg:h-16 lg:w-16 items-center justify-center rounded-2xl shadow-[0_0_35px_rgba(212,175,55,0.25)] border-2 border-[#d4af37]/60"
+                      className="relative flex h-16 w-16 items-center justify-center rounded-2xl shadow-[0_0_30px_rgba(212,175,55,0.35)] border-2 border-[#d4af37]"
                       style={{
-                        background: "radial-gradient(circle at 30% 30%, #1e293b 0%, #0a0f1d 75%)",
+                        background: "radial-gradient(circle at 35% 35%, #3d2315 0%, #150904 75%)",
                       }}
                     >
-                      <Ship className="w-8 h-8 lg:w-9 lg:h-9 text-[#ffd700] drop-shadow-[0_2px_10px_rgba(212,175,55,0.5)]" strokeWidth={1.75} />
+                      <ShipWheel className="w-10 h-10 text-[#f4ede0] drop-shadow-[0_2px_8px_rgba(212,175,55,0.7)] animate-[spin_60s_linear_infinite]" />
                     </div>
                   </div>
 
                   {/* Status Pill */}
-                  <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full border border-[#d4af37]/40 bg-[#d4af37]/10 text-[#d4af37] mb-2.5 font-cinzel text-[11px] font-bold tracking-[0.2em] uppercase">
+                  <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#d4af37]/50 bg-[#d4af37]/15 text-[#f4ede0] mb-2 font-cinzel text-[10px] font-bold tracking-[0.25em] uppercase shadow-[0_0_12px_rgba(212,175,55,0.2)]">
                     <Swords className="w-3.5 h-3.5 text-[#d4af37]" />
-                    BATTLE STATIONS · ACTION REQUIRED
+                    <span>BATTLE STATIONS · FULLSCREEN MANDATORY</span>
                   </div>
 
                   {/* Headline */}
-                  <h1 className="font-cinzel text-2xl sm:text-3xl lg:text-2xl font-black text-[#fdf6e2] uppercase tracking-[0.08em] drop-shadow-[0_4px_24px_rgba(0,0,0,0.9)]">
-                    ENTER FULLSCREEN
+                  <h1
+                    className="font-cinzel text-2xl sm:text-3xl font-black uppercase tracking-[0.1em] mb-1"
+                    style={{
+                      background: "linear-gradient(180deg, #FFFFFF 0%, #F5E5C0 50%, #C99E3D 100%)",
+                      WebkitBackgroundClip: "text",
+                      WebkitTextFillColor: "transparent",
+                      filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.8))",
+                    }}
+                  >
+                    HOIST THE COLORS
                   </h1>
 
-                  {/* Subtle Ornamental Gold Divider */}
-                  <div className="flex items-center justify-center gap-3 my-2 w-full max-w-xs opacity-75">
-                    <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-[#d4af37] to-[#d4af37]/40" />
-                    <div className="w-1.5 h-1.5 rotate-45 border border-[#d4af37] bg-[#d4af37]/40" />
-                    <div className="h-[1px] flex-1 bg-gradient-to-l from-transparent via-[#d4af37] to-[#d4af37]/40" />
+                  {/* Nautical Divider with Compass Rose */}
+                  <div className="flex items-center justify-center gap-3 my-2 w-full max-w-sm opacity-85">
+                    <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-[#d4af37] to-[#d4af37]/60" />
+                    <CompassRose className="w-4 h-4 text-[#d4af37]" />
+                    <div className="h-[1px] flex-1 bg-gradient-to-l from-transparent via-[#d4af37] to-[#d4af37]/60" />
                   </div>
 
-                  <p className="font-garamond text-xs sm:text-sm lg:text-xs text-[#c8b887] leading-relaxed max-w-lg mx-auto">
-                    The Captain has started the round! You must enter{" "}
-                    <strong className="text-[#d4af37]">fullscreen mode</strong> to access the coding arena. Exiting fullscreen, switching tabs, or cutting/copying/pasting will{" "}
-                    <strong className="text-red-400">permanently lock you out</strong> and auto-submit all questions in this round.
+                  <p className="font-garamond text-xs sm:text-sm text-[#e8d7b8] leading-relaxed max-w-lg mx-auto">
+                    The battle horn has sounded! By the Code of the High Seas, every contestant must lock their helm in{" "}
+                    <strong className="text-[#ffd700] font-bold">Fullscreen Mode</strong> before embarking.
                   </p>
 
+                  {/* 3 Fleet Rules Dossier Cards */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full my-3 text-left">
+                    <div className="p-2.5 rounded-xl border border-[#d4af37]/30 bg-[#160b07]/80 backdrop-blur-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <Maximize2 className="w-3.5 h-3.5 text-[#d4af37]" />
+                        <span className="font-cinzel text-[10px] font-bold text-[#d4af37] tracking-wider uppercase">Locked Helm</span>
+                      </div>
+                      <p className="font-garamond text-[11px] text-[#c4b59b] leading-tight">
+                        Fullscreen must remain engaged throughout the trial.
+                      </p>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl border border-[#d4af37]/30 bg-[#160b07]/80 backdrop-blur-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <AlertTriangle className="w-3.5 h-3.5 text-[#f59e0b]" />
+                        <span className="font-cinzel text-[10px] font-bold text-[#f59e0b] tracking-wider uppercase">No Mutiny</span>
+                      </div>
+                      <p className="font-garamond text-[11px] text-[#c4b59b] leading-tight">
+                        Tab switches and window focus loss are strictly forbidden.
+                      </p>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl border border-[#d4af37]/30 bg-[#160b07]/80 backdrop-blur-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <Scroll className="w-3.5 h-3.5 text-[#d4af37]" />
+                        <span className="font-cinzel text-[10px] font-bold text-[#d4af37] tracking-wider uppercase">Auto-Sealed</span>
+                      </div>
+                      <p className="font-garamond text-[11px] text-[#c4b59b] leading-tight">
+                        Breaching boundaries auto-submits all trial questions.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Primary Enter Fullscreen Button */}
                   <button
                     onClick={enterFullscreen}
-                    className="mt-3.5 flex items-center justify-center gap-2.5 border border-[#d4af37]/60 bg-gradient-to-r from-[#d4af37]/20 via-[#ffd700]/25 to-[#d4af37]/20 hover:from-[#d4af37]/35 hover:to-[#ffd700]/40 font-cinzel text-[#f4ede0] w-full rounded-2xl py-3 text-xs sm:text-sm font-bold tracking-[0.25em] uppercase transition-all shadow-[0_0_30px_rgba(212,175,55,0.2)]"
+                    className="group relative flex items-center justify-center gap-3 w-full py-3.5 px-6 rounded-xl font-cinzel font-black tracking-[0.25em] text-xs sm:text-sm uppercase text-[#fdf6e2] transition-all hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
+                    style={{
+                      background: "linear-gradient(180deg, #741714 0%, #420d0b 100%)",
+                      border: "2px solid #E2C36A",
+                      boxShadow: "0 0 25px rgba(226,195,106,0.35), inset 0 1px 0 rgba(255,255,255,0.25), 0 8px 16px rgba(0,0,0,0.6)",
+                    }}
                   >
-                    <Maximize2 className="w-4 h-4 text-[#ffd700]" />
-                    HOIST THE SAILS — ENTER FULLSCREEN
+                    <div className="absolute inset-0 bg-[#d4af37]/15 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <Maximize2 className="w-4 h-4 text-[#ffd700] group-hover:rotate-90 transition-transform duration-500" />
+                    <span className="relative z-10 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                      HOIST THE SAILS — ENTER FULLSCREEN
+                    </span>
                   </button>
 
-                  <p className="text-[9px] font-cinzel text-[#695e50] tracking-widest uppercase mt-2">
-                    PRESS F11 OR CLICK ABOVE · EXITING FULLSCREEN OR SWITCHING TABS = PERMANENT LOCKOUT
+                  <p className="text-[9px] font-cinzel text-[#8f7e65] tracking-widest uppercase mt-2.5">
+                    CLICK ABOVE OR PRESS F11 TO COMMENCE · LEAVING THE HELM PROVOKES MUTINY PROTOCOL
                   </p>
                 </div>
               </div>
@@ -1719,7 +1838,6 @@ export default function CompetitionArenaPage({ params }: { params: Promise<{ id:
         </div>
       )}
 
-      
       {/* ── MAIN IDE WORKSPACE ────────────────────────────────────── */}
       <div className="flex flex-1 min-h-0 overflow-hidden w-full max-w-[1920px] mx-auto gap-2.5 lg:gap-3">
         
