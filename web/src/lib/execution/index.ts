@@ -12,23 +12,20 @@ class FallbackExecutionService implements ExecutionService {
       return await this.dockerService.execute(request)
     } catch (dockerErr: any) {
       const msg = dockerErr?.message || ""
-      const isDockerInfraError =
-        msg.includes("Cannot connect to the Docker daemon") ||
-        msg.includes("docker API") ||
-        msg.includes("dockerDesktopLinuxEngine") ||
-        msg.includes("ENOENT") ||
-        msg.includes("spawn docker ENOENT") ||
-        msg.includes("The system cannot find the file specified") ||
-        msg.includes("docker daemon") ||
-        msg.includes("is the docker daemon running") ||
-        msg.includes("Docker daemon is not running") ||
-        msg.includes("container creation failed")
-
-      if (isDockerInfraError) {
-        console.warn(`Docker execution unavailable (${msg.slice(0, 120)}). Falling back to Local execution.`)
-        return await this.localService.execute(request)
+      
+      // If the error is a user request validation failure (e.g. empty code, exceeded limits), rethrow
+      if (
+        msg.includes("Invalid execution request") ||
+        msg.includes("Source code cannot be empty") ||
+        msg.includes("Source code exceeds") ||
+        msg.includes("Program input exceeds") ||
+        msg.includes("Expected output exceeds")
+      ) {
+        throw dockerErr
       }
-      throw dockerErr
+
+      console.warn(`[Execution] Docker execution unavailable (${msg.slice(0, 150)}). Falling back to Local/Cloud execution.`)
+      return await this.localService.execute(request)
     }
   }
 }

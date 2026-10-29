@@ -351,54 +351,78 @@ export class LocalVMExecutionService implements ExecutionService {
     }
   }
 
-  // ── PISTON API (Cloud Well-Known Compilers Fallback) ────────────────
-  private async executePiston(
+  // ── Remote Cloud Compilers Fallback (Judge0 CE) ────────────────────
+  private async executeRemoteCompiler(
     language: string,
     code: string,
     input: string
   ): Promise<{ stdout: string; stderr: string; compileOutput?: string | null; time: number }> {
     const start = performance.now()
-    let lang = language.toLowerCase()
-    if (lang === "cpp") lang = "c++"
+    const rawLang = language.toLowerCase().trim()
+
+    const langMap: Record<string, number> = {
+      c: 50,          // C (GCC 9.2.0)
+      cpp: 54,        // C++ (GCC 9.2.0)
+      "c++": 54,
+      java: 62,       // Java (OpenJDK 13.0.1)
+      python: 71,     // Python (3.8.1)
+      py: 71,
+      python3: 71,
+      javascript: 63, // JavaScript (Node.js 12.14.0)
+      js: 63,
+      nodejs: 63,
+    }
+
+    const languageId = langMap[rawLang] || 50
 
     try {
-      const res = await fetch("https://emkc.org/api/v2/piston/execute", {
+      const res = await fetch("https://ce.judge0.com/submissions?wait=true", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        signal: AbortSignal.timeout(10000),
+        signal: AbortSignal.timeout(15000),
         body: JSON.stringify({
-          language: lang,
-          version: "*",
-          files: [{ content: code }],
+          source_code: code,
+          language_id: languageId,
           stdin: input || "",
         }),
       })
 
-      if (!res.ok) {
-        throw new Error(`Piston compiler error: ${res.statusText}`)
-      }
+      if (res.ok) {
+        const data = await res.json()
+        const compileOutput = data.compile_output || null
+        const stdout = data.stdout || ""
+        let stderr = data.stderr || ""
 
-      const data = await res.json()
-      const run = data.run || {}
-      const compile = data.compile || {}
+        if (compileOutput) {
+          stderr = `${compileOutput}\n[Compilation Error: GCC]`
+        } else if (!stderr && data.status && data.status.id > 4 && data.status.id !== 3) {
+          stderr = data.status.description || ""
+        }
 
-      const compileOutput = compile.output || compile.stderr || null
-      const stdout = run.stdout || (compileOutput ? "" : run.output || "")
-      const stderr = compileOutput ? `${compileOutput}\n(Compilation Error)` : (run.stderr || "")
-
-      return {
-        stdout,
-        stderr,
-        compileOutput,
-        time: performance.now() - start,
+        return {
+          stdout,
+          stderr: stderr || "",
+          compileOutput,
+          time: performance.now() - start,
+        }
       }
     } catch (e: any) {
-      return {
-        stdout: "",
-        stderr: `Compiler execution error: ${e.message}`,
-        compileOutput: e.message,
-        time: performance.now() - start,
-      }
+      console.warn("[Remote Compiler] Request failed:", e?.message)
     }
+
+    return {
+      stdout: "",
+      stderr: "Compiler execution unavailable. Local toolchain and cloud compiler failed to respond.",
+      compileOutput: null,
+      time: performance.now() - start,
+    }
+  }
+
+  private async executePiston(
+    language: string,
+    code: string,
+    input: string
+  ): Promise<{ stdout: string; stderr: string; compileOutput?: string | null; time: number }> {
+    return this.executeRemoteCompiler(language, code, input)
   }
 }

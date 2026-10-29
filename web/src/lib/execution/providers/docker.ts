@@ -516,6 +516,29 @@ function resolveDockerExecutable(): string {
     }
   }
 
+  // Check common default install paths
+  const standardPaths = process.platform === "win32"
+    ? [
+        "C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe",
+        "C:\\Program Files\\Docker\\Docker\\resources\\docker.exe",
+        "C:\\Program Files\\Docker\\Docker\\docker.exe",
+        "C:\\ProgramData\\DockerDesktop\\version-bin\\docker.exe",
+      ]
+    : [
+        "/usr/local/bin/docker",
+        "/usr/bin/docker",
+        "/bin/docker",
+        "/snap/bin/docker",
+      ];
+
+  for (const candidate of standardPaths) {
+    try {
+      return validateDockerExecutable(candidate, "Default Path")
+    } catch {
+      continue
+    }
+  }
+
   throw new DockerExecutableResolutionError(
     `Docker CLI was not found in the backend process PATH. ` +
     (process.platform === "win32"
