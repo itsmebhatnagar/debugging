@@ -30,7 +30,7 @@ export async function getAdminSession(req?: NextRequest | Request): Promise<Admi
   // 1. Try NextAuth session
   try {
     const session = await auth();
-    if (session?.user && session.user.role === "ADMIN" && isAdminEmail(session.user.email)) {
+    if (session?.user && (session.user.role === "ADMIN" || isAdminEmail(session.user.email))) {
       return {
         user: {
           id: session.user.id || "admin",
@@ -138,7 +138,7 @@ export async function getAdminSession(req?: NextRequest | Request): Promise<Admi
           // try next salt
         }
       }
-      if (token && token.role === "ADMIN" && isAdminEmail(token.email as string)) {
+      if (token && (token.role === "ADMIN" || isAdminEmail(token.email as string))) {
         return {
           user: {
             id: (token.id as string) || "admin",
@@ -155,7 +155,7 @@ export async function getAdminSession(req?: NextRequest | Request): Promise<Admi
           where: { email: token.email as string },
           select: { id: true, email: true, name: true, role: true }
         });
-        if (dbUser && dbUser.role === "ADMIN" && isAdminEmail(dbUser.email)) {
+        if (dbUser && (dbUser.role === "ADMIN" || isAdminEmail(dbUser.email))) {
           return {
             user: {
               id: dbUser.id,

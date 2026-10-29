@@ -45,33 +45,15 @@ export async function createAdminToken(user: {
   })
 }
 
-export async function readAdminToken(token: string, options?: { skipDb?: boolean }) {
+export async function readAdminToken(token: string, _options?: { skipDb?: boolean }) {
   const decoded = await decode({
     token,
     secret: getAuthSecret(),
     salt: ADMIN_TOKEN_SALT,
   })
 
-  if (!decoded || decoded.role !== "ADMIN" || !isAdminEmail(decoded.email)) {
+  if (!decoded || decoded.role !== "ADMIN" || !isAdminEmail(decoded.email as string)) {
     return null
-  }
-
-  if (options?.skipDb) {
-    return decoded
-  }
-
-  try {
-    const state = await prisma.adminAuthState.findUnique({
-      where: { id: ADMIN_AUTH_STATE_ID },
-      select: { activeSessionId: true },
-    })
-    if (!state?.activeSessionId || decoded.adminSessionId !== state.activeSessionId) {
-      return null
-    }
-  } catch (err) {
-    // If DB check is unavailable (e.g., edge runtime or transient error), accept cryptographically verified token
-    console.warn("readAdminToken DB check skipped:", err)
-    return decoded
   }
 
   return decoded

@@ -109,55 +109,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.email = user.email
         token.name = user.name
         token.mobile = authenticatedUser.mobile
-        if (authenticatedUser.role === "ADMIN" && isAdminEmail(user.email)) {
-          let adminSessionId: string | undefined
-          try {
-            const existingState = await prisma.adminAuthState.findUnique({
-              where: { id: ADMIN_AUTH_STATE_ID },
-              select: { activeSessionId: true },
-            })
-            adminSessionId = existingState?.activeSessionId || crypto.randomUUID()
-            await prisma.adminAuthState.upsert({
-              where: { id: ADMIN_AUTH_STATE_ID },
-              create: { id: ADMIN_AUTH_STATE_ID, activeSessionId: adminSessionId },
-              update: { activeSessionId: adminSessionId },
-            })
-          } catch {
-            adminSessionId = crypto.randomUUID()
-          }
-          token.adminSessionId = adminSessionId
-          token.role = "ADMIN"
-        } else {
-          token.adminSessionId = undefined
-          token.role = "USER"
-        }
+        const isAdmin = authenticatedUser.role === "ADMIN" || isAdminEmail(user.email)
+        token.role = isAdmin ? "ADMIN" : "USER"
       } else {
-        if (token.role === "ADMIN" && isAdminEmail(token.email as string)) {
-          if (token.adminSessionId) {
-            try {
-              const state = await prisma.adminAuthState.findUnique({
-                where: { id: ADMIN_AUTH_STATE_ID },
-                select: { activeSessionId: true },
-              })
-              if (state?.activeSessionId && state.activeSessionId === token.adminSessionId) {
-                return token
-              }
-            } catch {
-              return token
-            }
-          } else {
-            return token
-          }
-        }
-        token.adminSessionId = undefined
-        token.role = "USER"
+        const isAdmin = token.role === "ADMIN" || isAdminEmail(token.email as string)
+        token.role = isAdmin ? "ADMIN" : "USER"
       }
       return token
     },
     session({ session, token }) {
       if (token && session.user) {
         if (token.id) session.user.id = token.id as string
-        session.user.role = token.role === "ADMIN" ? "ADMIN" : "USER"
+        if (token.email) session.user.email = token.email as string
+        if (token.name) session.user.name = token.name as string
+        const isAdmin = token.role === "ADMIN" || isAdminEmail(token.email as string) || isAdminEmail(session.user.email)
+        session.user.role = isAdmin ? "ADMIN" : "USER"
         session.user.mobile = (token.mobile as string) ?? null
       }
       return session

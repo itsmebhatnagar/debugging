@@ -131,21 +131,21 @@ export async function POST(req: NextRequest) {
     console.log(`[API /auth/login] Password verified successfully for "${user.email}" (${user.role})`);
 
     const isAdmin = user.role === "ADMIN" || isAdminEmail(user.email);
+    if (isAdmin && user.role !== "ADMIN") {
+      try {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { role: "ADMIN" },
+        });
+        user.role = "ADMIN";
+      } catch (e) {
+        console.error("[API /auth/login] Failed to sync role to ADMIN in DB:", e);
+      }
+    }
+
     let adminToken: string | undefined;
-    let adminSessionId: string | undefined;
 
     if (isAdmin) {
-      adminSessionId = crypto.randomUUID();
-      try {
-        await prisma.adminAuthState.upsert({
-          where: { id: ADMIN_AUTH_STATE_ID },
-          create: { id: ADMIN_AUTH_STATE_ID, activeSessionId: adminSessionId },
-          update: { activeSessionId: adminSessionId },
-        });
-      } catch (e) {
-        console.error("adminAuthState upsert error:", e);
-      }
-
       try {
         adminToken = await createAdminToken(user);
       } catch (err) {
@@ -193,7 +193,6 @@ export async function POST(req: NextRequest) {
         name: user.name,
         mobile: user.mobile,
         role: isAdmin ? "ADMIN" : "USER",
-        adminSessionId: isAdmin ? adminSessionId : undefined,
         sub: user.id,
       };
 

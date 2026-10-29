@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
 import { signOut } from "next-auth/react";
 import type { Session } from "next-auth";
+import { isAdminEmail } from "@/lib/admin-access";
 
 export function Navigation({ session }: { session: Session | null }) {
   const pathname = usePathname();
@@ -14,6 +15,8 @@ export function Navigation({ session }: { session: Session | null }) {
   if (pathname === "/" || pathname === "/login" || pathname === "/quiz" || pathname?.startsWith("/admin")) {
     return null;
   }
+
+  const isAdmin = (session?.user as any)?.role === "ADMIN" || isAdminEmail(session?.user?.email);
 
   return (
     <motion.nav 
@@ -56,6 +59,15 @@ export function Navigation({ session }: { session: Session | null }) {
 
       {/* RIGHT: Auth & Links */}
       <div className="flex items-center justify-end">
+        {session && isAdmin && (
+          <Link
+            href="/admin/dashboard"
+            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[#d4af37]/80 bg-[#d4af37]/20 text-[#f4ede0] font-cinzel text-xs font-bold tracking-widest hover:bg-[#d4af37]/35 transition-all pointer-events-auto mr-4 shadow-[0_0_12px_rgba(212,175,55,0.3)]"
+          >
+            <span className="w-2 h-2 rounded-full bg-[#d4af37] animate-pulse" />
+            ADMIN DECK
+          </Link>
+        )}
         {session ? (
           <div 
             className="relative pointer-events-auto" 
@@ -84,6 +96,12 @@ export function Navigation({ session }: { session: Session | null }) {
                   transition={{ duration: 0.2, ease: "easeOut" }}
                   className="absolute right-0 top-[100%] w-56 bg-[#1a1714]/95 backdrop-blur-md border border-[#d4af37]/50 shadow-2xl overflow-hidden flex flex-col z-[200]"
                 >
+                  {isAdmin && (
+                    <Link href="/admin/dashboard" className="px-6 py-4 font-cinzel font-bold tracking-[0.1em] text-[#d4af37] text-xs hover:bg-[#d4af37]/20 hover:text-white transition-colors border-b border-[#d4af37]/30 flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-[#d4af37] animate-pulse" />
+                      Command Deck (Admin)
+                    </Link>
+                  )}
                   <Link href="/profile" className="px-6 py-4 font-cinzel font-bold tracking-[0.1em] text-[#f4ede0] text-xs hover:bg-[#d4af37]/20 hover:text-white transition-colors border-b border-[#d4af37]/20">
                     My Profile
                   </Link>

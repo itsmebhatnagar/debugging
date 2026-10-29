@@ -21,10 +21,10 @@ export default auth(async (req) => {
     }
   }
 
-  if ((!isLoggedIn || userRole !== "ADMIN") && adminToken) {
+  if (adminToken) {
     try {
       const decoded = await readAdminToken(adminToken, { skipDb: true })
-      if (decoded) {
+      if (decoded && (decoded.role === "ADMIN" || isAdminEmail(decoded.email as string))) {
         isLoggedIn = true
         userRole = "ADMIN"
       }

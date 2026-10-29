@@ -4,10 +4,13 @@ import Link from "next/link"
 import { redirect } from "next/navigation"
 import { Spotlight } from "@/components/ui/spotlight"
 import { JoinCompetitionButton } from "@/components/JoinCompetitionButton"
+import { isAdminEmail } from "@/lib/admin-access"
 
 export default async function DashboardPage() {
   const session = await auth()
   if (!session?.user) redirect("/login")
+
+  const isAdmin = (session.user as any).role === "ADMIN" || isAdminEmail(session.user.email)
 
   let competitions = await prisma.competition.findMany({
     orderBy: { createdAt: "desc" },
@@ -63,6 +66,29 @@ export default async function DashboardPage() {
     <div className="relative min-h-screen pt-24 lg:pt-16 pb-16 lg:pb-8 px-4 lg:px-6 z-10 overflow-x-hidden">
       <div className="mx-auto max-w-6xl space-y-8 lg:space-y-6">
         
+        {/* ── ADMIN BANNER ─────────────────────────────────── */}
+        {isAdmin && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-2xl border border-[#d4af37]/50 bg-[#1a1714]/80 backdrop-blur-md shadow-[0_0_20px_rgba(212,175,55,0.15)]">
+            <div className="flex items-center gap-3">
+              <span className="w-3 h-3 rounded-full bg-[#d4af37] animate-pulse" />
+              <div>
+                <div className="font-cinzel text-sm font-bold tracking-wider text-[#d4af37] uppercase">
+                  Administrator Deck Active
+                </div>
+                <div className="font-garamond text-xs text-[#f4ede0]/70">
+                  Full command deck privileges enabled for {session.user.email}
+                </div>
+              </div>
+            </div>
+            <Link
+              href="/admin/dashboard"
+              className="w-full sm:w-auto px-6 py-2.5 rounded-xl border border-[#d4af37] bg-[#d4af37]/20 hover:bg-[#d4af37] hover:text-black font-cinzel text-xs font-bold tracking-[0.15em] text-[#f4ede0] transition-all text-center uppercase shadow-[0_0_15px_rgba(212,175,55,0.2)]"
+            >
+              Enter Admin Command Deck &rarr;
+            </Link>
+          </div>
+        )}
+
         {/* ── WELCOME BANNER ─────────────────────────────── */}
         <div className="relative w-full overflow-hidden rounded-[2rem] bg-[#d4af37]/20 p-[2px] shadow-2xl">
           <Spotlight className="from-[#f4ede0] via-[#d4af37] to-transparent blur-3xl" size={600} />
@@ -87,13 +113,16 @@ export default async function DashboardPage() {
               </div>
             </div>
 
-            {(session.user as any).role === "ADMIN" && (
+            {isAdmin && (
               <div className="mt-8 md:mt-0">
-                <Link href="/admin" className="px-8 py-4 border-2 border-[#d4af37]/60 bg-[#1a1714]/80 hover:bg-[#d4af37]/20 transition-all font-cinzel font-bold tracking-[0.2em] text-[#d4af37] text-xs uppercase flex items-center gap-3">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <Link
+                  href="/admin/dashboard"
+                  className="px-8 py-4 border-2 border-[#d4af37] bg-[#d4af37]/20 hover:bg-[#d4af37] hover:text-black transition-all font-cinzel font-bold tracking-[0.2em] text-[#d4af37] hover:text-black text-xs uppercase flex items-center gap-3 rounded-xl shadow-[0_0_20px_rgba(212,175,55,0.3)] group"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
                   </svg>
-                  Captain's Console
+                  Admin Command Deck
                 </Link>
               </div>
             )}
